@@ -153,7 +153,7 @@ void FP_PC_viewing::calcData() {
 					//0.09
 					if(fabs(fast_seg_ring[i][j].points[l].pctime - fast_seg[i][j].points[k].pctime)<0.05){
 						//环上的点比现在的远
-						if(fast_seg_ring[i][j].points[l].range > fast_seg[i][j].points[k].range){
+						if(fast_seg_ring[i][j].points[l].range > 1.0005*fast_seg[i][j].points[k].range){
 							//单帧debug用
 					/*		map_reduced.push_back(fast_seg[i][j].points[k]);
 							filter_index.push_back(fast_seg[i][j].points[k].NeighborPicked);*/

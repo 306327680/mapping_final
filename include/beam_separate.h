@@ -86,6 +86,7 @@ public:
 						 float &x0,float &y0,float &z0,float &r);
 //1.3------计算特征------
 	void calcFeature(pcl::PointCloud<PointTypeSm>::Ptr &laserCloud);
+	void calcFeature_mine(pcl::PointCloud<PointTypeSm>::Ptr &laserCloud);
 //1.4------计算光滑度------
 	void calculateSmoothness(pcl::PointCloud<PointTypeBeam>::Ptr segmentedCloud_bef,
 							 pcl::PointCloud<PointTypeSm>::Ptr &segmentedCloud);

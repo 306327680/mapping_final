@@ -37,7 +37,7 @@ void featureExtraction::getCircleCenter(PointTypeSm &p1, PointTypeSm &p2, PointT
 	r = 1/(float)sqrt(pow(p1.x - P0.x, 2) + pow(p1.y - P0.y, 2) + (pow(p1.z - P0.z, 2)));
 }
 
-//!!!特征提取
+//1.特征提取
 void featureExtraction::calcFeature(pcl::PointCloud<PointXYZIBS>::Ptr &laserCloud) {
 	//todo 内存泄漏
 	surfPointsLessFlat->clear();
@@ -49,6 +49,7 @@ void featureExtraction::calcFeature(pcl::PointCloud<PointXYZIBS>::Ptr &laserClou
 	//大循环 1 计算每个点的曲度,可以参照公式
 	//这个应该没有问题
 	for (int i = CURVATURE_REGION; i < laserCloud->size() - CURVATURE_REGION; i++) {
+		//todo 会有问题? 2019/5/14
 		float diffX = pointWeight * laserCloud->points[i].x;
 		float diffY = pointWeight * laserCloud->points[i].y;
 		float diffZ = pointWeight * laserCloud->points[i].z;
@@ -142,7 +143,6 @@ void featureExtraction::calcFeature(pcl::PointCloud<PointXYZIBS>::Ptr &laserClou
 	}
 	//3 第三大部分
 	//3. 分离特征点 感觉这里不是很对
-
 	
 	for (int i = 0; i < N_SCAN; i++) {
 		pcl::PointCloud<PointType>::Ptr surfPointsLessFlatScan(new pcl::PointCloud<PointType>);
@@ -284,6 +284,10 @@ void featureExtraction::calcFeature(pcl::PointCloud<PointXYZIBS>::Ptr &laserClou
 	}
 }
 
+//1.2 重新特征提取
+void featureExtraction::calcFeature_mine(pcl::PointCloud<PointTypeSm>::Ptr &laserCloud) {
+
+}
 
 
 
@@ -303,7 +307,7 @@ void featureExtraction::calculateSmoothness(pcl::PointCloud<PointTypeBeam>::Ptr 
 	}
 	
 	for (int i = 5; i < cloudSize - 5; i++) {
-		float diffRange;
+		float diffRange = 0;
 		diffRange = segmentedCloud->points[i-5].range + segmentedCloud->points[i-4].range
 					+ segmentedCloud->points[i-3].range + segmentedCloud->points[i-2].range
 					+ segmentedCloud->points[i-1].range - segmentedCloud->points[i].range * 10
@@ -367,7 +371,6 @@ void featureExtraction::checkorder(pcl::PointCloud<pcl::PointXYZI>::Ptr cloud_be
 	PointTypeBeam thisPoint;
 	float rowIdn, columnIdn, index, cloudSize;
 	//--变量声明完毕
-	
 	out->points.resize(cloud_bef->size());
 	
 	//a.0 计算旋转区间
@@ -651,7 +654,7 @@ void featureExtraction::adjustDistortion(pcl::PointCloud<PointTypeBeam>::Ptr poi
 	pcl::PointCloud<PointTypeBeam>::Ptr Individual(new pcl::PointCloud<PointTypeBeam>);
 	pcl::PointCloud<PointTypeBeam>::Ptr Individual_bef(new pcl::PointCloud<PointTypeBeam>);
 	temp->resize(pointIn->size());
-	for(int i; i<pointIn->size();i++){
+	for(int i = 0; i < pointIn->size(); i++){
 		Individual->resize(1);
 		Individual_bef->resize(1);
 		Individual_bef->points[0] = pointIn->points[i];
@@ -663,10 +666,9 @@ void featureExtraction::adjustDistortion(pcl::PointCloud<PointTypeBeam>::Ptr poi
 		temp->points[i].x = Individual->points[0].x;
 		temp->points[i].y = Individual->points[0].y;
 		temp->points[i].z = Individual->points[0].z;
-		if(pointIn->points[i].beam>=0 && pointIn->points[i].beam<=N_SCAN){
+		if(pointIn->points[i].beam >= 0 && pointIn->points[i].beam <= N_SCAN){
 			laserCloudScans_N[pointIn->points[i].beam].push_back(temp->points[i]);
 		}
-		
 	}
 	
 	for (int i = 0; i < N_SCAN; i++) {
@@ -724,4 +726,5 @@ void featureExtraction::SplitString(const std::string &s, std::vector<std::strin
 	if(pos1 != s.length())
 		v.push_back(s.substr(pos1));
 }
+
 
