@@ -54,7 +54,7 @@ void FP_PC_viewing::getmap(std::string mappath) {
 
 	maptemp->resize(cloud_bef.size());
 	map_point_save.resize(cloud_bef.size());
-	for(int i; i<cloud_bef.size(); i++){
+	for(int i = 0; i<cloud_bef.size(); i++){
 		maptemp->points[i].x = cloud_bef.points[i].x;
 		maptemp->points[i].y = cloud_bef.points[i].y;
 		maptemp->points[i].z = cloud_bef.points[i].z;
@@ -81,7 +81,7 @@ void FP_PC_viewing::getmap(std::string mappath) {
 		fast_map[j].resize(ceil(max_y)-floor(min_y));
 	}
 	
-	for(int i; i<maptemp->size(); i++){
+	for(int i = 0; i<maptemp->size(); i++){
 		fast_map[floor(maptemp->points[i].x - min_x)][floor(maptemp->points[i].y - min_y)]
 				.push_back(maptemp->points[i]);
 	}

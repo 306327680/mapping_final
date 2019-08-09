@@ -4,27 +4,6 @@
 #include "main.h"
 //G2O_USE_TYPE_GROUP(slam2d);
 
-/*#define PointCloud_T  pcl::PointCloud<pcl::PointXYZ>
-
-#define PointCloudPtr_T pcl::PointCloud<pcl::PointXYZ>::Ptr
-#define PointCloudConstPtr_T pcl::PointCloud<pcl::PointXYZ>::ConstPtr
-PointCloud_T GICP(const PointCloud_T & cloud_source,
-                     const PointCloud_T & cloud_target,
-                            Eigen::Isometry3d & icp_matrix) {
-    PointCloud_T result;
-    pcl::GeneralizedIterativeClosestPoint<pcl::PointXYZ, pcl::PointXYZ> gicp; //创建ICP对象，用于ICP配准
-    //gicp.setRotationEpsilon()
-
-    gicp.setTransformationEpsilon(0.01);
-    gicp.setMaximumIterations (100);
-    gicp.setInputSource(PointCloudConstPtr_T(new PointCloud_T(cloud_source)));
-    gicp.setInputTarget(PointCloudConstPtr_T(new PointCloud_T(cloud_target)));
-    gicp.align(result);
-    Eigen::Matrix4f tf_s2t = gicp.getFinalTransformation();
-    icp_matrix = tf_s2t.cast<double>();
-    std::cout<<tf_s2t<<std::endl;
-    return result; // source上应用这个矩阵，就可以转过去了
-}*/
 void genfeaturemap(std::vector<Eigen::Isometry3d, Eigen::aligned_allocator<Eigen::Isometry3d>> trans_vector,
 				 std::string filepath,pcl::PointCloud<pcl::PointXYZI>& bigmap){
 	//0.初始化参数
