@@ -1,6 +1,7 @@
 ##############################
 ## Folders                  ##
 ##############################
-target
-build
-cmake-build-debug
+.idea/
+.vscode/
+cmake-build-debug/
+build/

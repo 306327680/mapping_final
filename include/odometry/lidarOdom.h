@@ -13,7 +13,7 @@
 #include <pcl/filters/passthrough.h>
 #include <pcl/registration/gicp.h>
 /*#include <pcl/visualization/cloud_viewer.h>*/
-#include "util.h"
+#include "tools/util.h"
 #include <cmath>
 
 #include <pcl/point_cloud.h>

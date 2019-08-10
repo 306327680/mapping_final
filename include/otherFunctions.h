@@ -35,7 +35,7 @@
 #include <pcl/registration/gicp.h>
 #include <pcl/registration/gicp.h>
 #include <pcl/registration/ndt.h>
-#include "beam_separate.h"
+#include "distortion/beam_separate.h"
 
 // 1. 参数初始化
 bool tensorvoting = true;

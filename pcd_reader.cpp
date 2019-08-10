@@ -1,7 +1,7 @@
 // written by echo
 //
 
-#include "main.h"
+#include "otherFunctions.h"
 //G2O_USE_TYPE_GROUP(slam2d);
 
 void genfeaturemap(std::vector<Eigen::Isometry3d, Eigen::aligned_allocator<Eigen::Isometry3d>> trans_vector,
@@ -22,6 +22,7 @@ void genfeaturemap(std::vector<Eigen::Isometry3d, Eigen::aligned_allocator<Eigen
 	pcl::PointCloud<PointTypeSm> cornerPointsLessSharp;
 	pcl::PointCloud<PointTypeSm> surfPointsFlat;
 	pcl::PointCloud<PointTypeSm> surfPointsLessFlat;
+	pcl::PointCloud<PointTypeSm> tfedPC;
 	Eigen::Isometry3d out3d = Eigen::Isometry3d::Identity();
 	pcl::PointCloud<PointTypeSm>::Ptr segmentedCloud(new pcl::PointCloud<PointTypeSm>);
 	cout<<"start interation"<<endl;
@@ -46,32 +47,46 @@ void genfeaturemap(std::vector<Eigen::Isometry3d, Eigen::aligned_allocator<Eigen
 			Feature.calcFeature(segmentedCloud);
 
 			//把3m外的 特征点提取
-			pcl::transformPointCloud(*Feature.cornerPointsSharp, surfPointsLessFlat, trans_vector[i].matrix());
-			for (int k = 0; k < surfPointsLessFlat.size() ; ++k) {
-				if(surfPointsLessFlat.points[k].range>3){
-					cornerPointsSharp.points.push_back(surfPointsLessFlat.points[k]) ;
+			pcl::transformPointCloud(*Feature.cornerPointsSharp, tfedPC, trans_vector[i].matrix());
+			for (int k = 0; k < tfedPC.size() ; ++k) {
+				if(tfedPC.points[k].range>3){//过滤附近的点用的
+					tfedPC.points[k].pointType = 0;
+					cornerPointsSharp.points.push_back(tfedPC.points[k]) ;
 				}
 			}
-			pcl::transformPointCloud(*Feature.cornerPointsLessSharp, surfPointsLessFlat, trans_vector[i].matrix());
-			for (int k = 0; k < surfPointsLessFlat.size() ; ++k) {
-				if(surfPointsLessFlat.points[k].range>3){
-					cornerPointsLessSharp.points.push_back(surfPointsLessFlat.points[k]) ;
+			pcl::transformPointCloud(*Feature.cornerPointsLessSharp, tfedPC, trans_vector[i].matrix());
+			for (int k = 0; k < tfedPC.size() ; ++k) {
+				if(tfedPC.points[k].range>3){
+					tfedPC.points[k].pointType = 1;
+					cornerPointsLessSharp.points.push_back(tfedPC.points[k]) ;
 				}
 			}
-			pcl::transformPointCloud(*Feature.cornerPointsSharp, surfPointsLessFlat, trans_vector[i].matrix());
-			for (int k = 0; k < surfPointsLessFlat.size() ; ++k) {
-				if(surfPointsLessFlat.points[k].range>3){
-					surfPointsFlat.points.push_back(surfPointsLessFlat.points[k]) ;
+			pcl::transformPointCloud(*Feature.surfPointsFlat, tfedPC, trans_vector[i].matrix());
+			for (int k = 0; k < tfedPC.size() ; ++k) {
+				tfedPC.points[k].pointType = 2;
+				if(tfedPC.points[k].range>3){
+					surfPointsFlat.points.push_back(tfedPC.points[k]) ;
 				}
 			}
+			pcl::transformPointCloud(*Feature.surfPointsLessFlat, tfedPC, trans_vector[i].matrix());
+			for (int k = 0; k < tfedPC.size() ; ++k) {
+				if(tfedPC.points[k].range>3){
+					tfedPC.points[k].pointType = 3;
+					surfPointsLessFlat.points.push_back(tfedPC.points[k]) ;
+				}
+			}
+			
+			
 			cloud_bef->clear();
 		}
 	}
-
+	
 	writer.write<PointTypeSm>("cornerPointsSharp.pcd",cornerPointsSharp, true);
 	writer.write<PointTypeSm>("cornerPointsLessSharp.pcd",cornerPointsLessSharp, true);
 	writer.write<PointTypeSm>("surfPointsFlat.pcd",surfPointsFlat, true);
 	writer.write<PointTypeSm>("surfPointsLessFlat.pcd",surfPointsLessFlat, true);
+	pcl::PointXYZI curPC;
+	
 	cout<<"end interation"<<endl;
 	//转换回(0,0,0,0,0,0)
 //	pcl::transformPointCloud(*cloud_add, *cloud_aft, trans_vector[0].inverse().matrix());

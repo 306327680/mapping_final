@@ -9,11 +9,13 @@ find_package( G2O REQUIRED )
 find_package( Eigen3 REQUIRED)
 find_package( Cholmod REQUIRED )
 find_package( Sophus REQUIRED )
+find_package(OpenCV REQUIRED)
 include_directories( src include )
 include_directories( ${Sophus_INCLUDE_DIRS}
         ${CSPARSE_INCLUDE_DIR}
-        #        ${CERES_INCLUDE_DIRS} ${GLOG_INCLUDE_DIRS} ${GFLAGS_INCLUDE_DIR}
+        include
         )
+include_directories(${OpenCV_INCLUDE_DIRS})
 
 include_directories( ${CHOLMOD_INCLUDE_DIR} )
 include_directories( ${G2O_INCLUDE_DIRS}
@@ -23,24 +25,33 @@ INCLUDE_DIRECTORIES(${CSPARSE_INCLUDE_DIR})
 include_directories(${PCL_INCLUDE_DIRS})
 link_directories(${PCL_LIBRARIES_DIRS})
 add_definitions(${PCL_DEFINITIONS})
+ADD_LIBRARY(sophus SHARED include/sophus/se3.cpp include/sophus/so3.cpp)
+
+add_library(mapping_lm
+        include/mapping/lmOptimizationSufraceCorner.cpp
+        include/mapping/lmOptimizationSufraceCorner.h
+        )
+
+
 add_library(odom
-        include/util.cpp
-        include/beam_separate.cpp
-        include/beam_separate.h
-        include/util.h
-        include/lego_feature.cpp
-        include/lego_feature.h
-        include/a_loam_odom.cpp
-        include/a_loam_odom.h
-        include/FP_PC_crub.cpp
-        include/FP_PC_crub.h
-        include/FP_PC_viewing.h
-        include/FP_PC_viewing.cpp
-        include/mapping.cpp
-        include/mapping.h)
-add_executable(mapping pcd_reader.cpp include/main.h)
+        include/tools/util.cpp
+        include/distortion/beam_separate.cpp
+        include/distortion/beam_separate.h
+        include/tools/util.h
+        include/FeatureExtraction/lego_feature.cpp
+        include/FeatureExtraction/lego_feature.h
+        include/odometry/a_loam_odom.cpp
+        include/odometry/a_loam_odom.h
+        include/FirstPersonViewFilter/FP_PC_crub.cpp
+        include/FirstPersonViewFilter/FP_PC_crub.h
+        include/FirstPersonViewFilter/FP_PC_viewing.h
+        include/FirstPersonViewFilter/FP_PC_viewing.cpp
+        include/mapping/mapping.cpp
+        include/mapping/mapping.h)
+add_executable(mapping pcd_reader.cpp include/otherFunctions.h)
 target_link_libraries(mapping ${PCL_LIBRARIES}
         odom
+        mapping_lm
         g2o_core
         g2o_stuff
         g2o_types_slam3d

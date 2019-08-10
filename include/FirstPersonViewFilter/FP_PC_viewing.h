@@ -8,7 +8,7 @@
 #include <chrono>
 #include <iostream>
 /*#include <pcl/visualization/cloud_viewer.h>*/
-#include "util.h"
+#include "tools/util.h"
 #include <cmath>
 #include <Eigen/Eigenvalues>
 #define PCL_NO_PRECOMPILE
