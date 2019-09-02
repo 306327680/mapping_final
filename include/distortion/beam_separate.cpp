@@ -280,7 +280,7 @@ void featureExtraction::calcFeature(pcl::PointCloud<PointXYZIBS>::Ptr &laserClou
 		downSizeFilter.setInputCloud(surfPointsLessFlatScan);
 		downSizeFilter.setLeafSize(LESS_FLAT_FILTER_SIZE, LESS_FLAT_FILTER_SIZE, LESS_FLAT_FILTER_SIZE);
 		downSizeFilter.filter(surfPointsLessFlatScanDS);
-		*surfPointsLessFlat += surfPointsLessFlatScanDS;
+		*surfPointsLessFlat = surfPointsLessFlatScanDS;
 	}
 }
 

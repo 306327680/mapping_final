@@ -6,7 +6,7 @@ set( CMAKE_EXPORT_COMPILE_COMMANDS on)
 list( APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake_modules )
 FIND_PACKAGE( CSparse )
 find_package( G2O REQUIRED )
-find_package( Eigen3 REQUIRED)
+find_package( Eigen3  REQUIRED)
 find_package( Cholmod REQUIRED )
 find_package( Sophus REQUIRED )
 find_package(OpenCV REQUIRED)
@@ -25,14 +25,15 @@ INCLUDE_DIRECTORIES(${CSPARSE_INCLUDE_DIR})
 include_directories(${PCL_INCLUDE_DIRS})
 link_directories(${PCL_LIBRARIES_DIRS})
 add_definitions(${PCL_DEFINITIONS})
+#1.sophus
 ADD_LIBRARY(sophus SHARED include/sophus/se3.cpp include/sophus/so3.cpp)
-
+#2.mapping lm
 add_library(mapping_lm
         include/mapping/lmOptimizationSufraceCorner.cpp
         include/mapping/lmOptimizationSufraceCorner.h
         )
-
-
+target_link_libraries(mapping_lm sophus)
+#3. odometry
 add_library(odom
         include/tools/util.cpp
         include/distortion/beam_separate.cpp
@@ -48,9 +49,11 @@ add_library(odom
         include/FirstPersonViewFilter/FP_PC_viewing.cpp
         include/mapping/mapping.cpp
         include/mapping/mapping.h)
-add_executable(mapping pcd_reader.cpp include/otherFunctions.h)
+#main program
+add_executable(mapping main.cpp include/otherFunctions.h)
 target_link_libraries(mapping ${PCL_LIBRARIES}
         odom
+        ${OpenCV_LIBS}
         mapping_lm
         g2o_core
         g2o_stuff

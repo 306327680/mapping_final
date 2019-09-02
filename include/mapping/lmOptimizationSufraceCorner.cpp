@@ -273,6 +273,7 @@ void lmOptimizationSufraceCorner::currentPose(Eigen::Isometry3d pose) {
 }
 
 void lmOptimizationSufraceCorner::eigen2RPYXYZ(Eigen::Isometry3d pose, std::vector<double> & vector) {
+	vector.clear();
 	Eigen::Vector3d t(1, 0, 0);
 	Sophus::SE3 temp;
 	Sophus::SO3 rotate(pose.rotation());
@@ -284,5 +285,21 @@ void lmOptimizationSufraceCorner::eigen2RPYXYZ(Eigen::Isometry3d pose, std::vect
 	vector.push_back(XYZ[0]);
 	vector.push_back(XYZ[1]);
 	vector.push_back(XYZ[2]);
+}
+
+void lmOptimizationSufraceCorner::RPYXYZ2eigen(std::vector<double> &vector, Eigen::Isometry3d &pose) {
+	Eigen::Matrix4d lidarodomT;
+	lidarodomT.setIdentity();
+	lidarodomT(0,3) = vector[3];
+	lidarodomT(1,3) = vector[4];
+	lidarodomT(2,3) = vector[5];
+	lidarodomT(3,3) = 1;
+	Eigen::AngleAxisd rollAngle (vector[0], Eigen::Vector3d::UnitX());
+	Eigen::AngleAxisd pitchAngle(vector[1], Eigen::Vector3d::UnitY());
+	Eigen::AngleAxisd yawAngle  (vector[2], Eigen::Vector3d::UnitZ());
+	Eigen::Quaterniond quaternion;
+	quaternion=rollAngle*pitchAngle*yawAngle;
+	pose.matrix() = lidarodomT.matrix();
+	pose.rotate(quaternion);
 }
 

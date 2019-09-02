@@ -41,6 +41,7 @@ public:
 	//SE3 转roll pitch yaw
 	void currentPose(Eigen::Isometry3d pose);
 	void eigen2RPYXYZ(Eigen::Isometry3d pose,std::vector<double>& vector);
+	void RPYXYZ2eigen(std::vector<double>& vector,Eigen::Isometry3d & pose);
 	std::vector<double>_lidar_pose;
 private:
 	cv::Mat matA0;

@@ -58,10 +58,10 @@ struct PointXYZIBS
 	PCL_ADD_INTENSITY;
 	float beam;
 	float pctime;
-	int pointType;
+	float pointType;
 	float range;
 	float smooth;
-	int NeighborPicked;
+	float NeighborPicked;
 	float curvature;
 	EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 } EIGEN_ALIGN16;
@@ -71,10 +71,10 @@ POINT_CLOUD_REGISTER_POINT_STRUCT (PointXYZIBS,
 										   (float, z, z) (float, intensity, intensity)
 										   (float, beam, beam)
 										   (float, pctime, pctime)
-										   (int, pointType, pointType)
+										   (float, pointType, pointType)
 										   (float, range, range)
 										   (float, smooth, smooth)
-										   (int, NeighborPicked, NeighborPicked)
+										   (float, NeighborPicked, NeighborPicked)
 										   (float, curvature, curvature)
 )
 
