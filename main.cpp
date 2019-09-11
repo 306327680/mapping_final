@@ -3,7 +3,7 @@
 
 #include "otherFunctions.h"
 //G2O_USE_TYPE_GROUP(slam2d);
-
+//生成所有的特征地图
 void genfeaturemap(std::vector<Eigen::Isometry3d, Eigen::aligned_allocator<Eigen::Isometry3d>> trans_vector,
 				 std::string filepath,pcl::PointCloud<pcl::PointXYZI>& bigmap){
 	//0.初始化参数
@@ -12,12 +12,14 @@ void genfeaturemap(std::vector<Eigen::Isometry3d, Eigen::aligned_allocator<Eigen
 
 	pcl::PointCloud<pcl::PointXYZI>::Ptr cloud_bef(
 			new pcl::PointCloud<pcl::PointXYZI>);
+	pcl::PointCloud<pcl::PointXYZI> cloud_rot_pc;
 	pcl::PointCloud<pcl::PointXYZI>::Ptr cloud_rot(
 			new pcl::PointCloud<pcl::PointXYZI>);
 	pcl::PointCloud<PointTypeBeam>::Ptr test (
 			new pcl::PointCloud<PointTypeBeam>);
 	pcl::PointCloud<PointTypeBeam>::Ptr pcout(
 			new pcl::PointCloud<PointTypeBeam>);
+
 	pcl::PointCloud<PointTypeSm> cornerPointsSharp,wholemap;
 	pcl::PointCloud<PointTypeSm> cornerPointsLessSharp;
 	pcl::PointCloud<PointTypeSm> surfPointsFlat;
@@ -27,20 +29,22 @@ void genfeaturemap(std::vector<Eigen::Isometry3d, Eigen::aligned_allocator<Eigen
 	pcl::PointCloud<PointTypeSm>::Ptr segmentedCloud(new pcl::PointCloud<PointTypeSm>);
 	cout<<"start interation"<<endl;
 	pcl::PCDWriter writer;
+	groundSeg gs;
 	
-	//	1.迭代添加点云
+	//	1.迭代添加点云 大循环********
 	for(int i = 0;  i <file_names_ .size();i++){
 		if (i>start_id && i<end_id) {
+	
+			std::cout<<"remains: "<<end_id-i<<std::endl;
 			std::vector<int> indices1;
 			//读点云
 			pcl::io::loadPCDFile<pcl::PointXYZI>(file_names_[i], *cloud_bef);
 			pcl::removeNaNFromPointCloud(*cloud_bef, *cloud_rot, indices1);
-			
-			*cloud_bef = *cloud_rot;
-
 			out3d = trans_vector[i].matrix();
 			out3d =  trans_vector[i-1].inverse().matrix() * out3d.matrix();
-			
+			pcl::copyPointCloud(*cloud_rot,cloud_rot_pc);
+			pcl::copyPointCloud(gs.point_cb(cloud_rot_pc),*cloud_bef);
+
 			Feature.checkorder(cloud_bef,test);
 			Feature.adjustDistortion(test,pcout,out3d);//输入点云 输出点云 相对tf
 			Feature.calculateSmoothness(pcout,segmentedCloud);
@@ -62,7 +66,6 @@ void genfeaturemap(std::vector<Eigen::Isometry3d, Eigen::aligned_allocator<Eigen
 				if(tfedPC.points[k].range>3){
 					temp = tfedPC.points[k];
 					temp.pointType = 2.0;
-					std::cout<<k<<std::endl;
 					cornerPointsLessSharp.points.push_back(temp) ;
 				}
 			}
@@ -122,12 +125,15 @@ int main(int argc,char** argv){
 	  end_id = atoi(argv[4]);
   }
   std::cout<<"start_id "<<start_id<<" end_id "<<end_id;
+  //得到所有的pcd名字
   GetFileNames(filepath,"pcd");
+  //得到所有的位姿向量
   trans_vector = getEigenPoseFromg2oFile(g2o_path);
   //生成局部地图
-	lmOptimizationSufraceCorner lm;
+/*	lmOptimizationSufraceCorner lm;
 	std::vector<double>  vector;
 	Eigen::Isometry3d se3;
+	//测试 rpy->se3
 	for (int i = 0; i < trans_vector.size(); ++i) {
 		std::cout<<trans_vector[i].matrix()<<std::endl;
 		lm.eigen2RPYXYZ(trans_vector[i],vector);
@@ -135,9 +141,9 @@ int main(int argc,char** argv){
 			std::cout<<vector[j]<<std::endl;
 		}
 		lm.RPYXYZ2eigen(vector,se3);
-		std::cout<<se3.matrix()<<std::endl;
-	}
- /* pcl::PointCloud<pcl::PointXYZI>::Ptr cloud1(new pcl::PointCloud<pcl::PointXYZI>);
+		std::cout<<i<<std::endl;
+	}*/
+  pcl::PointCloud<pcl::PointXYZI>::Ptr cloud1(new pcl::PointCloud<pcl::PointXYZI>);
   cout<<"trans_vector.size() : "<<trans_vector.size() <<" file_names_.size() : "<< file_names_.size()<<endl;
   if(trans_vector.size() == file_names_.size()){
 	  genfeaturemap(trans_vector,filepath,*cloud1);
@@ -145,7 +151,7 @@ int main(int argc,char** argv){
   } else{
       cout<<"!!!!! PCD & g2o does not have same number "<<endl;
       return 0;
-  }*/
+  }
 
   return(0);
 }
