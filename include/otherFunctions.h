@@ -37,6 +37,7 @@
 #include <pcl/registration/ndt.h>
 #include "distortion/beam_separate.h"
 #include "mapping/lmOptimizationSufraceCorner.h"
+#include "oneFrameGND/ground_seg.h"
 
 // 1. 参数初始化
 bool tensorvoting = true;

@@ -46,13 +46,20 @@ add_library(odom
         include/FirstPersonViewFilter/FP_PC_crub.cpp
         include/FirstPersonViewFilter/FP_PC_crub.h
         include/FirstPersonViewFilter/FP_PC_viewing.h
-        include/FirstPersonViewFilter/FP_PC_viewing.cpp
-        include/mapping/mapping.cpp
-        include/mapping/mapping.h)
+        include/FirstPersonViewFilter/FP_PC_viewing.cpp)
+#        include/mapping/mapping.cpp
+#        include/mapping/mapping.h)
+#4. ground segmentation
+add_library(ground_seg
+        include/oneFrameGND/ground_seg.h
+        include/oneFrameGND/ground_seg.cpp
+        )
+target_link_libraries(ground_seg  ${PCL_LIBRARIES})
 #main program
 add_executable(mapping main.cpp include/otherFunctions.h)
 target_link_libraries(mapping ${PCL_LIBRARIES}
         odom
+        ground_seg
         ${OpenCV_LIBS}
         mapping_lm
         g2o_core

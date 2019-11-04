@@ -32,13 +32,13 @@ class lmOptimizationSufraceCorner {
 public:
 	lmOptimizationSufraceCorner(){};
 	//构建平面约束的方程
-	//输入1. 附近点云的surface 点 2. 当前雷达选中的点 3. 返回约束值
+	//1. 输入1. 附近点云的surface 点 2. 当前雷达选中的点 3. 返回约束值
 	bool surfConstraint(pcl::PointCloud<pcl::PointXYZI> surfNear,pcl::PointXYZI curPoint, Eigen::Vector4d& result);
-	//输入1. 附近点云的cornenr 点 2. 当前雷达选中的点 3. 返回约束值
+	//2. 输入1. 附近点云的cornenr 点 2. 当前雷达选中的点 3. 返回约束值
 	bool cornerConstraint(pcl::PointCloud<pcl::PointXYZI> cornerNear,pcl::PointXYZI curPoint, Eigen::Vector4d& result);
-	//对_constraint 关于_lidar_pose进行lm优化
+	//3. 对_constraint 关于_lidar_pose进行lm优化
 	bool LMoptimization(int interationTimes);
-	//SE3 转roll pitch yaw
+	//4. SE3 转roll pitch yaw
 	void currentPose(Eigen::Isometry3d pose);
 	void eigen2RPYXYZ(Eigen::Isometry3d pose,std::vector<double>& vector);
 	void RPYXYZ2eigen(std::vector<double>& vector,Eigen::Isometry3d & pose);

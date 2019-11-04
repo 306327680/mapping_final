@@ -16,6 +16,8 @@
 ####9. v-loam(to be continue)
 ####10. Ekf(to be continue)
 ####11. particle filter
+####12. lmOptimizationSufraceCorner
+用来构建mapping 的 corner 和 surface的约束
 ###3. Todo
 1. 首先完成 loam 的特征提取调参
 2. loam 的 mapping 部分完成

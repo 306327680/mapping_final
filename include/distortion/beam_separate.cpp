@@ -250,19 +250,21 @@ void featureExtraction::calcFeature(pcl::PointCloud<PointXYZIBS>::Ptr &laserClou
 						cloudNeighborPicked[ind + l] = 1;
 						laserCloud->points[ind + l].NeighborPicked = 1;
 					}
-					for (int l = -1; l >= -CURVATURE_REGION; l--) {
-						float diffX = laserCloud->points[ind + l].x
-									  - laserCloud->points[ind + l + 1].x;
-						float diffY = laserCloud->points[ind + l].y
-									  - laserCloud->points[ind + l + 1].y;
-						float diffZ = laserCloud->points[ind + l].z
-									  - laserCloud->points[ind + l + 1].z;
-						if (diffX * diffX + diffY * diffY + diffZ * diffZ > 0.05) {
-							break;
+					for (int l = -1; l >= -CURVATURE_REGION; l--) {//1
+						if( (ind + l)>=0 &&(ind + l + 1)<laserCloud->size()){
+							float diffX = laserCloud->points[ind + l].x
+										  - laserCloud->points[ind + l + 1].x;
+							float diffY = laserCloud->points[ind + l].y
+										  - laserCloud->points[ind + l + 1].y;
+							float diffZ = laserCloud->points[ind + l].z
+										  - laserCloud->points[ind + l + 1].z;
+							if (diffX * diffX + diffY * diffY + diffZ * diffZ > 0.05) {
+								break;
+							}
+							
+							cloudNeighborPicked[ind + l] = 1;
+							laserCloud->points[ind + l].NeighborPicked = 1;
 						}
-						
-						cloudNeighborPicked[ind + l] = 1;
-						laserCloud->points[ind + l].NeighborPicked = 1;
 					}
 				}
 			}
@@ -362,7 +364,7 @@ featureExtraction::copyPCD(pcl::PointCloud<pcl::PointXYZI>::
 }
 
 void featureExtraction::checkorder(pcl::PointCloud<pcl::PointXYZI>::Ptr cloud_bef,
-								   pcl::PointCloud<PointTypeBeam>::Ptr &out) {
+								   pcl::PointCloud<PointTypeBeam>::Ptr out) {
 	//--声明变量区
 	double verticalAngle, horizonAngle, range, beam_min, beam_max;
 	//用来存放每个beam的最大index 最小index
@@ -374,18 +376,26 @@ void featureExtraction::checkorder(pcl::PointCloud<pcl::PointXYZI>::Ptr cloud_be
 	out->points.resize(cloud_bef->size());
 	
 	//a.0 计算旋转区间
-	float startOrientation = (float)-atan2(out->points[0].y, out->points[0].x);
-	//todo 这个计算有问题>>>>
-	float endOrientation   = (float)-atan2(out->points[out->points.size() ].y,
-										   out->points[out->points.size() ].x) + 2 * M_PI;
-	if (endOrientation - startOrientation > 3 * M_PI) {
-		endOrientation -= 2 * M_PI;
-	} else if (endOrientation - startOrientation < M_PI)
-		endOrientation += 2 * M_PI;
+	float startOrientation = 0;
+	float endOrientation = 0;
+	if(out->size()>0){
+		startOrientation = (float)-atan2(out->points[0].y, out->points[0].x);
+		//todo 这个计算有问题>>>>
+		endOrientation   = (float)-atan2(out->points.back().y,
+										 out->points.back().x) + 2 * M_PI;
+		if (endOrientation - startOrientation > 3 * M_PI) {
+			endOrientation -= 2 * M_PI;
+		} else if (endOrientation - startOrientation < M_PI)
+			endOrientation += 2 * M_PI;
+	} else{
+		std::cerr<<"wrong"<<std::endl;
+	}
+
+
 	
 	
 	//a. 第一个for lego的确定beam的函数
-	for (size_t i = 0; i < out->size(); ++i){
+	for (size_t i = 1; i < out->size(); ++i){
 		out->points[i].x = cloud_bef->points[i].x;
 		out->points[i].y = cloud_bef->points[i].y;
 		out->points[i].z = cloud_bef->points[i].z;

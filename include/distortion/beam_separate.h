@@ -80,6 +80,11 @@ public:
 		surfPointsLessFlat.reset(new pcl::PointCloud<PointType>());
 		scanStartInd.resize(N_SCAN, 0);
 		scanEndInd.resize(N_SCAN, 0);
+		memset(cloudCurvature,0,90000);
+		memset(cloudSortInd,0,90000);
+		memset(cloudNeighborPicked,0,90000);
+		memset(cloudLabel,0,90000);
+		
 	};
 //1.2------计算三点的圆心------
 	void getCircleCenter(PointTypeSm &p1, PointTypeSm &p2, PointTypeSm &p3,
@@ -112,7 +117,7 @@ public:
 
 //8.用来检查这个型号的激光雷达数据读入的顺序 用pcl_viewer可视化一下
 	void checkorder(pcl::PointCloud<pcl::PointXYZI>::Ptr cloud_bef,
-					pcl::PointCloud<PointTypeBeam>::Ptr &out);
+					pcl::PointCloud<PointTypeBeam>::Ptr out);
 	
 // 10.2 矩阵转四元数  ， 实部在前，虚部在后
 	void rotMat2quaternion(Eigen::Matrix4d &T, Eigen::Vector4d &q_quaternion);
