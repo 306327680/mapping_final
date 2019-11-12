@@ -156,10 +156,10 @@ private:
 		SURFACE_FLAT = -1       ///< flat surface point
 	};
 //点的曲度
-	float cloudCurvature[90000];
-	int cloudSortInd[90000];
-	int cloudNeighborPicked[90000];
-	PointLabel cloudLabel[90000];
+	float cloudCurvature[300000];
+	int cloudSortInd[300000];
+	int cloudNeighborPicked[300000];
+	PointLabel cloudLabel[300000];
 
 //13 loam 的特征提取部分
 /** The number of (equally sized) regions used to distribute the feature extraction within a scan. */

@@ -4,6 +4,12 @@ find_package(PCL REQUIRED)
 set( CMAKE_CXX_FLAGS "-std=c++11 -O2" )
 set( CMAKE_EXPORT_COMPILE_COMMANDS on)
 list( APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake_modules )
+find_package( yaml-cpp REQUIRED )
+
+include_directories(${YAML_CPP_SOURCE_DIR}/src)
+include_directories(${YAML_CPP_SOURCE_DIR}/test)
+#测试point to plane icp
+find_package(libpointmatcher CONFIG)
 FIND_PACKAGE( CSparse )
 find_package( G2O REQUIRED )
 find_package( Eigen3  REQUIRED)
@@ -54,7 +60,7 @@ add_library(ground_seg
         include/oneFrameGND/ground_seg.h
         include/oneFrameGND/ground_seg.cpp
         )
-target_link_libraries(ground_seg  ${PCL_LIBRARIES})
+target_link_libraries(ground_seg        yaml-cpp ${PCL_LIBRARIES})
 #main program
 add_executable(mapping main.cpp include/otherFunctions.h)
 target_link_libraries(mapping ${PCL_LIBRARIES}

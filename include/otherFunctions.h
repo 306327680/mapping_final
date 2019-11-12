@@ -168,6 +168,8 @@ std::vector<Eigen::Isometry3d, Eigen::aligned_allocator<Eigen::Isometry3d>> getE
 void genlocalmap(std::vector<Eigen::Isometry3d, Eigen::aligned_allocator<Eigen::Isometry3d>> trans_vector,
 				 std::string filepath,pcl::PointCloud<pcl::PointXYZI>& bigmap){
 	Eigen::Isometry3d pcd_rotate = Eigen::Isometry3d::Identity();
+	PlaneGroundFilter filter;
+	
 	bool kitti = true;
 	featureExtraction Feature;
 	if (kitti){
@@ -208,19 +210,33 @@ void genlocalmap(std::vector<Eigen::Isometry3d, Eigen::aligned_allocator<Eigen::
 			pcl::removeNaNFromPointCloud(*cloud_bef, *cloud_rot, indices1);
 			
 			*cloud_bef = *cloud_rot;
+			float min_intensity = cloud_bef->points[0].intensity;
+			float max_intensity = 0;
+			for (int k = 0; k < cloud_bef->size(); ++k) {
+				
+				if(cloud_bef->points[k].intensity>max_intensity){
+					max_intensity = cloud_bef->points[k].intensity;
+				}
+				if(cloud_bef->points[k].intensity<min_intensity){
+					min_intensity = cloud_bef->points[k].intensity;
+				}
+			}
+			for (int k = 0; k < cloud_bef->size(); ++k) {
+				cloud_bef->points[k].intensity = (cloud_bef->points[k].intensity)*256/max_intensity;
+			}
 			if(tensorvoting){
 				pcl::PassThrough<pcl::PointXYZI> pass;   //1. passthrough
 				pass.setInputCloud (cloud_bef);
 				pass.setFilterFieldName ("x");
-				pass.setFilterLimits (-100, 100);
+				pass.setFilterLimits (-25, 251);
 				pass.filter (*cloud_rot);
 				pass.setInputCloud (cloud_rot);
 				pass.setFilterFieldName ("y");
-				pass.setFilterLimits (-10, 10);
+				pass.setFilterLimits (-100, 100);
 				pass.filter (*cloud_bef);
 				pass.setInputCloud (cloud_bef);
 				pass.setFilterFieldName ("z");
-				pass.setFilterLimits (-10, 1);
+				pass.setFilterLimits (-10, -1.8);
 				pass.filter (*cloud_rot);
 				
 			}
@@ -234,7 +250,8 @@ void genlocalmap(std::vector<Eigen::Isometry3d, Eigen::aligned_allocator<Eigen::
 			
 			Feature.checkorder(cloud_bef,test);
 			Feature.adjustDistortion(test,pcout,out3d);
-			/*	std::stringstream path;
+			/*	//保存每贞
+			 * std::stringstream path;
 				path<<"map/"<<i<<".pcd";
 				writer.write<PointTypeBeam>(path.str(),*pcout, true);
 				  std::stringstream path1;

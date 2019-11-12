@@ -4,6 +4,8 @@
 #include "otherFunctions.h"
 //G2O_USE_TYPE_GROUP(slam2d);
 //生成所有的特征地图
+//todo ground seg的地方还不能用
+
 void genfeaturemap(std::vector<Eigen::Isometry3d, Eigen::aligned_allocator<Eigen::Isometry3d>> trans_vector,
 				 std::string filepath,pcl::PointCloud<pcl::PointXYZI>& bigmap){
 	//0.初始化参数
@@ -29,7 +31,8 @@ void genfeaturemap(std::vector<Eigen::Isometry3d, Eigen::aligned_allocator<Eigen
 	pcl::PointCloud<PointTypeSm>::Ptr segmentedCloud(new pcl::PointCloud<PointTypeSm>);
 	cout<<"start interation"<<endl;
 	pcl::PCDWriter writer;
-	groundSeg gs;
+	//todo 这里改过了,还没改回来接口
+	//groundSeg gs;
 	
 	//	1.迭代添加点云 大循环********
 	for(int i = 0;  i <file_names_ .size();i++){
@@ -43,7 +46,7 @@ void genfeaturemap(std::vector<Eigen::Isometry3d, Eigen::aligned_allocator<Eigen
 			out3d = trans_vector[i].matrix();
 			out3d =  trans_vector[i-1].inverse().matrix() * out3d.matrix();
 			pcl::copyPointCloud(*cloud_rot,cloud_rot_pc);
-			pcl::copyPointCloud(gs.point_cb(cloud_rot_pc),*cloud_bef);
+			//pcl::copyPointCloud(gs.point_cb(cloud_rot_pc),*cloud_bef);
 
 			Feature.checkorder(cloud_bef,test);
 			Feature.adjustDistortion(test,pcout,out3d);//输入点云 输出点云 相对tf
@@ -109,27 +112,45 @@ void genfeaturemap(std::vector<Eigen::Isometry3d, Eigen::aligned_allocator<Eigen
 //	pcl::transformPointCloud(*cloud_add, *cloud_aft, trans_vector[0].inverse().matrix());
 }
 
+//设置输入模式: 1.g2o+pcd的传统模式(pcd+g2o路径) 2.point to plane ICP (需要提供pcd路径)
+int status = 0;
+//输入模式的函数
+int getParam(int argc,char** argv){
+	std::cout<<"设置建图模式: 1.g2o+pcd的传统模式(pcd+g2o路径) 2.point to plane ICP (需要提供pcd路径)"<<std::endl;
+	cin >> status;
+	std::cout <<"status: " <<status<<std::endl;
+	if(status==1){
+		if(argc != 3 && argc != 5 ){
+			std::cout<<"argument error! argument number has to be 3/5! The first one should be pcd path the second should be g2o path"<<std::endl;
+			std::cout<<"./pcd_reader /media/echo/35E4DE63622AD713/fushikang/loop_pcd_single /media/echo/35E4DE63622AD713/fushikang/lihaile.g2o "<<std::endl;
+			std::cout<<"/media/echo/DataDisc/1_pcd_file/pku_bin /media/echo/DataDisc/2_g2o/pku/4edges_out.g2o 500 12210"<<std::endl;
+			return(-1);
+		}
+		filepath = argv[1];
+		g2o_path = argv[2];
+		if (argc == 5){
+			start_id = atoi(argv[3]);
+			end_id = atoi(argv[4]);
+		}
+		std::cout<<"start_id "<<start_id<<" end_id "<<end_id;
+	}
+	if(status==2){
+		if(argc != 2 ){
+			std::cout<<"argument error! argument number has to be 2! The first one should be pcd path"<<std::endl;
+			std::cout<<"e.g.: \n ./pcd_reader /media/echo/35E4DE63622AD713/fushikang/loop_pcd_single"<<std::endl;
+			std::cout<<"输入pcd路径: "<<std::endl;
+			cin >> filepath;
+			cout<<filepath<<endl;
+		} else{
+			filepath = argv[1];
+		}
+	}
+}
 
-int main(int argc,char** argv){
-
-  if(argc != 3 && argc != 5 ){
-    std::cout<<"argument error! argument number has to be 3! The first one shuold be pcd path the second should be g2o path"<<std::endl;
-    std::cout<<"./pcd_reader /media/echo/35E4DE63622AD713/fushikang/loop_pcd_single /media/echo/35E4DE63622AD713/fushikang/lihaile.g2o "<<std::endl;
-    return(-1);
-  }
-	
-  filepath = argv[1];
-  g2o_path = argv[2];
-  if (argc == 5){
-	  start_id = atoi(argv[3]);
-	  end_id = atoi(argv[4]);
-  }
-  std::cout<<"start_id "<<start_id<<" end_id "<<end_id;
-  //得到所有的pcd名字
-  GetFileNames(filepath,"pcd");
-  //得到所有的位姿向量
-  trans_vector = getEigenPoseFromg2oFile(g2o_path);
-  //生成局部地图
+int g2omapping(){
+	//得到所有的位姿向量
+	trans_vector = getEigenPoseFromg2oFile(g2o_path);
+	//生成局部地图
 /*	lmOptimizationSufraceCorner lm;
 	std::vector<double>  vector;
 	Eigen::Isometry3d se3;
@@ -143,15 +164,42 @@ int main(int argc,char** argv){
 		lm.RPYXYZ2eigen(vector,se3);
 		std::cout<<i<<std::endl;
 	}*/
-  pcl::PointCloud<pcl::PointXYZI>::Ptr cloud1(new pcl::PointCloud<pcl::PointXYZI>);
-  cout<<"trans_vector.size() : "<<trans_vector.size() <<" file_names_.size() : "<< file_names_.size()<<endl;
-  if(trans_vector.size() == file_names_.size()){
-	  genfeaturemap(trans_vector,filepath,*cloud1);
-//      genlocalmap(trans_vector,filepath,*cloud1);
-  } else{
-      cout<<"!!!!! PCD & g2o does not have same number "<<endl;
-      return 0;
-  }
+	pcl::PointCloud<pcl::PointXYZI>::Ptr cloud1(new pcl::PointCloud<pcl::PointXYZI>);
+	cout<<"trans_vector.size() : "<<trans_vector.size() <<" file_names_.size() : "<< file_names_.size()<<endl;
+	if(trans_vector.size() == file_names_.size()){
+		//genfeaturemap(trans_vector,filepath,*cloud1);
+		genlocalmap(trans_vector,filepath,*cloud1);
+	} else{
+		cout<<"!!!!! PCD & g2o does not have same number "<<endl;
+		return 0;
+	}
+}
+int point2planeICP(){
+	cout<<file_names_.back()<<endl;
+	return(0);
+}
 
+
+int main(int argc,char** argv){
+
+	//获得参数
+  getParam(argc,argv);
+  //得到所有的pcd名字
+  GetFileNames(filepath,"pcd");
+  
+  switch(status)
+  {
+  	case 1 :
+  		  g2omapping();
+  		  cout << "g2o mapping start！" << endl;
+  		  break;
+  	case 2 :
+  	 	  cout << "point to plane ICP start:" << endl;
+		  point2planeICP();
+		  cout << "point to plane ICP finish!" << endl;
+  	 	  break;
+	default :
+	 	cout << "无效输入" << endl;
+  }
   return(0);
 }

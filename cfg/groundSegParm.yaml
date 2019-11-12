@@ -1,0 +1,9 @@
+sensor_model_: 64
+sensor_height_: 2.2
+clip_height_: 1.0
+min_distance_: 2
+max_distance_: 50.0
+num_iter_: 20
+num_lpr_: 20
+th_seeds_: 1.2
+th_dist_: 0.15

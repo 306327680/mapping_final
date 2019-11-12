@@ -1,74 +1,104 @@
-//
-// Created by echo on 2019/8/28.
-//
+#pragma once
 
-#ifndef PORT_SIMULATOR_GROUND_SEG_H
-#define PORT_SIMULATOR_GROUND_SEG_H
-
-
-
+#include <yaml-cpp/yaml.h>
+// For disable PCL complile lib, to use PointXYZIR
+#define PCL_NO_PRECOMPILE
 
 #include <pcl/point_types.h>
 #include <pcl/conversions.h>
-#include <pcl/io/pcd_io.h>
+
+#include <pcl/filters/filter.h>
+#include <pcl/common/centroid.h>
 #include <pcl/filters/extract_indices.h>
 
+// using eigen lib
+#include <Eigen/Dense>
 
 
-#define CLIP_HEIGHT 0.2 //截取掉高于雷达自身0.2米的点
-#define MIN_DISTANCE 2.4
-#define RADIAL_DIVIDER_ANGLE 0.18// 我们对360度进行微分，分成若干等份，每一份的角度为0.18度，这个微分的等份近似的可以看作一条射线，
-//如下图所示,图中是一个激光雷达的纵截面的示意图，雷达由下至上分布多个激光器，发出如图所示的放射状激光束，这些激光束在平地上即表现为，图中的水平线即为一条射线：
-#define SENSOR_HEIGHT 1.78
+namespace velodyne_pointcloud
+{
+/** Euclidean Velodyne coordinate, including intensity and ring number. */
+	struct PointXYZIR
+	{
+		PCL_ADD_POINT4D;                // quad-word XYZ
+		float intensity;                ///< laser intensity reading
+		uint16_t ring;                  ///< laser ring number
+		EIGEN_MAKE_ALIGNED_OPERATOR_NEW // ensure proper alignment
+	} EIGEN_ALIGN16;
+	
+}; // namespace velodyne_pointcloud
 
-#define concentric_divider_distance_ 0.1 //0.1 meters default
-#define min_height_threshold_ 0.05
-#define local_max_slope_ 8   //max slope of the ground between points, degree
-#define general_max_slope_ 5 //max slope of the ground in entire point cloud, degree
-#define reclass_distance_threshold_ 0.2
+POINT_CLOUD_REGISTER_POINT_STRUCT(velodyne_pointcloud::PointXYZIR,
+								  (float, x, x)(float, y, y)(float, z, z)(float, intensity, intensity)(uint16_t, ring, ring))
 
-class groundSeg
+//Customed Point Struct for holding clustered points
+namespace plane_ground_filter
+{
+/** Euclidean Velodyne coordinate, including intensity and ring number, and label. */
+	struct PointXYZIRL
+	{
+		PCL_ADD_POINT4D;                // quad-word XYZ
+		float intensity;                ///< laser intensity reading
+		uint16_t ring;                  ///< laser ring number
+		uint16_t label;                 ///< point label
+		EIGEN_MAKE_ALIGNED_OPERATOR_NEW // ensure proper alignment
+	} EIGEN_ALIGN16;
+	
+}; // namespace plane_ground_filter
+
+#define SLRPointXYZIRL plane_ground_filter::PointXYZIRL
+#define VPoint velodyne_pointcloud::PointXYZIR
+#define RUN pcl::PointCloud<SLRPointXYZIRL>
+
+// Register custom point struct according to PCL
+POINT_CLOUD_REGISTER_POINT_STRUCT(plane_ground_filter::PointXYZIRL,
+								  (float, x, x)(float, y, y)(float, z, z)(float, intensity, intensity)(uint16_t, ring, ring)(uint16_t, label, label))
+
+using Eigen::JacobiSVD;
+using Eigen::MatrixXf;
+using Eigen::VectorXf;
+
+class PlaneGroundFilter
 {
 
 private:
+ 
+	std::string point_topic_;
 	
-	struct PointXYZIRTColor
-	{
-		pcl::PointXYZI point;
-		
-		float radius; //cylindric coords on XY Plane
-		float theta;  //angle deg on XY plane
-		
-		size_t radial_div;     //index of the radial divsion to which this point belongs to
-		size_t concentric_div; //index of the concentric division to which this points belongs to
-		size_t original_index; //index of this point in the source pointcloud
-	};
-	typedef std::vector<PointXYZIRTColor> PointCloudXYZIRTColor;
+	int sensor_model_;
+	double sensor_height_, clip_height_, min_distance_, max_distance_;
+	int num_seg_ = 1;
+	int num_iter_, num_lpr_;
+	double th_seeds_, th_dist_;
+	// Model parameter for ground plane fitting
+	// The ground plane model is: ax+by+cz+d=0
+	// Here normal:=[a,b,c], d=d
+	// th_dist_d_ = threshold_dist - d
+	float d_, th_dist_d_;
+	MatrixXf normal_;
 	
-	size_t radial_dividers_num_;
-	size_t concentric_dividers_num_;
-	pcl::PCDWriter writer_pcd;
+	// pcl::PointCloud<VPoint>::Ptr g_seeds_pc(new pcl::PointCloud<VPoint>());
+	// pcl::PointCloud<VPoint>::Ptr g_ground_pc(new pcl::PointCloud<VPoint>());
+	// pcl::PointCloud<VPoint>::Ptr g_not_ground_pc(new pcl::PointCloud<VPoint>());
+	// pcl::PointCloud<SLRPointXYZIRL>::Ptr g_all_pc(new pcl::PointCloud<SLRPointXYZIRL>());
+	
+	pcl::PointCloud<VPoint>::Ptr g_seeds_pc;
+	pcl::PointCloud<VPoint>::Ptr g_ground_pc;
+	pcl::PointCloud<VPoint>::Ptr g_not_ground_pc;
+	pcl::PointCloud<SLRPointXYZIRL>::Ptr g_all_pc;
+	
+	void estimate_plane_(void);
+	void extract_initial_seeds_(const pcl::PointCloud<VPoint> &p_sorted);
+	void post_process(const pcl::PointCloud<VPoint>::Ptr in, const pcl::PointCloud<VPoint>::Ptr out);
 
-	
-	void clip_above(double clip_height, const pcl::PointCloud<pcl::PointXYZI>::Ptr in, const pcl::PointCloud<pcl::PointXYZI>::Ptr out);
-	
-	void remove_close_pt(double min_distance, const pcl::PointCloud<pcl::PointXYZI>::Ptr in, const pcl::PointCloud<pcl::PointXYZI>::Ptr out);
-	
-	void XYZI_to_RTZColor(const pcl::PointCloud<pcl::PointXYZI>::Ptr in_cloud,
-						  PointCloudXYZIRTColor &out_organized_points,
-						  std::vector<pcl::PointIndices> &out_radial_divided_indices,
-						  std::vector<PointCloudXYZIRTColor> &out_radial_ordered_clouds);
-	
-	void classify_pc(std::vector<PointCloudXYZIRTColor> &in_radial_ordered_clouds,
-					 pcl::PointIndices &out_ground_indices,
-					 pcl::PointIndices &out_no_ground_indices);
-	
+	void clip_above(const pcl::PointCloud<VPoint>::Ptr in,
+					const pcl::PointCloud<VPoint>::Ptr out);
+	void remove_close_far_pt(const pcl::PointCloud<VPoint>::Ptr in,
+							 const pcl::PointCloud<VPoint>::Ptr out);
 
 public:
-	groundSeg(){};
-	~groundSeg(){};
-	pcl::PointCloud<pcl::PointXYZI> point_cb(pcl::PointCloud<pcl::PointXYZI> point_in);
+	PlaneGroundFilter();
+	~PlaneGroundFilter();
+	void readParam();
+	void point_cb(const pcl::PointCloud<VPoint> laserCloudIn1);
 };
-
-#endif //PORT_SIMULATOR_GROUND_SEG_H
-
