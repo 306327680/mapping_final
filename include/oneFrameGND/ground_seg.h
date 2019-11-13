@@ -77,28 +77,30 @@ private:
 	float d_, th_dist_d_;
 	MatrixXf normal_;
 	
-	// pcl::PointCloud<VPoint>::Ptr g_seeds_pc(new pcl::PointCloud<VPoint>());
-	// pcl::PointCloud<VPoint>::Ptr g_ground_pc(new pcl::PointCloud<VPoint>());
-	// pcl::PointCloud<VPoint>::Ptr g_not_ground_pc(new pcl::PointCloud<VPoint>());
+	// pcl::PointCloud<pcl::PointXYZI>::Ptr g_seeds_pc(new pcl::PointCloud<pcl::PointXYZI>());
+	// pcl::PointCloud<pcl::PointXYZI>::Ptr g_ground_pc(new pcl::PointCloud<pcl::PointXYZI>());
+	// pcl::PointCloud<pcl::PointXYZI>::Ptr g_not_ground_pc(new pcl::PointCloud<pcl::PointXYZI>());
 	// pcl::PointCloud<SLRPointXYZIRL>::Ptr g_all_pc(new pcl::PointCloud<SLRPointXYZIRL>());
 	
-	pcl::PointCloud<VPoint>::Ptr g_seeds_pc;
-	pcl::PointCloud<VPoint>::Ptr g_ground_pc;
-	pcl::PointCloud<VPoint>::Ptr g_not_ground_pc;
-	pcl::PointCloud<SLRPointXYZIRL>::Ptr g_all_pc;
+	
 	
 	void estimate_plane_(void);
-	void extract_initial_seeds_(const pcl::PointCloud<VPoint> &p_sorted);
-	void post_process(const pcl::PointCloud<VPoint>::Ptr in, const pcl::PointCloud<VPoint>::Ptr out);
+	void extract_initial_seeds_(const pcl::PointCloud<pcl::PointXYZI> &p_sorted);
+	void post_process(const pcl::PointCloud<pcl::PointXYZI>::Ptr in, const pcl::PointCloud<pcl::PointXYZI>::Ptr out);
 
-	void clip_above(const pcl::PointCloud<VPoint>::Ptr in,
-					const pcl::PointCloud<VPoint>::Ptr out);
-	void remove_close_far_pt(const pcl::PointCloud<VPoint>::Ptr in,
-							 const pcl::PointCloud<VPoint>::Ptr out);
+	void clip_above(const pcl::PointCloud<pcl::PointXYZI>::Ptr in,
+					const pcl::PointCloud<pcl::PointXYZI>::Ptr out);
+	void remove_close_far_pt(const pcl::PointCloud<pcl::PointXYZI>::Ptr in,
+							 const pcl::PointCloud<pcl::PointXYZI>::Ptr out);
 
 public:
 	PlaneGroundFilter();
 	~PlaneGroundFilter();
 	void readParam();
-	void point_cb(const pcl::PointCloud<VPoint> laserCloudIn1);
+	pcl::PointCloud<pcl::PointXYZI>::Ptr g_seeds_pc;
+	pcl::PointCloud<pcl::PointXYZI>::Ptr g_ground_pc;
+	pcl::PointCloud<pcl::PointXYZI>::Ptr g_not_ground_pc;
+	pcl::PointCloud<SLRPointXYZIRL>::Ptr g_all_pc;
+	pcl::PointCloud<pcl::PointXYZI>::Ptr final_no_ground;
+	void point_cb(const pcl::PointCloud<pcl::PointXYZI> laserCloudIn1);
 };
