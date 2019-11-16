@@ -164,6 +164,8 @@ int g2omapping(){
 		lm.RPYXYZ2eigen(vector,se3);
 		std::cout<<i<<std::endl;
 	}*/
+	//样条插值
+	testspline(trans_vector);
 	pcl::PointCloud<pcl::PointXYZI>::Ptr cloud1(new pcl::PointCloud<pcl::PointXYZI>);
 	cout<<"trans_vector.size() : "<<trans_vector.size() <<" file_names_.size() : "<< file_names_.size()<<endl;
 	if(trans_vector.size() == file_names_.size()){
@@ -178,7 +180,6 @@ int point2planeICP(){
 	cout<<file_names_.back()<<endl;
 	return(0);
 }
-
 
 int main(int argc,char** argv){
 

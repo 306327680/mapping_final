@@ -38,6 +38,8 @@
 #include "distortion/beam_separate.h"
 #include "mapping/lmOptimizationSufraceCorner.h"
 #include "oneFrameGND/ground_seg.h"
+#include "spline/experiment.h"
+#include "g2oIO/PoseGraphIO.h"
 
 // 1. 参数初始化
 bool tensorvoting = true;
@@ -56,6 +58,9 @@ int past = 0;
 std::string save_g2o_path = "/home/echo/small_program/test.g2o";
 //存储g2o为iso3d
 std::vector<Eigen::Isometry3d, Eigen::aligned_allocator<Eigen::Isometry3d>> trans_vector;
+
+
+
 
 // 2. 得到名称
 bool GetFileNames(const std::string directory,const std::string suffix){
@@ -163,7 +168,7 @@ std::vector<Eigen::Isometry3d, Eigen::aligned_allocator<Eigen::Isometry3d>> getE
 	return vT;
 }
 
-//(1). 读trans和附近pcd拼成点云
+//6. 读trans和附近pcd拼成点云
 //1.trans vector 2.查找的位置 3.点云读取的路径
 void genlocalmap(std::vector<Eigen::Isometry3d, Eigen::aligned_allocator<Eigen::Isometry3d>> trans_vector,
 				 std::string filepath,pcl::PointCloud<pcl::PointXYZI>& bigmap){
@@ -338,4 +343,25 @@ void genlocalmap(std::vector<Eigen::Isometry3d, Eigen::aligned_allocator<Eigen::
 	cout<<"map saving"<<endl;
 	writer.write<pcl::PointXYZI>("final_map.pcd",*cloud_add, true);
 }
+
+//7. 用来测试插值的 输入: 位姿vector
+void testspline(std::vector<Eigen::Isometry3d, Eigen::aligned_allocator<Eigen::Isometry3d>> trans_vector){
+	Eigen::Isometry3d lastodom,latest_odom,lidar_latest,temp_new;
+	PoseGraphIO saveGraph;
+	for (int j = 0; j < trans_vector.size()-3; ++j) {
+		Eigen::Isometry3d t1,t2,t3,t4;
+		t1 = trans_vector[j];
+		t2 = trans_vector[j+1];
+		t3 = trans_vector[j+2];
+		t4 = trans_vector[j+3];
+		double num =3;//两个位姿之间插几个
+		for (double i = 0; i < num; ++i) {
+			SplineFusion sf;
+			saveGraph.insertPose(sf.cumulativeForm(t1,t2,t3,t4,i/num));
+		}
+	}
+	//保存g2o
+	saveGraph.saveGraph("/home/echo/test_ws/spline_g2o/a.g2o");
+}
+
 #endif //PCD_COMPARE_MAIN_H

@@ -94,4 +94,6 @@ target_link_libraries(mapping ${PCL_LIBRARIES}
         g2o_types_slam3d
         ${CSPARSE_LIBRARY}
         g2o_csparse_extension
-        g2o_types_slam3d)
+        g2o_types_slam3d
+        poseIO
+        spline)
