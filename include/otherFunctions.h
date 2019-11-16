@@ -239,7 +239,7 @@ void genlocalmap(std::vector<Eigen::Isometry3d, Eigen::aligned_allocator<Eigen::
 				pass.filter (*cloud_rot);
 				pass.setInputCloud (cloud_rot);
 				pass.setFilterFieldName ("y");
-				pass.setFilterLimits (-100, 100);
+				pass.setFilterLimits (-50, 50);
 				pass.filter (*cloud_bef);
 				pass.setInputCloud (cloud_bef);
 				pass.setFilterFieldName ("z");
@@ -290,7 +290,7 @@ void genlocalmap(std::vector<Eigen::Isometry3d, Eigen::aligned_allocator<Eigen::
 			if(!tensorvoting){
 				if (i % 100 == 50){
 					sor.setInputCloud(cloud_add);                   //设置需要过滤的点云给滤波对象
-					sor.setLeafSize(0.2, 0.2, 0.2);               //设置滤波时创建的体素大小为2cm立方体，通过设置该值可以直接改变滤波结果，值越大结果越稀疏
+					sor.setLeafSize(0.05, 0.05, 0.05);               //设置滤波时创建的体素大小为2cm立方体，通过设置该值可以直接改变滤波结果，值越大结果越稀疏
 					sor.filter(*cloud_aft);
 					*cloud_add = *cloud_aft;
 					std::cout.width(3);//i的输出为3位宽
@@ -302,10 +302,13 @@ void genlocalmap(std::vector<Eigen::Isometry3d, Eigen::aligned_allocator<Eigen::
 					std::cout << "\b\b\b\b";//回删三个字符，使数字在原地变化
 				}
 			}
-			
-			cloud_aft->clear();
-			cloud_bef->clear();
 		}
+		int percent = 0;
+		int size_all = 0;
+		size_all = static_cast<int>(file_names_ .size());
+		percent =i*100/size_all;
+		std::cout << percent << "%"<<std::endl;
+		std::cout << "\b\b\b\b";//回删三个字符，使数字在原地变化
 	}
 	fout.close();
 	cout<<"end interation"<<endl;
@@ -325,13 +328,13 @@ void genlocalmap(std::vector<Eigen::Isometry3d, Eigen::aligned_allocator<Eigen::
 	// outrem.setMinNeighborsInRadius (5);
 	// // 应用滤波器
 	// outrem.filter (*cloud_aft);
-	bigmap.clear();
+/*	bigmap.clear();
 	for (int l = 0; l < cloud_add->size(); ++l) {
-		if(cloud_add->points[l].intensity>(float)14.41 && cloud_add->points[l].intensity<(float)14.6){
+		if(cloud_add->points[l].intensity>(float)14.4860 && cloud_add->points[l].intensity<(float)14.96){
 			bigmap.push_back(cloud_add->points[l]);
 		}
 	}
-	*cloud_add = bigmap ;
+	*cloud_add = bigmap ;*/
 	cout<<"map saving"<<endl;
 	writer.write<pcl::PointXYZI>("final_map.pcd",*cloud_add, true);
 }

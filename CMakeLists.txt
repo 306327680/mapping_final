@@ -5,7 +5,7 @@ set( CMAKE_CXX_FLAGS "-std=c++11 -O2" )
 set( CMAKE_EXPORT_COMPILE_COMMANDS on)
 list( APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake_modules )
 find_package( yaml-cpp REQUIRED )
-
+#找到各种sb库
 include_directories(${YAML_CPP_SOURCE_DIR}/src)
 include_directories(${YAML_CPP_SOURCE_DIR}/test)
 #测试point to plane icp
@@ -31,8 +31,15 @@ INCLUDE_DIRECTORIES(${CSPARSE_INCLUDE_DIR})
 include_directories(${PCL_INCLUDE_DIRS})
 link_directories(${PCL_LIBRARIES_DIRS})
 add_definitions(${PCL_DEFINITIONS})
+
+find_package(G2O REQUIRED)
+include_directories(${G2O_INCLUDE_DIRS})
+
 #1.sophus
-ADD_LIBRARY(sophus SHARED include/sophus/se3.cpp include/sophus/so3.cpp)
+ADD_LIBRARY(sophus SHARED include/sophus/se3.cpp
+        include/sophus/so3.cpp
+        include/sophus/so3.h
+        include/sophus/se3.h)
 #2.mapping lm
 add_library(mapping_lm
         include/mapping/lmOptimizationSufraceCorner.cpp
@@ -55,12 +62,26 @@ add_library(odom
         include/FirstPersonViewFilter/FP_PC_viewing.cpp)
 #        include/mapping/mapping.cpp
 #        include/mapping/mapping.h)
-#4. ground segmentation
+
+
+#4. ground segmentation 地面分割
 add_library(ground_seg
         include/oneFrameGND/ground_seg.h
         include/oneFrameGND/ground_seg.cpp
         )
 target_link_libraries(ground_seg        yaml-cpp ${PCL_LIBRARIES})
+
+#5. spline fusion 插值
+add_library(spline
+        include/spline/experiment.cpp
+        include/spline/experiment.h
+        )
+target_link_libraries(spline ${PCL_LIBRARIES} sophus)
+
+#6. pose graph IO
+
+ADD_LIBRARY(poseIO SHARED include/g2oIO/PoseGraphIO.h include/g2oIO/PoseGraphIO.cpp)
+target_link_libraries(poseIO      g2o_core g2o_stuff g2o_types_slam3d ${CHOLMOD_LIBRARIES})
 #main program
 add_executable(mapping main.cpp include/otherFunctions.h)
 target_link_libraries(mapping ${PCL_LIBRARIES}
