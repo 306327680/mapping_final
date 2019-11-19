@@ -177,7 +177,21 @@ int g2omapping(){
 	}
 }
 int point2planeICP(){
-	cout<<file_names_.back()<<endl;
+	//点云缓冲
+	pcl::PointCloud<pcl::PointXYZI> cloud_bef;
+	pcl::PointCloud<pcl::PointXYZI>::Ptr cloud_rot(new pcl::PointCloud<pcl::PointXYZI>);
+	util tools;
+	pcl::PCDWriter writer;
+	for(int i = 1;  i <file_names_ .size();i++){
+		if (i>start_id && i<end_id) {
+			pcl::io::loadPCDFile<pcl::PointXYZI>(file_names_[i], cloud_bef);
+			std::vector<int> indices1;
+			pcl::removeNaNFromPointCloud(cloud_bef, *cloud_rot, indices1);
+			std::cout<<file_names_[i]<<std::endl;
+			tools.GetPointCloudBeam(*cloud_rot,cloud_bef);
+			writer.write("test.pcd",cloud_bef, false);
+		}
+	}
 	return(0);
 }
 

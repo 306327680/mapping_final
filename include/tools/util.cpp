@@ -85,3 +85,60 @@ util::getEigenPoseFromg2oFile(std::string &g2ofilename) {
     poses = vT;
     return vT;
 }
+//todo 回头写一个kmeans的
+void util::GetPointCloudBeam(pcl::PointCloud<pcl::PointXYZI> pc_in, pcl::PointCloud<pcl::PointXYZI>& pc_out) {
+	//RSBPEARL
+	float Rx_ = 0.01697;
+	float Ry_ = -0.0085;
+	float Rz_ = 0.12644;
+	pc_out.clear();
+	pcl::PointCloud<pcl::PointXYZI>::Ptr cloud_bef (new pcl::PointCloud<pcl::PointXYZI>());
+	pcl::PointCloud<pcl::PointXYZI>::Ptr cloud_to_pub (new pcl::PointCloud<pcl::PointXYZI>());
+	pcl::PointCloud<pcl::PointXYZI>::Ptr select_points (new pcl::PointCloud<pcl::PointXYZI>());
+
+	*cloud_bef = pc_in;
+	std::vector<int> indices1;
+	std::vector<int> beam_kind;
+	std::vector<int> beam_kind_unique;
+	std::vector<int> temp;
+	//找到线对应的角度
+	//
+	double verticalAngle;
+	if(1){
+		//找到线束分类 64线 atan2 5389 bpreal 90 arcsin()
+		for (int j = 0; j < cloud_bef->size(); j = j+1) {
+			
+			double theta_h = -atan2(cloud_bef->points[j].y,cloud_bef->points[j].x);
+			double theta_v =  (atan(((cloud_bef->points[j].z-Rz_)*cos(theta_h))/(cloud_bef->points[j].x-Rx_*cos(theta_h))));
+			beam_kind.push_back(int(theta_v*180.0 / M_PI));
+		}
+		beam_kind_unique = unique_element_in_vector(beam_kind);
+		//排序
+		std::sort (beam_kind_unique.begin(), beam_kind_unique.end());
+		std::cout<<"beam amount: "<<beam_kind_unique.size()<<std::endl;
+		
+		//第一次range大小
+		for (int j = 0; j < cloud_bef->size(); ++j) {
+			pcl::PointXYZI temp;
+			temp.x = pc_in[j].x;
+			temp.y = pc_in[j].y;
+			temp.z = pc_in[j].z;
+			
+
+			double theta_h = -atan2(temp.y,temp.x);
+			double theta_v =  (atan(((temp.z-Rz_)*cos(theta_h))/(temp.x-Rx_*cos(theta_h))));
+			temp.intensity =  theta_v*180.0/M_PI;
+			
+			for (int i = 0; i < beam_kind_unique.size(); ++i) {
+				if(int(temp.intensity) == beam_kind_unique[i]){
+					pcl::PointXYZI temp;
+					temp.x = pc_in[j].x;
+					temp.y = pc_in[j].y;
+					temp.z = pc_in[j].z;
+					temp.intensity = i;
+					pc_out.push_back(temp);
+				}
+			}
+		}
+	}
+}

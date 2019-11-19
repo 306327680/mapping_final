@@ -15,7 +15,7 @@
 #include <g2o/core/block_solver.h>
 #include <g2o/core/optimization_algorithm_levenberg.h>
 #include <g2o/solvers/eigen/linear_solver_eigen.h>
-#include <sophus/se3.hpp>
+#include <sophus/se3.h>
 
 #ifndef POSEGRAPHTOOLS_POSEGRAPHIO_H
 #define POSEGRAPHTOOLS_POSEGRAPHIO_H

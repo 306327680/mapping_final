@@ -49,8 +49,8 @@ std::string filename;
 std::string filepath = "/media/echo/35E4DE63622AD713/test/";
 Eigen::Isometry3d curICP = Eigen::Isometry3d::Identity();
 int cur_id = 0;
-int start_id = 4000;//设置开始结束的点
-int end_id = 4100;
+int start_id = 0;//设置开始结束的点
+int end_id = 2;
 //打开g2o文件路径
 std::string g2o_path = "null";
 int past = 0;
@@ -209,6 +209,7 @@ void genlocalmap(std::vector<Eigen::Isometry3d, Eigen::aligned_allocator<Eigen::
 	pcl::PCDWriter writer;
 	float min_intensity;
 	float max_intensity;
+	util tools;
 	//1.遍历所有点
 	for(int i = 1;  i <file_names_ .size();i++){
 		if (i>start_id && i<end_id) {
@@ -217,7 +218,7 @@ void genlocalmap(std::vector<Eigen::Isometry3d, Eigen::aligned_allocator<Eigen::
 			//读点云
 			pcl::io::loadPCDFile<pcl::PointXYZI>(file_names_[i], *cloud_bef);
 			pcl::removeNaNFromPointCloud(*cloud_bef, *cloud_rot, indices1);
-			
+
 			*cloud_bef = *cloud_rot;
 			//调整pandar的反射率
 			min_intensity = cloud_bef->points[0].intensity;
@@ -307,13 +308,14 @@ void genlocalmap(std::vector<Eigen::Isometry3d, Eigen::aligned_allocator<Eigen::
 					std::cout << "\b\b\b\b";//回删三个字符，使数字在原地变化
 				}
 			}
+			int percent = 0;
+			int size_all = 0;
+			size_all = end_id-start_id;
+			percent =i*100/size_all;
+			std::cout << percent << "%"<<std::endl;
+			std::cout << "\b \b \b \b";//回删三个字符，使数字在原地变化
 		}
-		int percent = 0;
-		int size_all = 0;
-		size_all = static_cast<int>(file_names_ .size());
-		percent =i*100/size_all;
-		std::cout << percent << "%"<<std::endl;
-		std::cout << "\b\b\b\b";//回删三个字符，使数字在原地变化
+
 	}
 	fout.close();
 	cout<<"end interation"<<endl;

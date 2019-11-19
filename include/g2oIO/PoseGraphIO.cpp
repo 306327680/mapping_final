@@ -47,7 +47,7 @@ void PoseGraphIO::saveGraph(std::string g2o_path) {
 	}
 /*	optimizer.initializeOptimization();
 	optimizer.optimize(30);*/
-	optimizer.save("/home/echo/test_ws/g2o/result.g2o");
+	optimizer.save(g2o_path.c_str());
 	std::cout << "result saved!" << std::endl;
 }
 

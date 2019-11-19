@@ -27,7 +27,7 @@
 G2O_USE_TYPE_GROUP(slam3d);
 #define PCL_NO_PRECOMPILE
 #include <pcl/point_types.h>
-
+#include <pcl/io/pcd_io.h>
 
 //新的点云类型
 
@@ -90,6 +90,16 @@ public:
     void timeUsed();
     //读取pcd序列
 	bool GetFileNames(const std::string directory,const std::string suffix ="pcd");
+	void GetPointCloudBeam(pcl::PointCloud<pcl::PointXYZI> pc_in,pcl::PointCloud<pcl::PointXYZI>& pc_out);
+	std::vector<int> unique_element_in_vector(std::vector<int> v){
+		std::vector<int>::iterator vector_iterator;
+		std::sort(v.begin(),v.end());
+		vector_iterator = std::unique(v.begin(),v.end());
+		if(vector_iterator != v.end()){
+			v.erase(vector_iterator,v.end());
+		}
+		return v;
+	}
 	//读取g2o位姿
 	std::vector<Eigen::Isometry3d, Eigen::aligned_allocator<Eigen::Isometry3d>> getEigenPoseFromg2oFile(
 			std::string &g2ofilename);
