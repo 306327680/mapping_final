@@ -180,6 +180,7 @@ int point2planeICP(){
 	//点云缓冲
 	pcl::PointCloud<pcl::PointXYZI> cloud_bef;
 	pcl::PointCloud<pcl::PointXYZI>::Ptr cloud_rot(new pcl::PointCloud<pcl::PointXYZI>);
+	pcl::PointCloud<pcl::PointXYZINormal>::Ptr result(new pcl::PointCloud<pcl::PointXYZINormal>);
 	util tools;
 	pcl::PCDWriter writer;
 	for(int i = 1;  i <file_names_ .size();i++){
@@ -188,8 +189,8 @@ int point2planeICP(){
 			std::vector<int> indices1;
 			pcl::removeNaNFromPointCloud(cloud_bef, *cloud_rot, indices1);
 			std::cout<<file_names_[i]<<std::endl;
-			tools.GetPointCloudBeam(*cloud_rot,cloud_bef);
-			writer.write("test.pcd",cloud_bef, false);
+			tools.GetPointCloudBeam(*cloud_rot,*result);
+			writer.write("test.pcd",*result, false);
 		}
 	}
 	return(0);

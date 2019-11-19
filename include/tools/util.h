@@ -90,7 +90,8 @@ public:
     void timeUsed();
     //读取pcd序列
 	bool GetFileNames(const std::string directory,const std::string suffix ="pcd");
-	void GetPointCloudBeam(pcl::PointCloud<pcl::PointXYZI> pc_in,pcl::PointCloud<pcl::PointXYZI>& pc_out);
+	//PointXYZINormal normal x 为线数
+	void GetPointCloudBeam(pcl::PointCloud<pcl::PointXYZI> pc_in,pcl::PointCloud<pcl::PointXYZINormal>& pc_out);
 	std::vector<int> unique_element_in_vector(std::vector<int> v){
 		std::vector<int>::iterator vector_iterator;
 		std::sort(v.begin(),v.end());

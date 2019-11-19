@@ -86,7 +86,7 @@ util::getEigenPoseFromg2oFile(std::string &g2ofilename) {
     return vT;
 }
 //todo 回头写一个kmeans的
-void util::GetPointCloudBeam(pcl::PointCloud<pcl::PointXYZI> pc_in, pcl::PointCloud<pcl::PointXYZI>& pc_out) {
+void util::GetPointCloudBeam(pcl::PointCloud<pcl::PointXYZI> pc_in, pcl::PointCloud<pcl::PointXYZINormal>& pc_out) {
 	//RSBPEARL
 	float Rx_ = 0.01697;
 	float Ry_ = -0.0085;
@@ -123,20 +123,22 @@ void util::GetPointCloudBeam(pcl::PointCloud<pcl::PointXYZI> pc_in, pcl::PointCl
 			temp.x = pc_in[j].x;
 			temp.y = pc_in[j].y;
 			temp.z = pc_in[j].z;
-			
+			temp.intensity = pc_in[j].intensity;
 
 			double theta_h = -atan2(temp.y,temp.x);
 			double theta_v =  (atan(((temp.z-Rz_)*cos(theta_h))/(temp.x-Rx_*cos(theta_h))));
-			temp.intensity =  theta_v*180.0/M_PI;
+			theta_v =  theta_v*180.0/M_PI;
 			
 			for (int i = 0; i < beam_kind_unique.size(); ++i) {
-				if(int(temp.intensity) == beam_kind_unique[i]){
-					pcl::PointXYZI temp;
-					temp.x = pc_in[j].x;
-					temp.y = pc_in[j].y;
-					temp.z = pc_in[j].z;
-					temp.intensity = i;
-					pc_out.push_back(temp);
+				if(int(theta_v) == beam_kind_unique[i]){
+					pcl::PointXYZINormal temp1;
+					
+					temp1.x = pc_in[j].x;
+					temp1.y = pc_in[j].y;
+					temp1.z = pc_in[j].z;
+					temp1.normal_x = i;
+					temp1.intensity = temp.intensity;
+					pc_out.push_back(temp1);
 				}
 			}
 		}
