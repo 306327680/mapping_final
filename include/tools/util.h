@@ -28,6 +28,7 @@ G2O_USE_TYPE_GROUP(slam3d);
 #define PCL_NO_PRECOMPILE
 #include <pcl/point_types.h>
 #include <pcl/io/pcd_io.h>
+#include <opencv/cv.h>
 
 //新的点云类型
 
@@ -88,10 +89,16 @@ public:
     void timeCalcSet(std::string name);
     void timeCalcSet();
     void timeUsed();
+    
+    //每根的点云
+	std::vector<pcl::PointCloud<pcl::PointXYZINormal>> beam_pcd;
     //读取pcd序列
 	bool GetFileNames(const std::string directory,const std::string suffix ="pcd");
-	//PointXYZINormal normal x 为线数
-	void GetPointCloudBeam(pcl::PointCloud<pcl::PointXYZI> pc_in,pcl::PointCloud<pcl::PointXYZINormal>& pc_out);
+	//PointXYZINormal normal x 为线数 y 为时间
+	void GetPointCloudBeam(pcl::PointCloud<pcl::PointXYZINormal> pc_in,pcl::PointCloud<pcl::PointXYZINormal>& pc_out);
+	//提取边缘点
+	void GetBeamEdge(pcl::PointCloud<pcl::PointXYZINormal> pc_in,pcl::PointCloud<pcl::PointXYZINormal>& pc_out);
+	
 	std::vector<int> unique_element_in_vector(std::vector<int> v){
 		std::vector<int>::iterator vector_iterator;
 		std::sort(v.begin(),v.end());

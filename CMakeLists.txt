@@ -62,6 +62,7 @@ add_library(odom
         include/FirstPersonViewFilter/FP_PC_viewing.cpp)
 #        include/mapping/mapping.cpp
 #        include/mapping/mapping.h)
+target_link_libraries(odom ${OpenCV_LIBS})
 
 
 #4. ground segmentation 地面分割

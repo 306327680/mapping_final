@@ -2,31 +2,30 @@
 <project version="4">
   <component name="CMakeRunConfigurationManager" shouldGenerate="true" shouldDeleteObsolete="true">
     <generated>
-      <config projectName="pcd_compare" targetName="mapping_lm" />
-      <config projectName="pcd_compare" targetName="ground_seg" />
-      <config projectName="pcd_compare" targetName="mapping" />
-      <config projectName="pcd_compare" targetName="sophus" />
       <config projectName="pcd_compare" targetName="odom" />
+      <config projectName="pcd_compare" targetName="ground_seg" />
+      <config projectName="pcd_compare" targetName="sophus" />
+      <config projectName="pcd_compare" targetName="mapping_lm" />
+      <config projectName="pcd_compare" targetName="poseIO" />
+      <config projectName="pcd_compare" targetName="spline" />
+      <config projectName="pcd_compare" targetName="mapping" />
     </generated>
   </component>
   <component name="CMakeSettings">
     <configurations>
       <configuration PROFILE_NAME="Debug" CONFIG_NAME="Debug" />
+      <configuration PROFILE_NAME="Release" CONFIG_NAME="Release" />
     </configurations>
   </component>
   <component name="ChangeListManager">
     <list default="true" id="0cf6a132-7d76-466a-a186-201a5e3e35f3" name="Default" comment="latest">
-      <change afterPath="$PROJECT_DIR$/include/distortion/util.cpp" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/include/distortion/util.h" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/include/oneFrameGND/ground_seg.cpp" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/include/oneFrameGND/ground_seg.h" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/CMakeLists.txt" beforeDir="false" afterPath="$PROJECT_DIR$/CMakeLists.txt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/include/distortion/beam_separate.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/include/distortion/beam_separate.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/include/distortion/beam_separate.h" beforeDir="false" afterPath="$PROJECT_DIR$/include/distortion/beam_separate.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/include/mapping/lmOptimizationSufraceCorner.h" beforeDir="false" afterPath="$PROJECT_DIR$/include/mapping/lmOptimizationSufraceCorner.h" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/include/otherFunctions.h" beforeDir="false" afterPath="$PROJECT_DIR$/include/otherFunctions.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/include/tools/util.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/include/tools/util.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/include/tools/util.h" beforeDir="false" afterPath="$PROJECT_DIR$/include/tools/util.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/main.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/main.cpp" afterDir="false" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="SHOW_DIALOG" value="false" />
@@ -49,28 +48,29 @@
   </component>
   <component name="OCFindUsagesOptions" text="true" ivars="false" properties="true" derivedClasses="false" />
   <component name="OCResolveContextSettings">
-    <option name="configuration" value="0-mapping" />
+    <option name="configuration" value="0-spline" />
   </component>
   <component name="ProjectId" id="1Q0LjOUlToWwhBNu79k14NpZmai" />
   <component name="PropertiesComponent">
     <property name="SHARE_PROJECT_CONFIGURATION_FILES" value="true" />
     <property name="WebServerToolWindowFactoryState" value="false" />
-    <property name="last_opened_file_path" value="$USER_HOME$/fusion_ws/src/undistortion/CMakeLists.txt" />
+    <property name="last_opened_file_path" value="$PROJECT_DIR$/include/g2oIO" />
     <property name="nodejs_interpreter_path.stuck_in_default_project" value="undefined stuck path" />
     <property name="nodejs_npm_path_reset_for_default_project" value="true" />
-    <property name="settings.editor.selected.configurable" value="dynamic.analysis.tools.valgrind" />
+    <property name="settings.editor.selected.configurable" value="CMakeSettings" />
   </component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$/include/g2oIO" />
       <recent name="$PROJECT_DIR$/include/distortion" />
       <recent name="$PROJECT_DIR$/include/oneFrameGND" />
     </key>
     <key name="MoveFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$/cfg" />
       <recent name="$PROJECT_DIR$/include/tools" />
       <recent name="$PROJECT_DIR$/include/FeatureExtraction" />
       <recent name="$PROJECT_DIR$/include/FirstPersonViewFilter" />
       <recent name="$PROJECT_DIR$/include/mapping" />
-      <recent name="$PROJECT_DIR$/include/distortion" />
     </key>
   </component>
   <component name="RunDashboard">
@@ -172,7 +172,7 @@
       <predefined_log_file id="idea.log" enabled="true" />
       <method />
     </configuration>
-    <configuration name="Build All" type="CMakeRunConfiguration" factoryName="Application" PROGRAM_PARAMS="$PROJECT_DIR$/../../1_pcd_file/pku_bin $PROJECT_DIR$/../../2_g2o/pku/4edges_out.g2o 500 12210" PASS_PARENT_ENVS_2="true" CONFIG_NAME="Debug" RUN_TARGET_PROJECT_NAME="pcd_compare" RUN_TARGET_NAME="mapping" EXPLICIT_BUILD_TARGET_NAME="all">
+    <configuration name="Build All" type="CMakeRunConfiguration" factoryName="Application" PROGRAM_PARAMS="$USER_HOME$/test_ws/pcd/ $USER_HOME$/test_ws/g2o/result.g2o 50 800" PASS_PARENT_ENVS_2="true" CONFIG_NAME="Debug" RUN_TARGET_PROJECT_NAME="pcd_compare" RUN_TARGET_NAME="mapping" EXPLICIT_BUILD_TARGET_NAME="all">
       <method v="2">
         <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
       </method>
@@ -202,7 +202,17 @@
         <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
       </method>
     </configuration>
+    <configuration name="poseIO" type="CMakeRunConfiguration" factoryName="Application" PASS_PARENT_ENVS_2="true" PROJECT_NAME="pcd_compare" TARGET_NAME="poseIO" CONFIG_NAME="Debug">
+      <method v="2">
+        <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
+      </method>
+    </configuration>
     <configuration name="sophus" type="CMakeRunConfiguration" factoryName="Application" PASS_PARENT_ENVS_2="true" PROJECT_NAME="pcd_compare" TARGET_NAME="sophus" CONFIG_NAME="Debug">
+      <method v="2">
+        <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="spline" type="CMakeRunConfiguration" factoryName="Application" PASS_PARENT_ENVS_2="true" PROJECT_NAME="pcd_compare" TARGET_NAME="spline" CONFIG_NAME="Debug">
       <method v="2">
         <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
       </method>
@@ -214,7 +224,9 @@
       <item itemvalue="CMake Application.mapping" />
       <item itemvalue="CMake Application.mapping_lm" />
       <item itemvalue="CMake Application.odom" />
+      <item itemvalue="CMake Application.poseIO" />
       <item itemvalue="CMake Application.sophus" />
+      <item itemvalue="CMake Application.spline" />
     </list>
   </component>
   <component name="SvnConfiguration">
@@ -271,6 +283,18 @@
       <workItem from="1571643496013" duration="612000" />
       <workItem from="1571818258734" duration="772000" />
       <workItem from="1572434351002" duration="2260000" />
+      <workItem from="1572865852487" duration="1919000" />
+      <workItem from="1573021902535" duration="1577000" />
+      <workItem from="1573091421931" duration="6167000" />
+      <workItem from="1573435483357" duration="672000" />
+      <workItem from="1573436465866" duration="34209000" />
+      <workItem from="1573637459337" duration="8858000" />
+      <workItem from="1573788462227" duration="89000" />
+      <workItem from="1573792984643" duration="40065000" />
+      <workItem from="1574142916182" duration="2723000" />
+      <workItem from="1574147904742" duration="5980000" />
+      <workItem from="1574158650041" duration="4635000" />
+      <workItem from="1574215238299" duration="23322000" />
     </task>
     <task id="LOCAL-00001" summary="change the structure">
       <created>1565432253211</created>
@@ -293,7 +317,56 @@
       <option name="project" value="LOCAL" />
       <updated>1568192592729</updated>
     </task>
-    <option name="localTasksCounter" value="4" />
+    <task id="LOCAL-00004" summary="latest">
+      <created>1572866085967</created>
+      <option name="number" value="00004" />
+      <option name="presentableId" value="LOCAL-00004" />
+      <option name="project" value="LOCAL" />
+      <updated>1572866085967</updated>
+    </task>
+    <task id="LOCAL-00005" summary="改了地面分割的方法,还没改好接口">
+      <created>1573560896791</created>
+      <option name="number" value="00005" />
+      <option name="presentableId" value="LOCAL-00005" />
+      <option name="project" value="LOCAL" />
+      <updated>1573560896791</updated>
+    </task>
+    <task id="LOCAL-00006" summary="地面特征提取了,intensity也过滤了,还差个滤波器就基本完成了">
+      <created>1573645267980</created>
+      <option name="number" value="00006" />
+      <option name="presentableId" value="LOCAL-00006" />
+      <option name="project" value="LOCAL" />
+      <updated>1573645267980</updated>
+    </task>
+    <task id="LOCAL-00007" summary="add spline g2oIO">
+      <created>1573877224386</created>
+      <option name="number" value="00007" />
+      <option name="presentableId" value="LOCAL-00007" />
+      <option name="project" value="LOCAL" />
+      <updated>1573877224386</updated>
+    </task>
+    <task id="LOCAL-00008" summary="spline">
+      <created>1573879505569</created>
+      <option name="number" value="00008" />
+      <option name="presentableId" value="LOCAL-00008" />
+      <option name="project" value="LOCAL" />
+      <updated>1573879505569</updated>
+    </task>
+    <task id="LOCAL-00009" summary="搞定了bparel的线束提取">
+      <created>1574142797625</created>
+      <option name="number" value="00009" />
+      <option name="presentableId" value="LOCAL-00009" />
+      <option name="project" value="LOCAL" />
+      <updated>1574142797625</updated>
+    </task>
+    <task id="LOCAL-00010" summary="使用normalize来搞">
+      <created>1574144186697</created>
+      <option name="number" value="00010" />
+      <option name="presentableId" value="LOCAL-00010" />
+      <option name="project" value="LOCAL" />
+      <updated>1574144186697</updated>
+    </task>
+    <option name="localTasksCounter" value="11" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -316,9 +389,15 @@
     <option name="CHECK_CODE_SMELLS_BEFORE_PROJECT_COMMIT" value="false" />
     <option name="CHECK_NEW_TODO" value="false" />
     <MESSAGE value="change the structure" />
-    <MESSAGE value="latest" />
     <MESSAGE value="no memory leak" />
-    <option name="LAST_COMMIT_MESSAGE" value="no memory leak" />
+    <MESSAGE value="latest" />
+    <MESSAGE value="改了地面分割的方法,还没改好接口" />
+    <MESSAGE value="地面特征提取了,intensity也过滤了,还差个滤波器就基本完成了" />
+    <MESSAGE value="add spline g2oIO" />
+    <MESSAGE value="spline" />
+    <MESSAGE value="搞定了bparel的线束提取" />
+    <MESSAGE value="使用normalize来搞" />
+    <option name="LAST_COMMIT_MESSAGE" value="使用normalize来搞" />
   </component>
   <component name="masterDetails">
     <states>

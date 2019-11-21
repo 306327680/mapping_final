@@ -390,8 +390,6 @@ void featureExtraction::checkorder(pcl::PointCloud<pcl::PointXYZI>::Ptr cloud_be
 	} else{
 		std::cerr<<"wrong"<<std::endl;
 	}
-
-
 	
 	
 	//a. 第一个for lego的确定beam的函数
@@ -439,7 +437,7 @@ void featureExtraction::checkorder(pcl::PointCloud<pcl::PointXYZI>::Ptr cloud_be
 				endOrientation = endOrientation_new;
 			}
 		}
-	}
+	}//确认beam结束
 	//b. 计算旋转时间
 	int flip = 1;
 	bool smaller = 0 ,bigger = 0;
@@ -457,7 +455,7 @@ void featureExtraction::checkorder(pcl::PointCloud<pcl::PointXYZI>::Ptr cloud_be
 	for (size_t i = 1; i < cloud_bef->points.size(); i++) {
 		float last_angle = (float)-atan2(out->points[i-1].y, out->points[i-1].x); //前一个角度
 		float cur_angle = (float)-atan2(out->points[i].y, out->points[i].x); //当前角度
-		//(1)检查线束跳变
+		//(1)检查线束跳变(左右)
 		//跳变情况1. 换线 2. 噪音
 		if(out->points[i].beam == out->points[i-1].beam){
 			//(2)检查角度跳变
