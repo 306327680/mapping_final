@@ -3,6 +3,20 @@
 ### 1. 该项目的说明
 2019/5/15 ver 1.0
 用来测试主流的建图算法 loam lego-loam a-loam 的前端部分的 特征提取 lidar-odom lidar-mapping等部分.
+
+建图模式目前分为三种,
+
+1.g2o+pcd的传统模式(pcd+g2o路径)
+
+2.point to plane ICP (需要提供pcd路径) :
+准备用来做一个前端,目前还没实现好,准备试试是libpointmatcher 或者pcl
+
+3.bpreal ground mapping (pcd+g2o路径)
+:这个目前通过一个点的左右向量点乘的得到当前的点的曲率,大于一定值认为是边缘
+
+4.LOAM 的建图方法(todo)
+
+
 ### 2. 文件说明
 #### 1.pcd_reader 主要是顺序读取pcd 进行测试
 #### 2.util 就是各种测试用的工具
@@ -18,14 +32,28 @@
 #### 11. particle filter
 #### 12. lmOptimizationSufraceCorner
 用来构建mapping 的 corner 和 surface的约束
-#### 13. spline
+### 3. 文件夹说明
+#### 1. spline
 采用se3 上的b样条插值,进行了去畸变
-#### 14. g2oIO
+#### 2. g2oIO
 进行位姿文件的读取转化
+#### 3.GPS 
+里面放了GPGGA解析啊, 什么LLA坐标转换之类的功能
+#### 4.registration
+里面放着最近点云配准的算法
+#### 5.DataIO
+里面放着各种数据存储和格式, eg: 阅读bag的格式,自己存储位姿的方式,GPGGA的保存等等.
+#### 6.Distortion
+得到点云线数,以及线性去畸变
+#### 7.VO
+ using OpenCV calcOpticalFlowPyrLK for feature tracking:
+https://github.com/ZhenghaoFei/visual_odom.git
 
-### 3. Todo
+
+### 4. Todo
 1. 首先完成 loam 的特征提取调参
 2. loam 的 mapping 部分完成
 3. lego 的Feature extraction 部分的重构
 4. lego 的 odom 部分 看看如何分成两组优化一个位姿.
 5. 11/16 进行 point to plane icp 的构建
+6. Visual odom

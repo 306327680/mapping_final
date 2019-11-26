@@ -16,6 +16,26 @@ find_package( Eigen3  REQUIRED)
 find_package( Cholmod REQUIRED )
 find_package( Sophus REQUIRED )
 find_package(OpenCV REQUIRED)
+#找到ros库
+find_package(roscpp REQUIRED)
+include_directories(${roscpp_INCLUDE_DIRS})
+
+find_package(sensor_msgs REQUIRED)
+include_directories(${sensor_msgs_INCLUDE_DIRS})
+
+find_package(rosbag REQUIRED)
+include_directories(${rosbag_INCLUDE_DIRS})
+
+find_package(std_msgs REQUIRED)
+include_directories(${std_msgs_INCLUDE_DIRS})
+
+find_package(nav_msgs REQUIRED)
+include_directories(${nav_msgs_INCLUDE_DIRS})
+
+find_package(geometry_msgs REQUIRED)
+include_directories(${geometry_msgs_INCLUDE_DIRS})
+
+
 include_directories( src include )
 include_directories( ${Sophus_INCLUDE_DIRS}
         ${CSPARSE_INCLUDE_DIR}
@@ -69,8 +89,12 @@ target_link_libraries(odom ${OpenCV_LIBS})
 add_library(ground_seg
         include/oneFrameGND/ground_seg.h
         include/oneFrameGND/ground_seg.cpp
-        )
-target_link_libraries(ground_seg        yaml-cpp ${PCL_LIBRARIES})
+        include/DataIO/ReadBag.cpp include/DataIO/ReadBag.h)
+target_link_libraries(ground_seg
+        ${roscpp_LIBRARIES} ${std_msgs_LIBRARIES}
+        ${rosbag_LIBRARIES} ${nav_msgs_LIBRARIES}
+        ${geometry_msgs_LIBRARIES} ${sensor_msgs_LIBRARIES}
+        yaml-cpp ${PCL_LIBRARIES})
 
 #5. spline fusion 插值
 add_library(spline

@@ -234,5 +234,4 @@ void util::GetBeamEdge(pcl::PointCloud<pcl::PointXYZINormal> pc_in, pcl::PointCl
 				}
 			}
 		}
-	
 }

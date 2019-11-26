@@ -81,10 +81,12 @@ void setStartEnd(){
 	cin >> end_id;
 	std::cout <<"end: " <<end_id<<std::endl;
 }
+void pointToPlaneICP(pcl::PointCloud<pcl::PointXYZI> pcin,Eigen::Isometry3d& tf){
 
+}
 //功能2
 int point2planeICP(){
-	//点云缓冲
+/*	//点云缓冲
 	pcl::PointCloud<pcl::PointXYZI> cloud_bef;
 	pcl::PointCloud<pcl::PointXYZINormal>::Ptr result(new pcl::PointCloud<pcl::PointXYZINormal>);
 	pcl::PointCloud<pcl::PointXYZINormal>::Ptr filter(new pcl::PointCloud<pcl::PointXYZINormal>);
@@ -104,16 +106,20 @@ int point2planeICP(){
 				aa.y = cloud_bef[j].y;
 				aa.z = cloud_bef[j].z;
 				aa.intensity = cloud_bef[j].intensity;
+				//得到延迟时间
 				aa.normal_y = j%(cloud_bef.size()/32);
 				raw->push_back(aa);
 			}
+			//下面的代码测试 提取线的边缘
 			pcl::removeNaNFromPointCloud(*raw, *filter, indices1);
 			tools.GetPointCloudBeam(*filter,*result);
 			tools.GetBeamEdge(*filter,*result);
 		}
 		writer.write("test.pcd",*result, false);
 	}
-	return(0);
+	return(0);*/
+	ReadBag rb;
+	rb.getPath("/media/echo/DataDisc/9_rosbag/shandong_park/2019-08-14-16-41-05.bag");
 }
 
 
@@ -127,6 +133,8 @@ void traversableMapping(){
 	pcl::PointCloud<pcl::PointXYZINormal>::Ptr raw(new pcl::PointCloud<pcl::PointXYZINormal>);
 	pcl::PointCloud<pcl::PointXYZINormal>::Ptr cloud_aft(new pcl::PointCloud<pcl::PointXYZINormal>);
 	pcl::PointCloud<pcl::PointXYZINormal>::Ptr cloud_add(new pcl::PointCloud<pcl::PointXYZINormal>);
+	pcl::PointCloud<pcl::PointXYZI>::Ptr whole_map(new pcl::PointCloud<pcl::PointXYZI>);
+	pcl::PointCloud<pcl::PointXYZI>::Ptr raw_tf(new pcl::PointCloud<pcl::PointXYZI>);
 	util tools;
 	pcl::PCDWriter writer;
 	//0. 得到每个点的位姿
@@ -140,10 +148,12 @@ void traversableMapping(){
 				result->clear();
 				raw->clear();
 				filter->clear();
+				raw_tf->clear();
 				pcl::io::loadPCDFile<pcl::PointXYZI>(file_names_[i], cloud_bef);
 				
 				std::vector<int> indices1;
 				std::cout<<"size: "<<cloud_bef.size()/32.0<<std::endl;
+				//1.读取每个点来的时间
 				for (int j = 0; j < cloud_bef.size(); ++j) {
 					pcl::PointXYZINormal aa;
 					aa.x = cloud_bef[j].x;
@@ -158,12 +168,15 @@ void traversableMapping(){
 				tools.GetBeamEdge(*filter,*result);
  
 				pcl::transformPointCloud(*result, *cloud_aft, trans_vector[i].matrix());
+				pcl::transformPointCloud(cloud_bef, *raw_tf, trans_vector[i].matrix());
 		
 				*cloud_add += *cloud_aft;
+				*whole_map += *raw_tf;
 			}
 		}
 		cout<<cloud_add->size()<<endl;
 		writer.write("test.pcd",*cloud_add, false);
+		writer.write("wholemap.pcd",*whole_map, false);
 	} else{
 		cout<<"!!!!! PCD & g2o does not have same number "<<endl;
 	}

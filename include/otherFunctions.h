@@ -12,6 +12,12 @@
 #include <pcl/visualization/pcl_visualizer.h>
 #include <pcl/visualization/point_cloud_handlers.h>
 #include <pcl/filters/filter.h>
+#include <pcl/console/time.h>
+#include <pcl/features/normal_3d.h>
+#include <pcl/io/pcd_io.h>
+#include <pcl/registration/gicp.h>
+#include <pcl/registration/icp.h>
+#include <pcl/registration/transformation_estimation_point_to_plane.h>
 #include <boost/thread/thread.hpp>
 #include <string>
 #include <dirent.h>
@@ -40,6 +46,7 @@
 #include "oneFrameGND/ground_seg.h"
 #include "spline/experiment.h"
 #include "g2oIO/PoseGraphIO.h"
+#include "DataIO/ReadBag.h"
 
 // 1. 参数初始化
 bool tensorvoting = true;
@@ -282,6 +289,7 @@ void genlocalmap(std::vector<Eigen::Isometry3d, Eigen::aligned_allocator<Eigen::
 				tmp->points[j].z = pcout->points[j].z;//14.40
 				tmp->points[j].intensity = pcout->points[j].intensity; }
 			//todo 改成 第一步提取index 先,之后记录index,最后滤除
+			//这里是地面滤波器
 			filter.point_cb(*tmp);
 			*tmp = *filter.g_ground_pc;
 			pcl::VoxelGrid<pcl::PointXYZI> sor;
@@ -305,15 +313,15 @@ void genlocalmap(std::vector<Eigen::Isometry3d, Eigen::aligned_allocator<Eigen::
 					size_all = static_cast<int>(file_names_ .size());
 					percent =i*100/size_all;
 					std::cout << percent << "%"<<std::endl;
-					std::cout << "\b\b\b\b";//回删三个字符，使数字在原地变化
+					std::cout << "\b\b\b";//回删三个字符，使数字在原地变化
 				}
 			}
 			int percent = 0;
 			int size_all = 0;
-			size_all = end_id-start_id;
+			size_all = end_id - start_id;
 			percent =i*100/size_all;
 			std::cout << percent << "%"<<std::endl;
-			std::cout << "\b \b \b \b";//回删三个字符，使数字在原地变化
+			std::cout << "\b \b \b ";//回删三个字符，使数字在原地变化
 		}
 
 	}
@@ -335,13 +343,14 @@ void genlocalmap(std::vector<Eigen::Isometry3d, Eigen::aligned_allocator<Eigen::
 	// outrem.setMinNeighborsInRadius (5);
 	// // 应用滤波器
 	// outrem.filter (*cloud_aft);
-/*	bigmap.clear();
+	//这里就是整
+	bigmap.clear();
 	for (int l = 0; l < cloud_add->size(); ++l) {
 		if(cloud_add->points[l].intensity>(float)14.4860 && cloud_add->points[l].intensity<(float)14.96){
 			bigmap.push_back(cloud_add->points[l]);
 		}
 	}
-	*cloud_add = bigmap ;*/
+	*cloud_add = bigmap ;
 	cout<<"map saving"<<endl;
 	writer.write<pcl::PointXYZI>("final_map.pcd",*cloud_add, true);
 }
