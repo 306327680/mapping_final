@@ -47,6 +47,8 @@
 #include "spline/experiment.h"
 #include "g2oIO/PoseGraphIO.h"
 #include "DataIO/ReadBag.h"
+#include "GPS/gpsTools.h"
+#include "registration/registration.h"
 
 // 1. 参数初始化
 bool tensorvoting = true;
@@ -96,6 +98,7 @@ bool GetFileNames(const std::string directory,const std::string suffix){
 		std::cerr<<"directory:"<<directory<<"is empty"<<std::endl;
 		return false;
 	}
+	std::cerr<<"路径: "<<directory<<" 有"<<file_names_.size()<<"个pcd文件"<<std::endl;
 	return true;
 }
 //3. 排序

@@ -35,8 +35,11 @@ include_directories(${nav_msgs_INCLUDE_DIRS})
 find_package(geometry_msgs REQUIRED)
 include_directories(${geometry_msgs_INCLUDE_DIRS})
 
+#libpointmatcher
+find_package(libpointmatcher CONFIG)
 
-include_directories( src include )
+include_directories( src include ${libpointmatcher_INCLUDE_DIRS})
+
 include_directories( ${Sophus_INCLUDE_DIRS}
         ${CSPARSE_INCLUDE_DIR}
         include
@@ -89,12 +92,13 @@ target_link_libraries(odom ${OpenCV_LIBS})
 add_library(ground_seg
         include/oneFrameGND/ground_seg.h
         include/oneFrameGND/ground_seg.cpp
-        include/DataIO/ReadBag.cpp include/DataIO/ReadBag.h)
+        include/DataIO/ReadBag.cpp include/DataIO/ReadBag.h include/registration/registration.cpp include/registration/registration.h include/GPS/gpsTools.cpp include/GPS/gpsTools.h)
 target_link_libraries(ground_seg
         ${roscpp_LIBRARIES} ${std_msgs_LIBRARIES}
         ${rosbag_LIBRARIES} ${nav_msgs_LIBRARIES}
         ${geometry_msgs_LIBRARIES} ${sensor_msgs_LIBRARIES}
-        yaml-cpp ${PCL_LIBRARIES})
+        yaml-cpp ${PCL_LIBRARIES}
+        ${libpointmatcher_LIBRARIES})
 
 #5. spline fusion 插值
 add_library(spline

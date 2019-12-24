@@ -16,6 +16,8 @@
 
 4.LOAM 的建图方法(todo)
 
+5.point to plane icp
+11/27 准备完成
 
 ### 2. 文件说明
 #### 1.pcd_reader 主要是顺序读取pcd 进行测试
@@ -43,17 +45,23 @@
 里面放着最近点云配准的算法
 #### 5.DataIO
 里面放着各种数据存储和格式, eg: 阅读bag的格式,自己存储位姿的方式,GPGGA的保存等等.
+
+(1) 现在阅读bag的已经完成了
 #### 6.Distortion
 得到点云线数,以及线性去畸变
 #### 7.VO
  using OpenCV calcOpticalFlowPyrLK for feature tracking:
 https://github.com/ZhenghaoFei/visual_odom.git
+#### 8.registration
+这个地方就放普通的icp接口,或者ndt之类的
 
+11/27 准备完成
 
 ### 4. Todo
 1. 首先完成 loam 的特征提取调参
 2. loam 的 mapping 部分完成
 3. lego 的Feature extraction 部分的重构
 4. lego 的 odom 部分 看看如何分成两组优化一个位姿.
-5. 11/16 进行 point to plane icp 的构建
+5. 11/16 进行 point to plane icp 的构建,1128 还在写
 6. Visual odom
+7. 还是得改下驱动,现在的时间戳不对回头我看一下,现在用size凑合一下
