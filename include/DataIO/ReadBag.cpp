@@ -102,28 +102,64 @@ void ReadBag::readHesai(std::string path) {
 	std::cout<<"the bag path is: "<<path<<std::endl;
 	bag.open(path, rosbag::bagmode::Read);
 	std::vector<std::string> topics;
-
-	
- 
+	bool pcd_start = false;
+	double time_begin;
+ 	float maxintensity=0;
+	float minintensity=1000;
+	float setMinIntensity = 0.0000000000000000000000000000000000000000014349296274686126806258990933;
+	float setMaxIntensity = 0.0000000000000000000000000000000000000000017922607358714410337114501370;
+	float diff_intensity = setMaxIntensity-setMinIntensity;
+	double timestamp;
 	//可以加挺多topic的?
 	topics.push_back(std::string("/points_raw"));
 	rosbag::View view(bag, rosbag::TopicQuery(topics));
 	//读广场的也就几秒
+	int inter_times =0;
 	BOOST_FOREACH(rosbag::MessageInstance const m, view)
 				{
+					pcdtosave.clear();
 					std::stringstream pcd_save;
+					pcd_save.precision(18);
 					sensor_msgs::PointCloud2::ConstPtr s = m.instantiate<sensor_msgs::PointCloud2>();
 					pcl::PCLPointCloud2 pcl_pc2;
-					pcd_save<<"map/"<<s->header.stamp.sec<<"."<<s->header.stamp.nsec<<".pcd";
-					std::cout<<pcd_save.str()<<std::endl;
+			
+		
 					pcl::fromROSMsg(*s,hesai_pcd);
 					std::cout<<"pcd size: "<<hesai_pcd.size()<<std::endl;
+ 					if(!pcd_start){
+						time_begin = hesai_pcd[0].timestamp;
+ 					}
+		
 					for (int i = 0; i < hesai_pcd.size(); ++i) {
-						hesai_pcd[i].timestamp = (float)i/(float)hesai_pcd.size();
+						//std::printf("%f\n",hesai_pcd[i].timestamp);
+						mypcd temp;
+						temp.x = hesai_pcd[i].x;
+						temp.y = hesai_pcd[i].y;
+						temp.z = hesai_pcd[i].z;
+						temp.intensity = int(256*(hesai_pcd[i].intensity - setMinIntensity)/diff_intensity);
+						temp.timestamp = hesai_pcd[i].timestamp - time_begin;
+						temp.ring = hesai_pcd[i].ring;
+						pcdtosave.push_back(temp);
+						//用来找最大最小intensity的
+			/*			if(maxintensity<hesai_pcd[i].intensity){
+							maxintensity=hesai_pcd[i].intensity;
+						}
+						if(minintensity>hesai_pcd[i].intensity){
+							minintensity=hesai_pcd[i].intensity;
+						}*/
 					}
-					writer.write(pcd_save.str(),hesai_pcd,false);
+					pcdtosave.width = pcdtosave.size();
+					//用来找最大最小intensity的
+/*					std::printf("maxintensity: %f minintensity: %f\n",maxintensity,minintensity);
+					std::cout.precision(70);
+					std::cout<<"maxintensity: "<<std::fixed<<maxintensity<<" minintensity: "<<minintensity<<std::endl;*/
+					timestamp = s->header.stamp.toSec();
+					pcd_save<<"map/"<<timestamp<<".pcd";
+					std::cout<<pcd_save.str()<<" size: "<<pcdtosave.size()<<" times: "<<inter_times<<std::endl;
+					writer.write(pcd_save.str(),pcdtosave,true);
+					std::cout<<pcd_save.str()<<" saved " <<std::endl;
+					inter_times++;
 				}
-	
 }
 
 void ReadBag::gnssLiDARExtrinsicParameters(std::string path) {

@@ -140,7 +140,7 @@ public:
 	
 private:
 	// VLP-16
-	const int N_SCAN = 16;
+	const int N_SCAN = 64;
 //每根线的间距
 	const float Div = 0.95;
 	const int Horizon_SCAN = 1800;

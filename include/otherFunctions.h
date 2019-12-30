@@ -49,7 +49,10 @@
 #include "DataIO/ReadBag.h"
 #include "GPS/gpsTools.h"
 #include "registration/registration.h"
-
+#include <pcl/keypoints/uniform_sampling.h>
+#include <pcl/visualization/cloud_viewer.h>
+#include "ndt_omp/include/pclomp/ndt_omp.h"
+#include <ndt_omp/include/pclomp/gicp_omp.h>
 // 1. 参数初始化
 bool tensorvoting = true;
 using namespace g2o;
@@ -484,4 +487,24 @@ void genfeaturemap(std::vector<Eigen::Isometry3d, Eigen::aligned_allocator<Eigen
 	//转换回(0,0,0,0,0,0)
 //	pcl::transformPointCloud(*cloud_add, *cloud_aft, trans_vector[0].inverse().matrix());
 }
+
+//6.1 omp NDT 配准
+pcl::PointCloud<pcl::PointXYZI>::Ptr align(pcl::Registration<pcl::PointXYZI, pcl::PointXYZI>::Ptr registration,
+		const pcl::PointCloud<pcl::PointXYZI>::Ptr& target_cloud,
+		const pcl::PointCloud<pcl::PointXYZI>::Ptr& source_cloud )
+{
+	registration->setInputTarget(target_cloud);
+	registration->setInputSource(source_cloud);
+	pcl::PointCloud<pcl::PointXYZI>::Ptr aligned(new pcl::PointCloud<pcl::PointXYZI>());
+	
+	auto t2 = ros::WallTime::now();
+	for(int i=0; i<10; i++) {
+		registration->align(*aligned);
+	}
+	auto t3 = ros::WallTime::now();
+	std::cout << "10times: " << (t3 - t2).toSec() * 1000 << "[msec]" << std::endl;
+	std::cout << "fitness: " << registration->getFitnessScore() << std::endl << std::endl;
+	return aligned;
+}
+
 #endif //PCD_COMPARE_MAIN_H

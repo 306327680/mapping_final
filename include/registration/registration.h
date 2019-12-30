@@ -28,17 +28,22 @@ public:
 	
 	void SetNormalICP();
 	pcl::PointCloud<pcl::PointXYZI> normalIcpRegistration(pcl::PointCloud<pcl::PointXYZI>::Ptr source,
-									 pcl::PointCloud<pcl::PointXYZI> target) ;
+									 pcl::PointCloud<pcl::PointXYZI> target);
+	pcl::PointCloud<pcl::PointXYZI> normalIcpRegistrationlocal(pcl::PointCloud<pcl::PointXYZI>::Ptr source,
+														  pcl::PointCloud<pcl::PointXYZI> target);
+	
 	PM::TransformationParameters  setScan(pcl::PointCloud<pcl::PointXYZI> pcin);
 	Eigen::Matrix4f transform_frame_to_frame = Eigen::Matrix4f::Identity();
-	Eigen::Matrix4f transformation = Eigen::Matrix4f::Identity();
+	Eigen::Matrix4f transformation = Eigen::Matrix4f::Identity(); //全局位姿
 	Eigen::Matrix4f icp_init = Eigen::Matrix4f::Identity();//icp的初值
 	Eigen::Matrix4f increase = Eigen::Matrix4f::Identity();//两次icp的结果
-	
+	//tools ReOrthogonalization 防止累计误差
+	Eigen::Isometry3d  ReOrthogonalization(Eigen::Isometry3d input);
+	pcl::IterativeClosestPointWithNormals<pcl::PointXYZINormal, pcl::PointXYZINormal>::Ptr pcl_plane_plane_icp;
 private:
 	PM::DataPoints *mapPointCloud;
 	PM::ICPSequence icp;
-	pcl::IterativeClosestPointWithNormals<pcl::PointXYZINormal, pcl::PointXYZINormal>::Ptr pcl_plane_plane_icp;
+	
 };
 
 

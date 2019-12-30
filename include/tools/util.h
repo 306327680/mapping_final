@@ -80,6 +80,26 @@ POINT_CLOUD_REGISTER_POINT_STRUCT (PointXYZIBS,
 )
 
 typedef PointXYZIBS  PointTypeSm;
+
+//todo  my pcd
+ 
+	struct PointXYZITR {
+		PCL_ADD_POINT4D
+		float intensity;
+		float timestamp;
+		float ring;                      ///< laser ring number
+		EIGEN_MAKE_ALIGNED_OPERATOR_NEW // make sure our new allocators are aligned
+	} EIGEN_ALIGN16;
+	
+ 
+
+POINT_CLOUD_REGISTER_POINT_STRUCT(PointXYZITR,
+								  (float, x, x)(float, y, y)(float, z, z)
+										  (float, intensity, intensity)(float, timestamp, timestamp)(float, ring, ring))
+
+typedef PointXYZITR mypcd;
+typedef pcl::PointCloud<mypcd> mypcdCloud;
+
 //hesai LiDAR
 namespace pandar_pointcloud
 {

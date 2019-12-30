@@ -55,6 +55,7 @@ private:
 	std::string camera3_ = "cam3_";
 	std::string cpt_navsat = "/cpt/ins_fix";
 	pcl::PointCloud<PPoint> hesai_pcd;
+	mypcdCloud pcdtosave;
 	//外外参标定的两个topic
 	std::string lidarodom = "/odom_mapped";
 	std::string gps_calibrate = "/ins_linsin_odom";

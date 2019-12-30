@@ -57,6 +57,12 @@ add_definitions(${PCL_DEFINITIONS})
 
 find_package(G2O REQUIRED)
 include_directories(${G2O_INCLUDE_DIRS})
+#open mp
+find_package(OpenMP)
+if (OPENMP_FOUND)
+    set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
+    set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
+endif()
 
 #1.sophus
 ADD_LIBRARY(sophus SHARED include/sophus/se3.cpp
@@ -111,6 +117,14 @@ target_link_libraries(spline ${PCL_LIBRARIES} sophus)
 
 ADD_LIBRARY(poseIO SHARED include/g2oIO/PoseGraphIO.h include/g2oIO/PoseGraphIO.cpp)
 target_link_libraries(poseIO      g2o_core g2o_stuff g2o_types_slam3d ${CHOLMOD_LIBRARIES})
+#7. NDT omp
+add_library(ndt_omp
+        include/ndt_omp/src/pclomp/voxel_grid_covariance_omp.cpp
+        include/ndt_omp/src/pclomp/voxel_grid_covariance_omp.cpp
+        include/ndt_omp/src/pclomp/ndt_omp.cpp
+        include/ndt_omp/src/pclomp/gicp_omp.cpp
+        )
+target_link_libraries(ndt_omp      ${PCL_LIBRARIES})
 #main program
 add_executable(mapping main.cpp include/otherFunctions.h)
 target_link_libraries(mapping ${PCL_LIBRARIES}
@@ -125,4 +139,5 @@ target_link_libraries(mapping ${PCL_LIBRARIES}
         g2o_csparse_extension
         g2o_types_slam3d
         poseIO
-        spline)
+        spline
+        ndt_omp)
