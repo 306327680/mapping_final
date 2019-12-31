@@ -65,3 +65,10 @@ https://github.com/ZhenghaoFei/visual_odom.git
 5. 11/16 进行 point to plane icp 的构建,1128 还在写
 6. Visual odom
 7. 还是得改下驱动,现在的时间戳不对回头我看一下,现在用size凑合一下
+### 5. 程序说明
+#### 1.速腾bperal 的地面边线提取
+在util.h中的 tools.GetPointCloudBeam(); 和 tools.GetBeamEdge();
+输入的是PointXYZINormal格式的点云,其通道定义为: 
+1. normal_y 为 timestamp(每个点的到达时间)
+2. GetPointCloudBeam 中返回 normal x 指的是当前的点云的线数.
+3. GetBeamEdge 中 intensity 为 其edge显著度: 保留范围为

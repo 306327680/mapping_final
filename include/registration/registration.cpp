@@ -73,7 +73,7 @@ void registration::addNormal(pcl::PointCloud<pcl::PointXYZI>::Ptr cloud,
 	normalEstimator.setInputCloud(cloud_source_normals);
 	normalEstimator.setSearchMethod(searchTree);
 	//normalEstimator.setRadiusSearch(0.05);
-	normalEstimator.setKSearch(40);
+	normalEstimator.setKSearch(20);
 	normalEstimator.compute(*normals);
 	pcl::concatenateFields(*cloud_source_normals, *normals, *cloud_with_normals);
 }
@@ -81,7 +81,7 @@ void registration::addNormal(pcl::PointCloud<pcl::PointXYZI>::Ptr cloud,
 void registration::SetNormalICP() {
 	pcl::IterativeClosestPointWithNormals<pcl::PointXYZINormal, pcl::PointXYZINormal>::Ptr icp(
 			new pcl::IterativeClosestPointWithNormals<pcl::PointXYZINormal, pcl::PointXYZINormal>());
-	icp->setMaximumIterations(30);
+	icp->setMaximumIterations(20);
 	icp->setMaxCorrespondenceDistance(0.8);
 	icp->setTransformationEpsilon(1e-6);
 	icp->setEuclideanFitnessEpsilon(1e-6);
@@ -133,10 +133,9 @@ pcl::PointCloud<pcl::PointXYZI> registration::normalIcpRegistration(pcl::PointCl
 	//上面那个也不对
 	//increase = transformation * increase * pcl_plane_plane_icp->getFinalTransformation();
 	increase = increase * pcl_plane_plane_icp->getFinalTransformation();
-	std::cout << "用上次变化量做初值之后的icp \n" << std::endl << pcl_plane_plane_icp->getFinalTransformation() << std::endl;
-	std::cout << "两帧之间的实际变化量 \n" << std::endl << increase << std::endl;
-	std::cout << "global \n" << std::endl << transformation << std::endl;
-	std::cout << "分数 : " << std::endl << pcl_plane_plane_icp->getFitnessScore() << std::endl;
+	std::cout << "用上次变化量做初值之后的icp \n" <<   pcl_plane_plane_icp->getFinalTransformation() << std::endl;
+//	std::cout << "两帧之间的实际变化量 \n" << increase << std::endl;
+	std::cout <<"*****  第一次分数 : " << pcl_plane_plane_icp->getFitnessScore() << std::endl;
 	pcl::transformPointCloud(*source, tfed, transformation.matrix());
 	//变化量
 	return tfed;
@@ -197,8 +196,8 @@ pcl::PointCloud<pcl::PointXYZI> registration::normalIcpRegistrationlocal(pcl::Po
 	transformation = transformation_local;
 	
 	std::cout << "第二次用结果做初值之后的icp调整量 \n"  << pcl_plane_plane_icp->getFinalTransformation() << std::endl;
-	std::cout << "第二次global \n" << std::endl << transformation_local  << std::endl;
-	std::cout << "第二次分数 : " << std::endl << pcl_plane_plane_icp->getFitnessScore()  << std::endl;
+//	std::cout << "第二次global \n" << std::endl << transformation_local  << std::endl;
+	std::cout << "*****  第二次分数 : "  << pcl_plane_plane_icp->getFitnessScore()  << std::endl;
 	pcl::transformPointCloud(*source, tfed, transformation.matrix());
 	//变化量
 	return tfed;

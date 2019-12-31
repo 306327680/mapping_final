@@ -119,10 +119,43 @@ void simpleDistortion(mypcdCloud input,Eigen::Matrix4f increase,pcl::PointCloud<
 	Feature.adjustDistortion(test,pcout,se3);
 	pcl::copyPointCloud(*pcout,output);
 }
+//6.1 tools 建立局部地图
+//a. 挑选关键帧(有必要?)
+//b. 维持队列长度
+//d. downsample
+pcl::PointCloud<pcl::PointXYZI> lidarLocalMap(std::vector<Eigen::Matrix4f> & poses,std::vector<pcl::PointCloud<pcl::PointXYZI>> & clouds){
+	pcl::PointCloud<pcl::PointXYZI>::Ptr map_ptr (new pcl::PointCloud<pcl::PointXYZI>);
+	pcl::PointCloud<pcl::PointXYZI> map_temp;
+	Eigen::Matrix4f tf_all = Eigen::Matrix4f::Identity();
+	if (poses.size()>=15){
+		for (int i = poses.size() - 15 ; i <poses.size() ; i++) {
+			pcl::transformPointCloud(clouds[i],map_temp,poses[i]);
+			*map_ptr += map_temp;
+		}
+	}else{//第一开始点云不多的情况
+		for (int i = 0 ; i <poses.size() ; i++) {
+			pcl::transformPointCloud(clouds[i],map_temp,poses[i]);
+			*map_ptr += map_temp;
+		}
+	}
+
+	pcl::transformPointCloud(*map_ptr,map_temp,poses.back().inverse());
+	*map_ptr = map_temp;
+	//显示看一下
+ 
+	
+	pcl::UniformSampling<pcl::PointXYZI> filter;
+	pcl::PointCloud<int> keypointIndices;
+	filter.setInputCloud(map_ptr);
+	filter.setRadiusSearch(0.02f); //2cm 测距精度
+	filter.compute(keypointIndices);
+	pcl::copyPointCloud(*map_ptr, keypointIndices.points, map_temp);
+	return  map_temp;
+}
 //功能2建图前端 点面icp
 int point2planeICP(){
 	//点云缓冲
-	std::vector<pcl::PointCloud<pcl::PointXYZI>> localmap;
+ 
 	pcl::PointCloud<pcl::PointXYZI> tfed;
 	pcl::PointCloud<pcl::PointXYZI>::Ptr filteredCloud(new pcl::PointCloud<pcl::PointXYZI>);
 	pcl::PointCloud<pcl::PointXYZI>::Ptr cloud_filtered(new pcl::PointCloud<pcl::PointXYZI>);
@@ -133,14 +166,18 @@ int point2planeICP(){
 	pcl::PointCloud<pcl::PointXYZI>::Ptr cloud_local_map(new pcl::PointCloud<pcl::PointXYZI>);
 	pcl::PointCloud<pcl::PointXYZI>::Ptr cloud_map(new pcl::PointCloud<pcl::PointXYZI>);
 	pcl::PointCloud<pcl::PointXYZINormal>::Ptr result(new pcl::PointCloud<pcl::PointXYZINormal>);
-	pcl::PointCloud<pcl::PointXYZINormal>::Ptr filter(new pcl::PointCloud<pcl::PointXYZINormal>);
+	pcl::PointCloud<pcl::PointXYZINormal>::Ptr filter1(new pcl::PointCloud<pcl::PointXYZINormal>);
 	pcl::PointCloud<pcl::PointXYZINormal>::Ptr raw(new pcl::PointCloud<pcl::PointXYZINormal>);
 	bool bperal_edge = false;
 	//存tf的
 	std::vector<Eigen::Matrix4f> poses;
+	std::vector<pcl::PointCloud<pcl::PointXYZI>>  clouds;
 	//每两帧之间的变换
 	std::vector<Eigen::Matrix4f> icp_result;
 	Eigen::Matrix4f current_scan_pose = Eigen::Matrix4f::Identity();
+	//滤波相关
+	pcl::UniformSampling<pcl::PointXYZI> filter;
+	pcl::PointCloud<int> keypointIndices;
 //class
 	util tools;
 	registration icp;
@@ -154,7 +191,6 @@ int point2planeICP(){
 	
 	for(int i = 1;  i <file_names_ .size();i++){
 		if (i>start_id && i<end_id) {
-			std::cout<<"*************点云ID: "<<i<<std::endl;
 			pcl::io::loadPCDFile<mypcd>(file_names_[i], xyzItimeRing);
 			pcl::copyPointCloud(xyzItimeRing,*cloud_hesai);
 			if(bperal_edge){
@@ -179,7 +215,8 @@ int point2planeICP(){
 					//1.1 第一帧 不进行计算
 					std::cout<<"first cloud" <<std::endl;
 					pcl::copyPointCloud(*cloud_hesai,*cloud_local_map);
-					localmap.push_back(*cloud_local_map);
+					poses.push_back(Eigen::Matrix4f::Identity());
+					clouds.push_back(*cloud_local_map);
 					first_cloud = false;
 				} else{
 					//2.1 加个去畸变
@@ -190,59 +227,51 @@ int point2planeICP(){
 					}else{
 						pcl::copyPointCloud(*cloud_hesai,*cloud_bef);
 					}
-					
+					//2.1.1 设为普通icp********
+					icp.transformation = Eigen::Matrix4f::Identity();
 					//2.2 输入的也应该降采样
-					pcl::UniformSampling<pcl::PointXYZI> filter;
-					pcl::PointCloud<int> keypointIndices;
+				
 					filter.setInputCloud(cloud_bef);
-					filter.setRadiusSearch(0.05f); //0.1米
+					filter.setRadiusSearch(0.02f); //2cm 根据测距精度设置的
 					filter.compute(keypointIndices);
 					pcl::copyPointCloud(*cloud_bef, keypointIndices.points, *cloud_filtered);
 					*cloud_bef = *cloud_filtered;
 					keypointIndices.clear();
-					//2.3 进行point 2 plane ICP **********
+					//2.3 进行point 2 plane ICP ********** 去3次畸变2次icp ****&&&&这个当做 lidar odom
+					tools.timeCalcSet("第一次ICP用时     ");
 					tfed = icp.normalIcpRegistration(cloud_bef,*cloud_local_map);
 					icp_result.push_back(icp.increase);
  					//todo 不应该这样,应该都放到000附近
 					//2.3.1 再次去畸变
 					simpleDistortion(xyzItimeRing,icp.increase.inverse(),*cloud_bef);
-					pcl::transformPointCloud(*cloud_bef,tfed,icp.transformation.matrix());//去了
-					//2.3.2 再次icp           ***********
+					tools.timeUsed();
+					//2.3.2 再次icp           *********** &&&&这个当做 lidar mapping
+					tools.timeCalcSet("第二次ICP用时    ");
+					*cloud_local_map = lidarLocalMap(poses,clouds);
+					//lidarLocalMap(poses,clouds);
 					tfed = icp.normalIcpRegistrationlocal(cloud_bef,*cloud_local_map);
-					poses.push_back(icp.transformation.matrix());
 					icp_result.back() = icp_result.back()*icp.pcl_plane_plane_icp->getFinalTransformation(); //第一次结果*下一次去畸变icp结果
-					//2.4把最后去畸变结果的点云放进去
-					localmap.push_back(tfed);
-					//2.5下面维护 5帧的local map
-					cloud_local_map->clear();
-					if(localmap.size()>1){
-						std::vector<pcl::PointCloud<pcl::PointXYZI>> localmap_temp;
-						for (int j = 1; j < localmap.size(); ++j) {
-							localmap_temp.push_back(localmap[j]);
-						}
-						localmap = localmap_temp;
-					}
-					for (int j = 0; j < localmap.size(); j=j+1) {
-						*cloud_local_map += localmap[j];
-					}
-					//map filter start
-					filter.setInputCloud(cloud_local_map);
-					filter.setRadiusSearch(0.05f); //0.1米
-					filter.compute(keypointIndices);
-					pcl::copyPointCloud(*cloud_local_map, keypointIndices.points, *filteredCloud);
-					*cloud_local_map = *filteredCloud;
-					//filter end
+					//2.3.3 再次去畸变
+					simpleDistortion(xyzItimeRing,icp.increase.inverse(),*cloud_bef);
+					tools.timeUsed();
+					//2.4 speed
+					std::cout<<"*****点云ID: "<<i<<" ***** speed: "<<3.6*sqrt(icp_result.back()(0,3)*icp_result.back()(0,3)+
+					icp_result.back()(1,3)*icp_result.back()(1,3))/0.1<<" km/h ********"<<std::endl;
 					
+					*cloud_local_map = *cloud_bef;
+			 		//可以用恢复出来的位姿 tf 以前的点云
+					clouds.push_back(*cloud_bef);
 					//生成地图
 					Eigen::Matrix4f current_pose = Eigen::Matrix4f::Identity();
 					//试一下这样恢复出来的位姿
 					for (int k = 0; k < icp_result.size(); ++k) {
 						current_pose *= icp_result[k];
 					}
-					std::cout<<"恢复位姿\n"<<current_pose.matrix()<<std::endl;
-					pcl::transformPointCloud(*cloud_hesai,tfed,current_pose);
+					poses.push_back(current_pose.matrix());
+					std::cout<<"全局坐标 \n"<<current_pose.matrix()<<std::endl;
+					pcl::transformPointCloud(*cloud_bef,tfed,current_pose);
 					*cloud_map += tfed;
-					std::cout<<"scan: "<<i<<" map size: "<<cloud_local_map->size() <<std::endl;
+					std::cout<<" 局部地图大小: "<<cloud_local_map->size() <<std::endl;
 				}
 			}
 		}
