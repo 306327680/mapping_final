@@ -2,68 +2,69 @@
 <project version="4">
   <component name="CMakeRunConfigurationManager" shouldGenerate="true" shouldDeleteObsolete="true">
     <generated>
-      <config projectName="pcd_compare" targetName="roscpp_generate_messages_eus" />
-      <config projectName="pcd_compare" targetName="gtest" />
+      <config projectName="pcd_compare" targetName="doxygen" />
+      <config projectName="pcd_compare" targetName="rosgraph_msgs_generate_messages_lisp" />
+      <config projectName="pcd_compare" targetName="actionlib_msgs_generate_messages_py" />
+      <config projectName="pcd_compare" targetName="geometry_msgs_generate_messages_nodejs" />
+      <config projectName="pcd_compare" targetName="std_srvs_generate_messages_eus" />
       <config projectName="pcd_compare" targetName="topic_tools_generate_messages_eus" />
-      <config projectName="pcd_compare" targetName="geometry_msgs_generate_messages_cpp" />
-      <config projectName="pcd_compare" targetName="roscpp_generate_messages_lisp" />
-      <config projectName="pcd_compare" targetName="gmock" />
-      <config projectName="pcd_compare" targetName="sensor_msgs_generate_messages_py" />
-      <config projectName="pcd_compare" targetName="clean_test_results" />
-      <config projectName="pcd_compare" targetName="std_msgs_generate_messages_nodejs" />
-      <config projectName="pcd_compare" targetName="poseIO" />
       <config projectName="pcd_compare" targetName="std_srvs_generate_messages_lisp" />
-      <config projectName="pcd_compare" targetName="std_msgs_generate_messages_cpp" />
-      <config projectName="pcd_compare" targetName="geometry_msgs_generate_messages_lisp" />
-      <config projectName="pcd_compare" targetName="gtest_main" />
-      <config projectName="pcd_compare" targetName="tests" />
-      <config projectName="pcd_compare" targetName="topic_tools_generate_messages_lisp" />
-      <config projectName="pcd_compare" targetName="actionlib_msgs_generate_messages_eus" />
+      <config projectName="pcd_compare" targetName="geometry_msgs_generate_messages_eus" />
+      <config projectName="pcd_compare" targetName="gtest" />
       <config projectName="pcd_compare" targetName="nav_msgs_generate_messages_nodejs" />
-      <config projectName="pcd_compare" targetName="mapping_lm" />
-      <config projectName="pcd_compare" targetName="std_srvs_generate_messages_py" />
-      <config projectName="pcd_compare" targetName="spline" />
-      <config projectName="pcd_compare" targetName="sensor_msgs_generate_messages_lisp" />
+      <config projectName="pcd_compare" targetName="tests" />
+      <config projectName="pcd_compare" targetName="roscpp_generate_messages_nodejs" />
+      <config projectName="pcd_compare" targetName="topic_tools_generate_messages_py" />
       <config projectName="pcd_compare" targetName="rosgraph_msgs_generate_messages_nodejs" />
-      <config projectName="pcd_compare" targetName="topic_tools_generate_messages_nodejs" />
-      <config projectName="pcd_compare" targetName="nav_msgs_generate_messages_lisp" />
-      <config projectName="pcd_compare" targetName="run_tests" />
+      <config projectName="pcd_compare" targetName="gtest_main" />
+      <config projectName="pcd_compare" targetName="roscpp_generate_messages_cpp" />
+      <config projectName="pcd_compare" targetName="poseIO" />
       <config projectName="pcd_compare" targetName="actionlib_msgs_generate_messages_lisp" />
+      <config projectName="pcd_compare" targetName="nav_msgs_generate_messages_eus" />
+      <config projectName="pcd_compare" targetName="download_extra_data" />
+      <config projectName="pcd_compare" targetName="ground_seg" />
+      <config projectName="pcd_compare" targetName="std_srvs_generate_messages_nodejs" />
+      <config projectName="pcd_compare" targetName="actionlib_msgs_generate_messages_cpp" />
+      <config projectName="pcd_compare" targetName="topic_tools_generate_messages_nodejs" />
+      <config projectName="pcd_compare" targetName="roscpp_generate_messages_lisp" />
+      <config projectName="pcd_compare" targetName="std_msgs_generate_messages_eus" />
+      <config projectName="pcd_compare" targetName="sophus" />
+      <config projectName="pcd_compare" targetName="spline" />
+      <config projectName="pcd_compare" targetName="geometry_msgs_generate_messages_cpp" />
+      <config projectName="pcd_compare" targetName="run_tests" />
+      <config projectName="pcd_compare" targetName="gmock" />
+      <config projectName="pcd_compare" targetName="sensor_msgs_generate_messages_cpp" />
+      <config projectName="pcd_compare" targetName="mapping" />
+      <config projectName="pcd_compare" targetName="rosgraph_msgs_generate_messages_py" />
+      <config projectName="pcd_compare" targetName="sensor_msgs_generate_messages_py" />
+      <config projectName="pcd_compare" targetName="topic_tools_generate_messages_cpp" />
+      <config projectName="pcd_compare" targetName="geometry_msgs_generate_messages_lisp" />
+      <config projectName="pcd_compare" targetName="sensor_msgs_generate_messages_eus" />
+      <config projectName="pcd_compare" targetName="sensor_msgs_generate_messages_lisp" />
+      <config projectName="pcd_compare" targetName="nav_msgs_generate_messages_cpp" />
+      <config projectName="pcd_compare" targetName="actionlib_msgs_generate_messages_nodejs" />
+      <config projectName="pcd_compare" targetName="std_srvs_generate_messages_cpp" />
+      <config projectName="pcd_compare" targetName="nav_msgs_generate_messages_py" />
+      <config projectName="pcd_compare" targetName="ndt_omp" />
+      <config projectName="pcd_compare" targetName="std_msgs_generate_messages_py" />
+      <config projectName="pcd_compare" targetName="nav_msgs_generate_messages_lisp" />
+      <config projectName="pcd_compare" targetName="std_msgs_generate_messages_cpp" />
+      <config projectName="pcd_compare" targetName="roscpp_generate_messages_eus" />
+      <config projectName="pcd_compare" targetName="sensor_msgs_generate_messages_nodejs" />
+      <config projectName="pcd_compare" targetName="std_srvs_generate_messages_py" />
+      <config projectName="pcd_compare" targetName="geometry_msgs_generate_messages_py" />
+      <config projectName="pcd_compare" targetName="rosgraph_msgs_generate_messages_cpp" />
+      <config projectName="pcd_compare" targetName="actionlib_msgs_generate_messages_eus" />
+      <config projectName="pcd_compare" targetName="topic_tools_generate_messages_lisp" />
+      <config projectName="pcd_compare" targetName="odom" />
+      <config projectName="pcd_compare" targetName="rosgraph_msgs_generate_messages_eus" />
+      <config projectName="pcd_compare" targetName="std_msgs_generate_messages_nodejs" />
+      <config projectName="pcd_compare" targetName="clean_test_results" />
+      <config projectName="pcd_compare" targetName="gmock_main" />
       <config projectName="pcd_compare" targetName="_catkin_empty_exported_target" />
       <config projectName="pcd_compare" targetName="roscpp_generate_messages_py" />
-      <config projectName="pcd_compare" targetName="nav_msgs_generate_messages_py" />
-      <config projectName="pcd_compare" targetName="std_msgs_generate_messages_eus" />
-      <config projectName="pcd_compare" targetName="ground_seg" />
-      <config projectName="pcd_compare" targetName="rosgraph_msgs_generate_messages_py" />
-      <config projectName="pcd_compare" targetName="doxygen" />
-      <config projectName="pcd_compare" targetName="std_srvs_generate_messages_nodejs" />
-      <config projectName="pcd_compare" targetName="topic_tools_generate_messages_py" />
-      <config projectName="pcd_compare" targetName="rosgraph_msgs_generate_messages_eus" />
-      <config projectName="pcd_compare" targetName="roscpp_generate_messages_nodejs" />
-      <config projectName="pcd_compare" targetName="std_srvs_generate_messages_cpp" />
-      <config projectName="pcd_compare" targetName="sophus" />
-      <config projectName="pcd_compare" targetName="std_msgs_generate_messages_py" />
-      <config projectName="pcd_compare" targetName="download_extra_data" />
-      <config projectName="pcd_compare" targetName="sensor_msgs_generate_messages_eus" />
-      <config projectName="pcd_compare" targetName="actionlib_msgs_generate_messages_nodejs" />
-      <config projectName="pcd_compare" targetName="mapping" />
-      <config projectName="pcd_compare" targetName="actionlib_msgs_generate_messages_py" />
-      <config projectName="pcd_compare" targetName="nav_msgs_generate_messages_eus" />
-      <config projectName="pcd_compare" targetName="roscpp_generate_messages_cpp" />
-      <config projectName="pcd_compare" targetName="geometry_msgs_generate_messages_nodejs" />
-      <config projectName="pcd_compare" targetName="topic_tools_generate_messages_cpp" />
-      <config projectName="pcd_compare" targetName="geometry_msgs_generate_messages_eus" />
-      <config projectName="pcd_compare" targetName="geometry_msgs_generate_messages_py" />
+      <config projectName="pcd_compare" targetName="mapping_lm" />
       <config projectName="pcd_compare" targetName="std_msgs_generate_messages_lisp" />
-      <config projectName="pcd_compare" targetName="rosgraph_msgs_generate_messages_lisp" />
-      <config projectName="pcd_compare" targetName="gmock_main" />
-      <config projectName="pcd_compare" targetName="odom" />
-      <config projectName="pcd_compare" targetName="rosgraph_msgs_generate_messages_cpp" />
-      <config projectName="pcd_compare" targetName="std_srvs_generate_messages_eus" />
-      <config projectName="pcd_compare" targetName="sensor_msgs_generate_messages_cpp" />
-      <config projectName="pcd_compare" targetName="nav_msgs_generate_messages_cpp" />
-      <config projectName="pcd_compare" targetName="actionlib_msgs_generate_messages_cpp" />
-      <config projectName="pcd_compare" targetName="sensor_msgs_generate_messages_nodejs" />
     </generated>
   </component>
   <component name="CMakeSettings">
@@ -73,14 +74,11 @@
     </configurations>
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="0cf6a132-7d76-466a-a186-201a5e3e35f3" name="Default" comment="crub ok">
-      <change afterPath="$PROJECT_DIR$/include/DataIO/ReadBag.cpp" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/include/DataIO/ReadBag.h" afterDir="false" />
+    <list default="true" id="0cf6a132-7d76-466a-a186-201a5e3e35f3" name="Default" comment="rosbag can read">
+      <change afterPath="$PROJECT_DIR$/doc/debug.md" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/CMakeLists.txt" beforeDir="false" afterPath="$PROJECT_DIR$/CMakeLists.txt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/include/otherFunctions.h" beforeDir="false" afterPath="$PROJECT_DIR$/include/otherFunctions.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/include/tools/util.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/include/tools/util.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/include/registration/registration.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/include/registration/registration.cpp" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/main.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/main.cpp" afterDir="false" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
@@ -103,27 +101,32 @@
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
   <component name="OCFindUsagesOptions" text="true" ivars="false" properties="true" derivedClasses="false" />
+  <component name="OCResolveContextSettings">
+    <option name="configuration" value="0-ground_seg" />
+  </component>
   <component name="ProjectId" id="1Q0LjOUlToWwhBNu79k14NpZmai" />
   <component name="PropertiesComponent">
     <property name="SHARE_PROJECT_CONFIGURATION_FILES" value="true" />
     <property name="WebServerToolWindowFactoryState" value="false" />
-    <property name="last_opened_file_path" value="$PROJECT_DIR$/include/g2oIO" />
+    <property name="last_opened_file_path" value="$PROJECT_DIR$/CMakeLists.txt" />
     <property name="nodejs_interpreter_path.stuck_in_default_project" value="undefined stuck path" />
     <property name="nodejs_npm_path_reset_for_default_project" value="true" />
-    <property name="settings.editor.selected.configurable" value="CMakeSettings" />
+    <property name="nodejs_package_manager_path" value="npm" />
+    <property name="settings.editor.selected.configurable" value="preferences.keymap" />
   </component>
   <component name="RecentsManager">
-    <key name="CopyFile.RECENT_KEYS">
-      <recent name="$PROJECT_DIR$/include/g2oIO" />
-      <recent name="$PROJECT_DIR$/include/distortion" />
-      <recent name="$PROJECT_DIR$/include/oneFrameGND" />
-    </key>
     <key name="MoveFile.RECENT_KEYS">
       <recent name="$PROJECT_DIR$/cfg" />
       <recent name="$PROJECT_DIR$/include/tools" />
       <recent name="$PROJECT_DIR$/include/FeatureExtraction" />
       <recent name="$PROJECT_DIR$/include/FirstPersonViewFilter" />
       <recent name="$PROJECT_DIR$/include/mapping" />
+    </key>
+    <key name="CopyFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$/include/ndt_omp" />
+      <recent name="$PROJECT_DIR$/include/g2oIO" />
+      <recent name="$PROJECT_DIR$/include/distortion" />
+      <recent name="$PROJECT_DIR$/include/oneFrameGND" />
     </key>
   </component>
   <component name="RunDashboard">
@@ -225,7 +228,7 @@
       <predefined_log_file id="idea.log" enabled="true" />
       <method />
     </configuration>
-    <configuration name="Build All" type="CMakeRunConfiguration" factoryName="Application" PROGRAM_PARAMS="$USER_HOME$/test_ws/pcd_64/ $USER_HOME$/test_ws/g2o_64/result.g2o 0 1000" PASS_PARENT_ENVS_2="true" CONFIG_NAME="Debug" RUN_TARGET_PROJECT_NAME="pcd_compare" RUN_TARGET_NAME="mapping" EXPLICIT_BUILD_TARGET_NAME="all">
+    <configuration name="Build All" type="CMakeRunConfiguration" factoryName="Application" PROGRAM_PARAMS="$PROJECT_DIR$/cmake-build-debug/map" PASS_PARENT_ENVS_2="true" CONFIG_NAME="Debug" RUN_TARGET_PROJECT_NAME="pcd_compare" RUN_TARGET_NAME="mapping" EXPLICIT_BUILD_TARGET_NAME="all">
       <method v="2">
         <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
       </method>
@@ -356,6 +359,11 @@
       </method>
     </configuration>
     <configuration name="nav_msgs_generate_messages_py" type="CMakeRunConfiguration" factoryName="Application" PASS_PARENT_ENVS_2="true" PROJECT_NAME="pcd_compare" TARGET_NAME="nav_msgs_generate_messages_py" CONFIG_NAME="Debug">
+      <method v="2">
+        <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="ndt_omp" type="CMakeRunConfiguration" factoryName="Application" PASS_PARENT_ENVS_2="true" PROJECT_NAME="pcd_compare" TARGET_NAME="ndt_omp" CONFIG_NAME="Debug">
       <method v="2">
         <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
       </method>
@@ -570,6 +578,7 @@
       <item itemvalue="CMake Application.nav_msgs_generate_messages_lisp" />
       <item itemvalue="CMake Application.nav_msgs_generate_messages_nodejs" />
       <item itemvalue="CMake Application.nav_msgs_generate_messages_py" />
+      <item itemvalue="CMake Application.ndt_omp" />
       <item itemvalue="CMake Application.odom" />
       <item itemvalue="CMake Application.poseIO" />
       <item itemvalue="CMake Application.roscpp_generate_messages_cpp" />
@@ -678,7 +687,14 @@
       <workItem from="1574147904742" duration="5980000" />
       <workItem from="1574158650041" duration="4635000" />
       <workItem from="1574215238299" duration="27909000" />
-      <workItem from="1574647220109" duration="23427000" />
+      <workItem from="1574647220109" duration="69599000" />
+      <workItem from="1575250668058" duration="37166000" />
+      <workItem from="1575514869171" duration="15977000" />
+      <workItem from="1575855995514" duration="634000" />
+      <workItem from="1576640158675" duration="1200000" />
+      <workItem from="1577182688730" duration="33369000" />
+      <workItem from="1577670960412" duration="66570000" />
+      <workItem from="1578016036657" duration="2960000" />
     </task>
     <task id="LOCAL-00001" summary="change the structure">
       <created>1565432253211</created>
@@ -757,7 +773,35 @@
       <option name="project" value="LOCAL" />
       <updated>1574333943859</updated>
     </task>
-    <option name="localTasksCounter" value="12" />
+    <task id="LOCAL-00012" summary="rosbag can read">
+      <created>1574758726365</created>
+      <option name="number" value="00012" />
+      <option name="presentableId" value="LOCAL-00012" />
+      <option name="project" value="LOCAL" />
+      <updated>1574758726365</updated>
+    </task>
+    <task id="LOCAL-00013" summary="好久没看了,准备重新加个NDT omp试下，同时看看补充一下时间戳(按进来的顺序分离线数和时间戳)对不对">
+      <created>1577184868669</created>
+      <option name="number" value="00013" />
+      <option name="presentableId" value="LOCAL-00013" />
+      <option name="project" value="LOCAL" />
+      <updated>1577184868669</updated>
+    </task>
+    <task id="LOCAL-00014" summary="准备转换到局部坐标系了,现在可以work15米">
+      <created>1577707806360</created>
+      <option name="number" value="00014" />
+      <option name="presentableId" value="LOCAL-00014" />
+      <option name="project" value="LOCAL" />
+      <updated>1577707806360</updated>
+    </task>
+    <task id="LOCAL-00015" summary="rosbag can read">
+      <created>1577776346205</created>
+      <option name="number" value="00015" />
+      <option name="presentableId" value="LOCAL-00015" />
+      <option name="project" value="LOCAL" />
+      <updated>1577776346205</updated>
+    </task>
+    <option name="localTasksCounter" value="16" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -789,7 +833,10 @@
     <MESSAGE value="搞定了bparel的线束提取" />
     <MESSAGE value="使用normalize来搞" />
     <MESSAGE value="crub ok" />
-    <option name="LAST_COMMIT_MESSAGE" value="crub ok" />
+    <MESSAGE value="好久没看了,准备重新加个NDT omp试下，同时看看补充一下时间戳(按进来的顺序分离线数和时间戳)对不对" />
+    <MESSAGE value="准备转换到局部坐标系了,现在可以work15米" />
+    <MESSAGE value="rosbag can read" />
+    <option name="LAST_COMMIT_MESSAGE" value="rosbag can read" />
   </component>
   <component name="masterDetails">
     <states>

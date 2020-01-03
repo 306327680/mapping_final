@@ -53,6 +53,7 @@
 #include <pcl/visualization/cloud_viewer.h>
 #include "ndt_omp/include/pclomp/ndt_omp.h"
 #include <ndt_omp/include/pclomp/gicp_omp.h>
+#include <pcl/filters/statistical_outlier_removal.h>
 // 1. 参数初始化
 bool tensorvoting = true;
 using namespace g2o;
@@ -488,6 +489,43 @@ void genfeaturemap(std::vector<Eigen::Isometry3d, Eigen::aligned_allocator<Eigen
 //	pcl::transformPointCloud(*cloud_add, *cloud_aft, trans_vector[0].inverse().matrix());
 }
 
+//6.0 线性去畸变的接口
+void simpleDistortion(mypcdCloud input,Eigen::Matrix4f increase,pcl::PointCloud<pcl::PointXYZI>& output){
+	output.clear();
+/*	for (int i = 0; i < input.size(); ++i) {
+		pcl::PointCloud<pcl::PointXYZI> onepointcloud,onepointcloudtfed;
+		pcl::PointXYZI onepoint;
+		onepoint.x = input[i].x;
+		onepoint.y = input[i].y;
+		onepoint.z = input[i].z;
+		onepoint.intensity = input[i].intensity;
+		onepointcloud.push_back(onepoint);
+		pcl::transformPointCloud(onepointcloud,onepointcloudtfed,increase*10*input[i].timestamp);
+		output.push_back(onepointcloudtfed[0]);
+	}
+	printf("current input: %d after distortion: %d \n",input.size(),output.size());*/
+	pcl::PointCloud<PointTypeBeam>::Ptr test (new pcl::PointCloud<PointTypeBeam>);
+	pcl::PointCloud<PointTypeBeam>::Ptr pcout(new pcl::PointCloud<PointTypeBeam>);
+	
+	featureExtraction Feature;
+	Eigen::Isometry3d se3;
+	se3 = increase.cast<double>();
+	PointTypeBeam temp;
+	for (int i = 0; i < input.size(); ++i) {
+		temp.x = input[i].x;
+		temp.y = input[i].y;
+		temp.z = input[i].z;
+		temp.intensity = input[i].intensity;
+		temp.pctime = input[i].timestamp*10;
+		temp.beam = input[i].ring;
+		test->push_back(temp);
+	}
+	
+	Feature.adjustDistortion(test,pcout,se3);
+	pcl::copyPointCloud(*pcout,output);
+}
+
+
 //6.1 omp NDT 配准
 pcl::PointCloud<pcl::PointXYZI>::Ptr align(pcl::Registration<pcl::PointXYZI, pcl::PointXYZI>::Ptr registration,
 		const pcl::PointCloud<pcl::PointXYZI>::Ptr& target_cloud,
@@ -505,6 +543,23 @@ pcl::PointCloud<pcl::PointXYZI>::Ptr align(pcl::Registration<pcl::PointXYZI, pcl
 	std::cout << "10times: " << (t3 - t2).toSec() * 1000 << "[msec]" << std::endl;
 	std::cout << "fitness: " << registration->getFitnessScore() << std::endl << std::endl;
 	return aligned;
+}
+//6.1.1 距离滤波
+void pointCloudRangeFilter(pcl::PointCloud<pcl::PointXYZI>& input,float range){
+	pcl::PointCloud<pcl::PointXYZI>::Ptr filtered(new pcl::PointCloud<pcl::PointXYZI>());
+	for (int i = 0; i < input.size(); ++i) {
+		if(sqrtf(input[i].x*input[i].x+input[i].y+input[i].y)<range){
+			filtered->push_back(input[i]);
+		}
+	}
+
+	//加一个
+	pcl::StatisticalOutlierRemoval<pcl::PointXYZI> sor;     //创建滤波器对象
+	sor.setInputCloud (filtered);                      //设置待滤波的点云
+	sor.setMeanK (50);                               	//设置在进行统计时考虑的临近点个数
+	sor.setStddevMulThresh (1.0);         		//设置判断是否为离群点的阀值，用来倍乘标准差，也就是上面的std_mul
+	sor.filter (input);
+
 }
 
 #endif //PCD_COMPARE_MAIN_H

@@ -73,7 +73,7 @@ void registration::addNormal(pcl::PointCloud<pcl::PointXYZI>::Ptr cloud,
 	normalEstimator.setInputCloud(cloud_source_normals);
 	normalEstimator.setSearchMethod(searchTree);
 	//normalEstimator.setRadiusSearch(0.05);
-	normalEstimator.setKSearch(20);
+	normalEstimator.setKSearch(10);
 	normalEstimator.compute(*normals);
 	pcl::concatenateFields(*cloud_source_normals, *normals, *cloud_with_normals);
 }
@@ -83,8 +83,8 @@ void registration::SetNormalICP() {
 			new pcl::IterativeClosestPointWithNormals<pcl::PointXYZINormal, pcl::PointXYZINormal>());
 	icp->setMaximumIterations(20);
 	icp->setMaxCorrespondenceDistance(0.8);
-	icp->setTransformationEpsilon(1e-6);
-	icp->setEuclideanFitnessEpsilon(1e-6);
+	icp->setTransformationEpsilon(0.0001);
+	icp->setEuclideanFitnessEpsilon(0.0001);
 	this->pcl_plane_plane_icp = icp;
 	
 }
@@ -102,6 +102,7 @@ pcl::PointCloud<pcl::PointXYZI> registration::normalIcpRegistration(pcl::PointCl
 	//隔断一下
 	pcl::PointCloud<pcl::PointXYZI>::Ptr target1(new pcl::PointCloud<pcl::PointXYZI>);
 	pcl::copyPointCloud(target,*target1);
+	
 	addNormal(source, cloud_source_normals);
 	addNormal(target1, cloud_target_normals);
 	*cloud_source_normals_temp = *cloud_source_normals;
@@ -112,15 +113,6 @@ pcl::PointCloud<pcl::PointXYZI> registration::normalIcpRegistration(pcl::PointCl
 	icp_init = ReOrthogonalization(Eigen::Isometry3d(icp_init.matrix().cast<double>())).matrix().cast<float>();
 	//1.转换点云 给一个初值
 	pcl::transformPointCloud(*cloud_source_normals_temp, *cloud_source_normals, icp_init.matrix());
-/*	if(icp_init!= Eigen::Matrix4f::Identity()){
-		if(pcl_plane_plane_icp->getFitnessScore()<0.2){
-			pcl::transformPointCloud(*cloud_source_normals_temp, *cloud_source_normals, icp_init.matrix());
-		} else{
-			pcl::transformPointCloud(*cloud_source_normals_temp, *cloud_source_normals, transformation.matrix());
-		}
-	}else{
-		*cloud_source_normals = *cloud_source_normals_temp;
-	}*/
 
 	pcl_plane_plane_icp->setInputSource(cloud_source_normals);
 	pcl_plane_plane_icp->setInputTarget(cloud_target_normals);

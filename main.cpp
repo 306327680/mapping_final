@@ -13,7 +13,7 @@ int status = 0;
 //输入模式的函数
 int getParam(int argc,char** argv){
 	std::cout<<"设置建图模式: 1.g2o+pcd的传统模式(pcd+g2o路径) 2.point to plane ICP (需要提供pcd路径) 3.bpreal ground mapping (pcd+g2o路径)"
-	<<"4. 使用编码器和GPS LiDAR 建图"<<"5. LiDAR gps 外参标定"<<"6. NDT maping"<<std::endl;
+			 <<"4. 使用编码器和GPS LiDAR 建图"<<"5. LiDAR gps 外参标定"<<"6. NDT maping"<<std::endl;
 	cin >> status;
 	std::cout <<"status: " <<status<<std::endl;
 	if(status==1||status==3){
@@ -85,40 +85,6 @@ void setStartEnd(){
 void pointToPlaneICP(pcl::PointCloud<pcl::PointXYZI> pcin,Eigen::Isometry3d& tf){
 
 }
-void simpleDistortion(mypcdCloud input,Eigen::Matrix4f increase,pcl::PointCloud<pcl::PointXYZI>& output){
-	output.clear();
-/*	for (int i = 0; i < input.size(); ++i) {
-		pcl::PointCloud<pcl::PointXYZI> onepointcloud,onepointcloudtfed;
-		pcl::PointXYZI onepoint;
-		onepoint.x = input[i].x;
-		onepoint.y = input[i].y;
-		onepoint.z = input[i].z;
-		onepoint.intensity = input[i].intensity;
-		onepointcloud.push_back(onepoint);
-		pcl::transformPointCloud(onepointcloud,onepointcloudtfed,increase*10*input[i].timestamp);
-		output.push_back(onepointcloudtfed[0]);
-	}
-	printf("current input: %d after distortion: %d \n",input.size(),output.size());*/
-	pcl::PointCloud<PointTypeBeam>::Ptr test (new pcl::PointCloud<PointTypeBeam>);
-	pcl::PointCloud<PointTypeBeam>::Ptr pcout(new pcl::PointCloud<PointTypeBeam>);
-	
-	featureExtraction Feature;
-	Eigen::Isometry3d se3;
-	se3 = increase.cast<double>();
-	PointTypeBeam temp;
-	for (int i = 0; i < input.size(); ++i) {
-		temp.x = input[i].x;
-		temp.y = input[i].y;
-		temp.z = input[i].z;
-		temp.intensity = input[i].intensity;
-		temp.pctime = input[i].timestamp*10;
-		temp.beam = input[i].ring;
-		test->push_back(temp);
-	}
-	
-	Feature.adjustDistortion(test,pcout,se3);
-	pcl::copyPointCloud(*pcout,output);
-}
 //6.1 tools 建立局部地图
 //a. 挑选关键帧(有必要?)
 //b. 维持队列长度
@@ -126,33 +92,52 @@ void simpleDistortion(mypcdCloud input,Eigen::Matrix4f increase,pcl::PointCloud<
 pcl::PointCloud<pcl::PointXYZI> lidarLocalMap(std::vector<Eigen::Matrix4f> & poses,std::vector<pcl::PointCloud<pcl::PointXYZI>> & clouds){
 	pcl::PointCloud<pcl::PointXYZI>::Ptr map_ptr (new pcl::PointCloud<pcl::PointXYZI>);
 	pcl::PointCloud<pcl::PointXYZI> map_temp;
+	std::vector<Eigen::Matrix4f>  poses_tmp;
+	std::vector<pcl::PointCloud<pcl::PointXYZI>>  clouds_tmp;
 	Eigen::Matrix4f tf_all = Eigen::Matrix4f::Identity();
-	if (poses.size()>=15){
-		for (int i = poses.size() - 15 ; i <poses.size() ; i++) {
+	//局部地图采用 continues time 的方式生成 先只在10帧上做
+	
+/*	Eigen::Isometry3d t1,t2,t3,t4,current_trans;
+	double num =3;//两个位姿之间插几个
+	SplineFusion sf;
+	for (double i = 0; i < num; ++i) {
+		current_trans = sf.cumulativeForm(t1,t2,t3,t4,i/num);
+	}*/
+	//note 15帧64线 0.02 大概225520个点 //10帧试试
+	if (poses.size()>=10){
+		for (int i = poses.size() - 10; i <poses.size() ; i++) {
+			pcl::transformPointCloud(clouds[i],map_temp,poses[i]);
+			*map_ptr += map_temp;
+			poses_tmp.push_back(poses[i]);
+			clouds_tmp.push_back(clouds[i]);
+		}
+		poses = poses_tmp;
+		clouds = clouds_tmp;
+	}else if(poses.size()>1){//第一开始点云不多的情况 不要第一个帧
+		for (int i = 1 ; i <poses.size() ; i++) {
 			pcl::transformPointCloud(clouds[i],map_temp,poses[i]);
 			*map_ptr += map_temp;
 		}
-	}else{//第一开始点云不多的情况
-		for (int i = 0 ; i <poses.size() ; i++) {
-			pcl::transformPointCloud(clouds[i],map_temp,poses[i]);
-			*map_ptr += map_temp;
-		}
+	} else{
+		pcl::transformPointCloud(clouds[0],*map_ptr,poses[0]);
 	}
 
 	pcl::transformPointCloud(*map_ptr,map_temp,poses.back().inverse());
 	*map_ptr = map_temp;
 	//显示看一下
- 
 	
 	pcl::UniformSampling<pcl::PointXYZI> filter;
 	pcl::PointCloud<int> keypointIndices;
 	filter.setInputCloud(map_ptr);
-	filter.setRadiusSearch(0.02f); //2cm 测距精度
+	filter.setRadiusSearch(0.15f); //2cm 测距精度 015 haixing
 	filter.compute(keypointIndices);
 	pcl::copyPointCloud(*map_ptr, keypointIndices.points, map_temp);
+	//pointCloudRangeFilter(map_temp,75); //距离滤波可以去了
+	std::cout<<" 局部地图大小: "<<map_temp.size() <<std::endl;
 	return  map_temp;
 }
-//功能2建图前端 点面icp
+
+//6.2 建图前端 点面icp
 int point2planeICP(){
 	//点云缓冲
  
@@ -178,101 +163,79 @@ int point2planeICP(){
 	//滤波相关
 	pcl::UniformSampling<pcl::PointXYZI> filter;
 	pcl::PointCloud<int> keypointIndices;
+	//车速
+	float curr_speed = 0;
 //class
 	util tools;
 	registration icp;
 	icp.setParam("/media/echo/DataDisc/3_program/mapping/cfg/icp.yaml");
 	icp.SetNormalICP();
 	pcl::PCDWriter writer;
- 	bool first_cloud = true;
- 	bool distortion = true;
- 	std::cout<<file_names_ .size()<<std::endl;
+	bool first_cloud = true;
+	bool distortion = true;
+	std::cout<<file_names_ .size()<<std::endl;
 	std::cout<<start_id<<" "<<end_id<<std::endl;
 	
 	for(int i = 1;  i <file_names_ .size();i++){
 		if (i>start_id && i<end_id) {
 			pcl::io::loadPCDFile<mypcd>(file_names_[i], xyzItimeRing);
 			pcl::copyPointCloud(xyzItimeRing,*cloud_hesai);
-			if(bperal_edge){
-/*				//转换格式
-				for (int j = 0; j < cloud_bef.size(); ++j) {
-					pcl::PointXYZINormal aa;
-					aa.x = cloud_bef[j].x;
-					aa.y = cloud_bef[j].y;
-					aa.z = cloud_bef[j].z;
-					aa.intensity = cloud_bef[j].intensity;
-					//得到延迟时间
-					aa.normal_y = j%(cloud_bef.size()/32);
-					raw->push_back(aa);
+			//1. 这里用pcl的 plane to plane icp
+			if(first_cloud){
+				//1.1 第一帧 不进行计算
+				std::cout<<"first cloud" <<std::endl;
+				pcl::copyPointCloud(*cloud_hesai,*cloud_local_map);
+				poses.push_back(Eigen::Matrix4f::Identity());
+				clouds.push_back(*cloud_local_map);
+				first_cloud = false;
+			} else{
+				//2.1 加个去畸变
+				simpleDistortion(xyzItimeRing,icp.increase.inverse(),*cloud_bef);
+				//2.1.1 设为普通icp********
+				icp.transformation = Eigen::Matrix4f::Identity();
+				//2.2 输入的也应该降采样
+				filter.setInputCloud(cloud_bef);
+				filter.setRadiusSearch(0.02f); //2cm 根据测距精度设置的
+				filter.compute(keypointIndices);
+				pcl::copyPointCloud(*cloud_bef, keypointIndices.points, *cloud_filtered);
+				*cloud_bef = *cloud_filtered;
+				//(*cloud_bef,75 - 1.5*(curr_speed/10)); //根据车速减小范围
+				keypointIndices.clear();
+				//2.3 进行point 2 plane ICP ********** 去3次畸变2次icp ****&&&&这个当做 lidar odom
+				tools.timeCalcSet("第一次ICP用时     ");
+				tfed = icp.normalIcpRegistration(cloud_bef,*cloud_local_map);
+				icp_result.push_back(icp.increase);
+				//todo 不应该这样,应该都放到000附近
+				//2.3.1 再次去畸变 再次减小范围
+				simpleDistortion(xyzItimeRing,icp.increase.inverse(),*cloud_bef);
+				//pointCloudRangeFilter(*cloud_bef,75 - 1.5*(curr_speed/10)); //根据车速减小范围
+				tools.timeUsed();
+				//2.3.2 再次icp           *********** &&&&这个当做 lidar mapping
+				tools.timeCalcSet("第二次ICP用时    ");
+				*cloud_local_map = lidarLocalMap(poses,clouds);  //生成局部地图****
+				tfed = icp.normalIcpRegistrationlocal(cloud_bef,*cloud_local_map);
+				icp_result.back() = icp_result.back()*icp.pcl_plane_plane_icp->getFinalTransformation(); //第一次结果*下一次去畸变icp结果
+				//2.3.3 再次去畸变 再次减小范围
+				simpleDistortion(xyzItimeRing,icp.increase.inverse(),*cloud_bef);
+				//pointCloudRangeFilter(*cloud_bef,75 - 1.5*(curr_speed/10)); //根据车速减小范围
+				tools.timeUsed();
+				//2.4 speed
+				curr_speed = sqrt(icp_result.back()(0,3)*icp_result.back()(0,3)+
+								  icp_result.back()(1,3)*icp_result.back()(1,3))/0.1;
+				std::cout<<"*****点云ID: "<<i<<" ***** speed: "<<3.6*curr_speed<<" km/h ********"<<std::endl;
+				*cloud_local_map = *cloud_bef;
+				//可以用恢复出来的位姿 tf 以前的点云
+				clouds.push_back(*cloud_bef);
+				//生成地图
+				Eigen::Matrix4f current_pose = Eigen::Matrix4f::Identity();
+				//试一下这样恢复出来的位姿
+				for (int k = 0; k < icp_result.size(); ++k) {
+					current_pose *= icp_result[k];
 				}
-				//下面的代码测试 提取线的边缘
-				pcl::removeNaNFromPointCloud(*raw, *filter, indices1);
-				tools.GetPointCloudBeam(*filter,*result);
-				tools.GetBeamEdge(*filter,*result);*/
-			}else{
-				//1. 这里用pcl的 plane to plane icp
-				if(first_cloud){
-					//1.1 第一帧 不进行计算
-					std::cout<<"first cloud" <<std::endl;
-					pcl::copyPointCloud(*cloud_hesai,*cloud_local_map);
-					poses.push_back(Eigen::Matrix4f::Identity());
-					clouds.push_back(*cloud_local_map);
-					first_cloud = false;
-				} else{
-					//2.1 加个去畸变
-					
-					if(distortion){
-						simpleDistortion(xyzItimeRing,icp.increase.inverse(),*cloud_bef);
-//						std::cout<<"畸变用的位移:\n"<<icp.increase.inverse()<<std::endl;
-					}else{
-						pcl::copyPointCloud(*cloud_hesai,*cloud_bef);
-					}
-					//2.1.1 设为普通icp********
-					icp.transformation = Eigen::Matrix4f::Identity();
-					//2.2 输入的也应该降采样
-				
-					filter.setInputCloud(cloud_bef);
-					filter.setRadiusSearch(0.02f); //2cm 根据测距精度设置的
-					filter.compute(keypointIndices);
-					pcl::copyPointCloud(*cloud_bef, keypointIndices.points, *cloud_filtered);
-					*cloud_bef = *cloud_filtered;
-					keypointIndices.clear();
-					//2.3 进行point 2 plane ICP ********** 去3次畸变2次icp ****&&&&这个当做 lidar odom
-					tools.timeCalcSet("第一次ICP用时     ");
-					tfed = icp.normalIcpRegistration(cloud_bef,*cloud_local_map);
-					icp_result.push_back(icp.increase);
- 					//todo 不应该这样,应该都放到000附近
-					//2.3.1 再次去畸变
-					simpleDistortion(xyzItimeRing,icp.increase.inverse(),*cloud_bef);
-					tools.timeUsed();
-					//2.3.2 再次icp           *********** &&&&这个当做 lidar mapping
-					tools.timeCalcSet("第二次ICP用时    ");
-					*cloud_local_map = lidarLocalMap(poses,clouds);
-					//lidarLocalMap(poses,clouds);
-					tfed = icp.normalIcpRegistrationlocal(cloud_bef,*cloud_local_map);
-					icp_result.back() = icp_result.back()*icp.pcl_plane_plane_icp->getFinalTransformation(); //第一次结果*下一次去畸变icp结果
-					//2.3.3 再次去畸变
-					simpleDistortion(xyzItimeRing,icp.increase.inverse(),*cloud_bef);
-					tools.timeUsed();
-					//2.4 speed
-					std::cout<<"*****点云ID: "<<i<<" ***** speed: "<<3.6*sqrt(icp_result.back()(0,3)*icp_result.back()(0,3)+
-					icp_result.back()(1,3)*icp_result.back()(1,3))/0.1<<" km/h ********"<<std::endl;
-					
-					*cloud_local_map = *cloud_bef;
-			 		//可以用恢复出来的位姿 tf 以前的点云
-					clouds.push_back(*cloud_bef);
-					//生成地图
-					Eigen::Matrix4f current_pose = Eigen::Matrix4f::Identity();
-					//试一下这样恢复出来的位姿
-					for (int k = 0; k < icp_result.size(); ++k) {
-						current_pose *= icp_result[k];
-					}
-					poses.push_back(current_pose.matrix());
-					std::cout<<"全局坐标 \n"<<current_pose.matrix()<<std::endl;
-					pcl::transformPointCloud(*cloud_bef,tfed,current_pose);
-					*cloud_map += tfed;
-					std::cout<<" 局部地图大小: "<<cloud_local_map->size() <<std::endl;
-				}
+				poses.push_back(current_pose.matrix());
+				std::cout<<"全局坐标 \n"<<current_pose.matrix()<<std::endl;
+				pcl::transformPointCloud(*cloud_bef,tfed,current_pose);
+				*cloud_map += tfed;
 			}
 		}
 	}
@@ -285,12 +248,7 @@ int point2planeICP(){
 	vis.spin();
 	return(0);
 }
-//读取hesaipcd
-void readAndSaveHesai(std::string path){
-	ReadBag a;
-	a.readHesai(path);
-	
-}
+
 
 // 功能3 设置road curb 的mapping
 void traversableMapping(){
@@ -383,7 +341,7 @@ void LiDARGNSSMapping(){
 }
 //功能6. NDT mapping
 void NDTmapping(){
- 	//	local variables
+	//	local variables
 	pcl::PointCloud<pcl::PointXYZI>::Ptr target_cloud(new pcl::PointCloud<pcl::PointXYZI>());
 	pcl::PointCloud<pcl::PointXYZI>::Ptr source_cloud(new pcl::PointCloud<pcl::PointXYZI>());
 	pcl::PointCloud<pcl::PointXYZI>::Ptr downsampled(new pcl::PointCloud<pcl::PointXYZI>());
@@ -395,7 +353,7 @@ void NDTmapping(){
 	filter.setRadiusSearch(0.1f); //0.1米
 	mypcdCloud xyzItimeRing; //现在改了之后的点
 	pclomp::NormalDistributionsTransform<pcl::PointXYZI, pcl::PointXYZI>::Ptr ndt_omp
-	(new pclomp::NormalDistributionsTransform<pcl::PointXYZI, pcl::PointXYZI>());
+			(new pclomp::NormalDistributionsTransform<pcl::PointXYZI, pcl::PointXYZI>());
 	//配置ndt
 	ndt_omp->setResolution(1.0);
 	Eigen::Matrix4d total_t = Eigen::Matrix4d::Identity();
@@ -428,9 +386,9 @@ void NDTmapping(){
 				//2 配置线程数
 				std::vector<int> num_threads = {1, omp_get_max_threads()};
 				for(int n : num_threads) {
-						ndt_omp->setNumThreads(n);
-						ndt_omp->setNeighborhoodSearchMethod(pclomp::DIRECT1);
-						aligned = align(ndt_omp, target_cloud, source_cloud);
+					ndt_omp->setNumThreads(n);
+					ndt_omp->setNeighborhoodSearchMethod(pclomp::DIRECT1);
+					aligned = align(ndt_omp, target_cloud, source_cloud);
 				}
 				//*target_cloud += *aligned;
 				std::cout<<"target size: "<<target_cloud->size()<<std::endl;
@@ -454,46 +412,54 @@ void NDTmapping(){
 	vis.addPointCloud(aligned, aligned_handler, "aligned");
 	vis.spin();
 }
+//功能7 读取hesaipcd
+void readAndSaveHesai(std::string path){
+	ReadBag a;
+	a.readHesai(path);
+}
 //intensity 的 edge 可不可以检测的到
 int main(int argc,char** argv){
 
-  //获得参数
-  getParam(argc,argv);
-  //得到所有的pcd名字
-  GetFileNames(filepath,"pcd");
+	//获得参数
+	getParam(argc,argv);
+	//得到所有的pcd名字
+	GetFileNames(filepath,"pcd");
   
-  switch(status)
-  {
-  	case 1 :
-  		  g2omapping();
-  		  cout << "g2o mapping start！" << endl;
-  		  break;
-  	case 2 :
-		  setStartEnd();
-  	 	  cout << "point to plane ICP start:" << endl;
-  	 	  //读bag的功能测试ok
-		  //readAndSaveHesai("/media/echo/DataDisc/9_rosbag/rsparel_64_ins/2019-11-06-20-43-12_0.bag");
-		  point2planeICP();
-		  cout << "point to plane ICP finish!" << endl;
-  	 	  break;
-  	case 3 :
-  		  traversableMapping();
-		  cout << "traversable Mapping finish!" << endl;
-		  break;
-	case 4 :
-		encoderMapping();
-		break;
-  	case 5:
-  		//Calibrating the extrinsic parameters
-		LiDARGNSScalibration();
-		LiDARGNSSMapping();
-		break;
-	case 6:
-		setStartEnd();
-		NDTmapping();
-		break;
-	default :
-	 	cout << "无效输入" << endl;
-  }
-  return(0);
+	switch(status)
+	{
+		case 1 :
+			g2omapping();
+			cout << "g2o mapping start！" << endl;
+			break;
+		case 2 :
+			setStartEnd();
+			cout << "point to plane ICP start:" << endl;
+			//读bag的功能测试ok
+			//readAndSaveHesai("/media/echo/DataDisc/9_rosbag/rsparel_64_ins/2019-11-06-20-43-12_0.bag");
+			point2planeICP();
+			cout << "point to plane ICP finish!" << endl;
+			break;
+		case 3 :
+			traversableMapping();
+			cout << "traversable Mapping finish!" << endl;
+			break;
+		case 4 :
+			encoderMapping();
+			break;
+		case 5:
+			//Calibrating the extrinsic parameters
+			LiDARGNSScalibration();
+			LiDARGNSSMapping();
+			break;
+		case 6:
+			setStartEnd();
+			NDTmapping();
+			break;
+		case 7:
+			readAndSaveHesai("/media/echo/DataDisc1/9_rosbag/rsparel_64_ins/2019-11-06-20-43-50_1.bag");
+			break;
+		default :
+			cout << "无效输入" << endl;
+	}
+	return(0);
 }
