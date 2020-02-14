@@ -74,18 +74,20 @@ Eigen::Vector3d gpsTools::ENU2ECEF(const Eigen::Vector3d &enu) {
 
 void gpsTools::updateGPSpose(const sensor_msgs::NavSatFix &gps_msgs) {
 	//检查状态4
-	if(gps_msgs.status.status == 4 ||gps_msgs.status.status == 5||gps_msgs.status.status == 1||gps_msgs.status.status == 2){
+	//因为zed的数据集有问题,所以包含状态0
+	if(gps_msgs.status.status == 4 ||gps_msgs.status.status == 5||gps_msgs.status.status == 1||gps_msgs.status.status == 2||gps_msgs.status.status == 0){
 		//第一个的时候设置为起点
 		if(lla_origin_ == Eigen::Vector3d::Identity()){
 			Eigen::Vector3d lla  = GpsMsg2Eigen(gps_msgs);
 			lla_origin_ = lla;
-			std::cout<<"GPS origin: "<<lla_origin_<<"\n status: "<<gps_msgs.status.status<<std::endl;
+			gps_pos_ = Eigen::Vector3d::Identity();
+//			std::cout<<"GPS origin: "<<lla_origin_<<"\n status: "<<gps_msgs.status.status<<std::endl;
 		} else{
 			Eigen::Vector3d lla = GpsMsg2Eigen(gps_msgs);
 			Eigen::Vector3d ecef = LLA2ECEF(lla);
 			Eigen::Vector3d enu = ECEF2ENU(ecef);
 			gps_pos_ = enu;
-			std::cout<<"GPS lla_origin_: "<<lla_origin_<<"\n curr"<<gps_pos_<<std::endl;
+//			std::cout<<"GPS lla_origin_: "<<lla_origin_<<"\n curr"<<gps_pos_<<std::endl;
 		}
 	}
 }

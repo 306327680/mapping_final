@@ -154,7 +154,7 @@ void ReadBag::readHesai(std::string path) {
 					std::cout.precision(70);
 					std::cout<<"maxintensity: "<<std::fixed<<maxintensity<<" minintensity: "<<minintensity<<std::endl;*/
 					timestamp = s->header.stamp.toSec();
-					pcd_save<<"map/"<<timestamp<<".pcd";
+					pcd_save<<"map_pm/"<<timestamp<<".pcd";
 					std::cout<<pcd_save.str()<<" size: "<<pcdtosave.size()<<" times: "<<inter_times<<std::endl;
 					writer.write(pcd_save.str(),pcdtosave,true);
 					std::cout<<pcd_save.str()<<" saved " <<std::endl;
@@ -226,4 +226,36 @@ void ReadBag::gnssLiDARExtrinsicParameters(std::string path) {
  
 	bag.close();
 	std::cout<<"read bag finish! "<<Eigen_GPS.size()<<" "<<Eigen_encoder.size()<<std::endl;
+}
+
+void ReadBag::gnssPCDExtrinsicParameters(std::string path, std::vector<std::pair<Eigen::Isometry3d, double>> &gps_pose,
+										 Eigen::Vector3d &lla_origin) {
+	bool first_gps = true;
+	gpsTools gt;
+	std::vector<std::string> topics;
+	pcl::PointCloud<pcl::PointXYZ>::Ptr gps_route(new pcl::PointCloud<pcl::PointXYZ>);//可视化gps路径
+	
+	std::cout<<"the bag path is: "<<path<<std::endl;
+	bag.open(path, rosbag::bagmode::Read);
+	topics.push_back(std::string("/cpt/ins_fix"));
+	rosbag::View view(bag, rosbag::TopicQuery(topics));
+
+	BOOST_FOREACH(rosbag::MessageInstance const m, view)
+				{
+					sensor_msgs::NavSatFix::ConstPtr s = m.instantiate<sensor_msgs::NavSatFix>();
+					if(first_gps){
+						//把第一个坐标转化位lla
+						lla_origin = gt.GpsMsg2Eigen(*s);
+						gps_pose.push_back(std::pair<Eigen::Isometry3d, double>());
+						gt.lla_origin_ = lla_origin;
+						gps_route->push_back(pcl::PointXYZ(0,0,0));
+						first_gps = false;
+					}else{
+						gt.updateGPSpose(*s);
+						gps_route->push_back(pcl::PointXYZ(gt.gps_pos_(0),gt.gps_pos_(1),gt.gps_pos_(2)));
+					}
+				}
+	pcl::PCDWriter writer;
+
+	writer.write("route/gnss.pcd",*gps_route);
 }

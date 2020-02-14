@@ -24,13 +24,16 @@
 #include "tools/util.h"
 #include <pcl/conversions.h>
 #include <pcl_ros/transforms.h>
-
+#include <utility>
 #include <pcl_conversions/pcl_conversions.h>
+#include <pcl/visualization/pcl_visualizer.h>
 class ReadBag {
 public:
 	ReadBag(){bag_strat_time.init();};
 	void getPath(std::string path);
 	void gnssLiDARExtrinsicParameters (std::string path);
+	//输入pcd路径读取LLA下面的惯导坐标+时间戳 和pcd计算好的 pcd的先不加_因为现在没有数据gps和lidar对齐的
+	void gnssPCDExtrinsicParameters (std::string path,std::vector<std::pair<Eigen::Isometry3d,double>> & gps_pose , Eigen::Vector3d &lla_origin);
 	std::vector<Eigen::Vector3d> Eigen_encoder;
 	std::vector<Eigen::Vector3d> Eigen_GPS;
 	gpsTools gpstools;

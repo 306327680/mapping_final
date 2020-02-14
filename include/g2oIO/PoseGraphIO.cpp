@@ -55,3 +55,39 @@ void PoseGraphIO::insertPose(Eigen::Isometry3d pose) {
 	
 	_odom_buffer.push_back(pose);
 }
+
+std::vector<Eigen::Isometry3d, Eigen::aligned_allocator<Eigen::Isometry3d>>
+PoseGraphIO::getEigenPoseFromg2oFile(std::string &g2ofilename) {
+	std::cout<<"Reading the g2o file ~"<<std::endl;
+	std::ifstream fin(g2ofilename);
+	std::cout<<"G2o opened"<<std::endl;
+	if (!fin) {
+		std::cerr << "file " << g2ofilename << " does not exist." << std::endl;
+		std::vector<Eigen::Isometry3d, Eigen::aligned_allocator<Eigen::Isometry3d>> vT;
+		vT.resize(1);
+		vT[0] = Eigen::Matrix4d::Identity(4, 4);
+		return vT;
+	}
+	
+	std::vector<Eigen::Isometry3d, Eigen::aligned_allocator<Eigen::Isometry3d>> vT;
+	while (!fin.eof()) {
+		std::string name;
+		fin >> name;
+		if (name == "VERTEX_SE3:QUAT") {
+			g2o::VertexSE3 v;
+			
+			int index = 0;
+			fin >> index;
+			v.setId(index);
+			v.read(fin);
+			Eigen::Isometry3d T = v.estimate();
+			vT.push_back(T);
+		} else if (name == "EDGE_SE3:QUAT") {
+			continue;
+		} else
+			continue;
+		if (!fin.good()) break;
+	}
+	std::cout << "read total " << vT.size() << " vertices\n";
+	return vT;
+}

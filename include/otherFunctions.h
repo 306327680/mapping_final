@@ -6,7 +6,7 @@
 #define PCD_COMPARE_MAIN_H
 
 #include <iostream>
-#include <pcl/io/pcd_io.h>
+#include <pcl/io/pcd_io.h>//不能两次引用头文件
 #include <pcl/point_types.h>
 #include <pcl/registration/icp.h>
 #include <pcl/visualization/pcl_visualizer.h>
@@ -54,6 +54,8 @@
 #include "ndt_omp/include/pclomp/ndt_omp.h"
 #include <ndt_omp/include/pclomp/gicp_omp.h>
 #include <pcl/filters/statistical_outlier_removal.h>
+#include <ros/ros.h>
+#include <6DOFcalib/Calibration6DOF.h>
 // 1. 参数初始化
 bool tensorvoting = true;
 using namespace g2o;
@@ -146,7 +148,7 @@ void saveFile(std::string outFilename, std::vector<VertexSE3*> vertices,
 
 //5 .读取g2o文件
 std::vector<Eigen::Isometry3d, Eigen::aligned_allocator<Eigen::Isometry3d>> getEigenPoseFromg2oFile(
-		std::string &g2ofilename) {
+		std::string g2ofilename) {
 	cout<<"Reading the g2o file ~"<<endl;
 	std::ifstream fin(g2ofilename);
 	cout<<"G2o opened"<<endl;
@@ -296,7 +298,7 @@ void genlocalmap(std::vector<Eigen::Isometry3d, Eigen::aligned_allocator<Eigen::
 				tmp->points[j].z = pcout->points[j].z;//14.40
 				tmp->points[j].intensity = pcout->points[j].intensity; }
 			//todo 改成 第一步提取index 先,之后记录index,最后滤除
-			//这里是地面滤波器
+			//***这里是地面滤波器
 			filter.point_cb(*tmp);
 			*tmp = *filter.g_ground_pc;
 			pcl::VoxelGrid<pcl::PointXYZI> sor;

@@ -17,6 +17,7 @@ public:
 	gpsTools(){lla_origin_.setIdentity();};
 	//1.ros msg 转 eigen
 	static Eigen::Vector3d GpsMsg2Eigen(const sensor_msgs::NavSatFix &gps_msgs);
+	//一般只用update GPSpose就行
 	void updateGPSpose(const sensor_msgs::NavSatFix &gps_msgs);
 	//2. LLA经度(longitude),纬度(latitude)和高度(altitude)经纬高坐标系 转(Earth-Centered, Earth-Fixed)
 	// Z轴指向指向北，但不完全精确地与地球转动轴重合。转动轴有微小“摆动”，称之为“极运动(polar motion)”

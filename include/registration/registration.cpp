@@ -152,7 +152,7 @@ Eigen::Isometry3d registration::ReOrthogonalization(Eigen::Isometry3d input)  {
 	
 	return result;
 }
-
+//scan 和 map的匹配
 pcl::PointCloud<pcl::PointXYZI> registration::normalIcpRegistrationlocal(pcl::PointCloud<pcl::PointXYZI>::Ptr source,
 																		 pcl::PointCloud<pcl::PointXYZI> target) {
 	pcl::PointCloud<pcl::PointXYZINormal>::Ptr cloud_source_normals(

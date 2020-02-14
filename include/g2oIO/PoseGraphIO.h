@@ -31,6 +31,7 @@ public:
 	void getPose();
 	void insertPose(Eigen::Isometry3d pose);
 	void saveGraph(std::string g2o_path);
+	std::vector<Eigen::Isometry3d, Eigen::aligned_allocator<Eigen::Isometry3d>> getEigenPoseFromg2oFile(std::string &g2ofilename);
 	void saveCloud();
 private:
 	std::vector<Eigen::Isometry3d, Eigen::aligned_allocator<Eigen::Isometry3d>> _odom_buffer;

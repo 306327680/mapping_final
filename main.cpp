@@ -43,7 +43,7 @@ int getParam(int argc,char** argv){
 		}
 	}
 }
-//功能1 用g2o pose 建图
+//功能1 用g2o pose 建图*******888888
 int g2omapping(){
 	//得到所有的位姿向量
 	trans_vector = getEigenPoseFromg2oFile(g2o_path);
@@ -147,6 +147,7 @@ pcl::PointCloud<pcl::PointXYZI> continusTimeDistrotion(std::vector<Eigen::Matrix
 //a. 挑选关键帧(有必要?)
 //b. 维持队列长度
 //d. downsample
+// 15 帧大概1.2 s
 pcl::PointCloud<pcl::PointXYZI> lidarLocalMap(std::vector<Eigen::Matrix4f> & poses,std::vector<pcl::PointCloud<pcl::PointXYZI>> & clouds){
 	pcl::PointCloud<pcl::PointXYZI>::Ptr map_ptr (new pcl::PointCloud<pcl::PointXYZI>);
 	pcl::PointCloud<pcl::PointXYZI> map_temp;
@@ -156,8 +157,8 @@ pcl::PointCloud<pcl::PointXYZI> lidarLocalMap(std::vector<Eigen::Matrix4f> & pos
 	//局部地图采用 continues time 的方式生成 先只在10帧上做
 	
 	//note 15帧64线 0.02 大概225520个点 //10帧试试
-	if (poses.size()>=10){
-		for (int i = poses.size() - 10; i <poses.size(); i++) {
+	if (poses.size()>=15){
+		for (int i = poses.size() - 15; i <poses.size(); i++) {
 			pcl::transformPointCloud(clouds[i],map_temp,poses[i]);
 			*map_ptr += map_temp;
 			poses_tmp.push_back(poses[i]);
@@ -177,22 +178,29 @@ pcl::PointCloud<pcl::PointXYZI> lidarLocalMap(std::vector<Eigen::Matrix4f> & pos
 	pcl::transformPointCloud(*map_ptr,map_temp,poses.back().inverse());
 	*map_ptr = map_temp;
 	//显示看一下
+	util tools;
+	tools.timeCalcSet("降采样的时间");
+	pcl::VoxelGrid<pcl::PointXYZI> sor;
+	sor.setInputCloud(map_ptr);
+	sor.setLeafSize(0.15f, 0.15f, 0.15f);
+	sor.filter(map_temp);
 	
-	pcl::UniformSampling<pcl::PointXYZI> filter;
+/*	pcl::UniformSampling<pcl::PointXYZI> filter;
 	pcl::PointCloud<int> keypointIndices;
 	filter.setInputCloud(map_ptr);
 	filter.setRadiusSearch(0.15f); //2cm 测距精度 015 haixing
 	filter.compute(keypointIndices);
-	pcl::copyPointCloud(*map_ptr, keypointIndices.points, map_temp);
+	pcl::copyPointCloud(*map_ptr, keypointIndices.points, map_temp);*/
 	//pointCloudRangeFilter(map_temp,75); //距离滤波可以去了
+	tools.timeUsed();
 	std::cout<<" 局部地图大小: "<<map_temp.size() <<std::endl;
 	return  map_temp;
 }
 
 //6.2 建图前端 点面icp
 int point2planeICP(){
-	//点云缓冲
- 
+	//g2o结果存储
+	PoseGraphIO g2osaver;
 	pcl::PointCloud<pcl::PointXYZI> tfed;
 	pcl::PointCloud<pcl::PointXYZI> cloud_continus_time_T_world;
 	pcl::PointCloud<pcl::PointXYZI> cloud_continus_time_T_LiDAR;
@@ -209,6 +217,18 @@ int point2planeICP(){
 	pcl::PointCloud<pcl::PointXYZINormal>::Ptr filter1(new pcl::PointCloud<pcl::PointXYZINormal>);
 	pcl::PointCloud<pcl::PointXYZINormal>::Ptr raw(new pcl::PointCloud<pcl::PointXYZINormal>);
 	bool bperal_edge = false;
+	//ros debug
+	//todo 这里可以去掉ros
+	ros::NodeHandle node;
+	ros::NodeHandle privateNode("~");
+	sensor_msgs::PointCloud2 to_pub_frame;
+	sensor_msgs::PointCloud2 to_pub_frame_linear;
+	pcl::PCLPointCloud2 pcl_frame;
+	ros::Publisher test_frame;
+	ros::Publisher test_frame_linear;
+	test_frame = node.advertise<sensor_msgs::PointCloud2>("/local_map", 5);
+	test_frame_linear = node.advertise<sensor_msgs::PointCloud2>("/current_frame_linear", 5);
+	//todo end 这里可以去掉ros
 	//存tf的
 	std::vector<Eigen::Matrix4f> poses;
 	std::vector<pcl::PointCloud<pcl::PointXYZI>>  clouds;
@@ -224,7 +244,7 @@ int point2planeICP(){
 	std::vector<Eigen::Matrix4f>  poses_distortion;
 	std::vector<mypcdCloud> clouds_distortion_origin;
 //class
-	util tools;
+	util tools,tools2;
 	registration icp;
 	icp.setParam("/media/echo/DataDisc/3_program/mapping/cfg/icp.yaml");
 	icp.SetNormalICP();
@@ -234,8 +254,9 @@ int point2planeICP(){
 	std::cout<<file_names_ .size()<<std::endl;
 	std::cout<<start_id<<" "<<end_id<<std::endl;
 	
-	for(int i = 1;  i <file_names_ .size();i++){
+	for(int i = 0;  i <file_names_ .size();i++){
 		if (i>start_id && i<end_id) {
+			tools2.timeCalcSet("total");
 			pcl::io::loadPCDFile<mypcd>(file_names_[i], xyzItimeRing);
 			pcl::copyPointCloud(xyzItimeRing,*cloud_hesai);
 			//1. 这里用pcl的 plane to plane icp
@@ -246,6 +267,7 @@ int point2planeICP(){
 				poses.push_back(Eigen::Matrix4f::Identity());
 				clouds.push_back(*cloud_local_map);
 				first_cloud = false;
+				g2osaver.insertPose(Eigen::Isometry3d::Identity());
 			} else{
 				//2.1 加个去畸变
 				simpleDistortion(xyzItimeRing,icp.increase.inverse(),*cloud_bef);
@@ -268,8 +290,10 @@ int point2planeICP(){
 				//pointCloudRangeFilter(*cloud_bef,75 - 1.5*(curr_speed/10)); //根据车速减小范围
 				tools.timeUsed();
 				//2.3.2 再次icp           *********** &&&&这个当做 lidar mapping
-				tools.timeCalcSet("第二次ICP用时    ");
+				tools.timeCalcSet("局部地图用时    ");
 				*cloud_local_map = lidarLocalMap(poses,clouds);  //生成局部地图****
+				tools.timeUsed();
+				tools.timeCalcSet("第二次ICP用时    ");
 				tfed = icp.normalIcpRegistrationlocal(cloud_bef,*cloud_local_map);
 				icp_result.back() = icp_result.back()*icp.pcl_plane_plane_icp->getFinalTransformation(); //第一次结果*下一次去畸变icp结果
 				//2.3.3 再次去畸变 再次减小范围
@@ -292,20 +316,39 @@ int point2planeICP(){
 				//存储这次结果
 				poses_distortion.push_back(current_pose.matrix());
 				poses.push_back(current_pose.matrix());
+				g2osaver.insertPose(Eigen::Isometry3d(current_pose.matrix().cast<double>()));
 				clouds_distortion_origin.push_back(xyzItimeRing);
 				//运行最终的去畸变
-				if(0){ //存大点云
+				if(1){ //存大点云
 					std::cout<<"全局坐标 \n"<<current_pose.matrix()<<std::endl;
 					pcl::transformPointCloud(*cloud_bef,tfed,current_pose);
 					*cloud_map += tfed;
-					tools.timeCalcSet("连续时间去畸变用时:    ");
+			/*		tools.timeCalcSet("连续时间去畸变用时:    ");
 					cloud_continus_time_T_world = continusTimeDistrotion(poses_distortion,clouds_distortion_origin);//这里放的是最新的一帧和位姿
 					*cloud_map_continus_time += cloud_continus_time_T_world;
-					/*			if (poses_distortion.size() == 4){ //进行了连续时间的去畸变就替换这个 转换到最新的T的坐标系下面
+					*//*			if (poses_distortion.size() == 4){ //进行了连续时间的去畸变就替换这个 转换到最新的T的坐标系下面
 									pcl::transformPointCloud(cloud_continus_time_T_world,cloud_continus_time_T_LiDAR,current_pose.matrix().inverse());
 									clouds[clouds.size()-3] = cloud_continus_time_T_LiDAR;
-								}*/
-					tools.timeUsed();
+								}*//*
+					tools.timeUsed();*/
+					//todo 这里可以去掉ros
+	/*				pcl::toPCLPointCloud2(*cloud_map_continus_time, pcl_frame);
+					pcl_conversions::fromPCL(pcl_frame, to_pub_frame);
+					to_pub_frame.header.frame_id = "/map";
+					test_frame.publish(to_pub_frame);*/
+	
+					pcl::toPCLPointCloud2(tfed, pcl_frame);
+					pcl_conversions::fromPCL(pcl_frame, to_pub_frame_linear);
+					to_pub_frame_linear.header.frame_id = "/map";
+					test_frame_linear.publish(to_pub_frame_linear);
+					
+					pcl::toPCLPointCloud2(*cloud_local_map, pcl_frame);
+					pcl_conversions::fromPCL(pcl_frame, to_pub_frame_linear);
+					to_pub_frame_linear.header.frame_id = "/map";
+					test_frame.publish(to_pub_frame_linear);
+					
+					tools2.timeUsed();
+					//	todo 这里可以去掉ros
 				}else{//存每一帧
 					cloud_continus_time_T_world = continusTimeDistrotion(poses_distortion,clouds_distortion_origin);//这里放的是最新的一帧和位姿
 					std::stringstream pcd_save;
@@ -317,11 +360,11 @@ int point2planeICP(){
 			}
 		}
 	}
-/*	writer.write("testdistro.pcd",*cloud_map, true);
-	writer.write("distro_final.pcd",*cloud_map_continus_time, true);
+	g2osaver.saveGraph("/media/echo/DataDisc/3_program/mapping/cmake-build-debug/g2o/icp.g2o");
+	writer.write("cloud_map.pcd",*cloud_map, true);
+	//writer.write("distro_final.pcd",*cloud_map_continus_time, true);
 	//可视化一下
-	pcl::visualization::PCLVisualizer vis("PlICP");
- 
+/*	pcl::visualization::PCLVisualizer vis("PlICP");
 	pcl::visualization::PointCloudColorHandlerGenericField<pcl::PointXYZI> aligned_handler(cloud_map, "intensity");
 	vis.addPointCloud(cloud_map, aligned_handler, "map");
 	vis.spin();*/
@@ -406,13 +449,64 @@ void encoderMapping(){
 }
 
 //功能5.1 LiDAR + GNSS mapping 标定
+//程序准备设计的方案: 1. 读取一个bag 取其中的一段时间 eg 60s 600 帧进行 odom的计算
+//2. 读取gps 转成lla
+//3. 时间戳对齐
+//4. 设置两个优化变量 一个是两个传感器的外参 一个是旋转的角度,就是雷达初始时刻相对于正北的朝向;
+//5.
+// /media/echo/DataDisc/9_rosbag/rsparel_64_ins 这个好像能work gps时间戳不太对 就用时间戳减1s
 void LiDARGNSScalibration (){
 	pcl::PCDWriter writer;
 	ReadBag rb;
-	rb.gnssLiDARExtrinsicParameters("/media/echo/DataDisc/9_rosbag/test_gps_lidar_calibration/2019-10-23-18-48-24.bag");
+	Calibration6DOF calibrate; //用来标定外参的
+	std::vector<std::pair<Eigen::Isometry3d,double>>  gps_pose ;
+	Eigen::Vector3d lla_origin;
+	pcl::PointCloud<pcl::PointXYZ>::Ptr gps_position(new pcl::PointCloud<pcl::PointXYZ>);
+	pcl::PointCloud<pcl::PointXYZ> lidar_position;
+	pcl::PointCloud<pcl::PointXYZ> gps_position_save;
+	//计算外参要用的
+	std::vector<Eigen::Matrix4d> gps_poses;std::vector<Eigen::Matrix4d> LiDAR_poses;Eigen::Isometry3d  T_lidar2INS;
+	//处于计算时间考虑,分步执行
+	//step 1: 把pcd计算出里程计
+	//step 2: 把gps的位置转化为pcd
+	//rb.gnssPCDExtrinsicParameters("/media/echo/DataDisc/9_rosbag/zed_pandar64_ins/Hesai_back_afternoon_2.bag",gps_pose,lla_origin);
 	//测试: 存储GPS + Encoder 到点云
-	writer.write("/home/echo/encoder.pcd",rb.encoder_pcd);
-	writer.write("/home/echo/gps_pcd.pcd",rb.gps_pcd);
+	//测试 step 1. 读取g2o的 位姿
+	//测试 step 2. 读取gps位姿的pcd
+	pcl::io::loadPCDFile<pcl::PointXYZ>("route/gnss.pcd", *gps_position); //gnssPCDExtrinsicParameters 函数得到的gnss轨迹
+	trans_vector = getEigenPoseFromg2oFile("/media/echo/DataDisc/3_program/mapping/cmake-build-debug/g2o/icp.g2o");//通过功能2 得到的位置
+	//测试step 3. 虚拟出两个数据来计算出两个T 第一个T LiDAR到gnss中心的位姿 另一个是LiDAR到 LLA坐标的位姿
+	
+	//可视化一下当前的时间戳的对应关系.
+	pcl::visualization::PCLVisualizer vis("gps2lidar");
+	pcl::visualization::PointCloudColorHandlerGenericField<pcl::PointXYZ> aligned_handler(gps_position, "intensity");
+	vis.addPointCloud(gps_position, aligned_handler, "map");
+	for (int i = 0; i < trans_vector.size(); ++i) {
+		pcl::PointXYZ temp;
+		temp.x = trans_vector[i](0,3);
+		temp.y = trans_vector[i](1,3);
+		temp.z = trans_vector[i](2,3);
+		vis.addLine<pcl::PointXYZ>(gps_position->points[i*5], temp, i*2%255, (i*3+100)%255, 0, std::to_string(i));
+		lidar_position.push_back(temp);
+		gps_position_save.push_back(gps_position->points[i*5]);
+	}
+	vis.spin();
+	//0.格式转化
+	for (int j = 0; j < gps_position->size(); ++j) {
+		Eigen::Matrix4d temp;
+		temp.setIdentity();
+		temp(0,3) = gps_position->points[j].x;
+		temp(1,3) = gps_position->points[j].y;
+		temp(2,3) = gps_position->points[j].z;
+		gps_poses.push_back(temp);
+	}
+	for (int k = 0; k < trans_vector.size(); ++k) {
+		LiDAR_poses.push_back(trans_vector[k].matrix());
+	}
+	//1.计算lidar到gnss 外参
+	calibrate.CalibrateGNSSLiDAR(gps_poses,LiDAR_poses,T_lidar2INS);
+	writer.write("route/lidar_position.pcd",lidar_position);
+	writer.write("route/gps_position_save.pcd",gps_position_save);
 }
 //功能5.2 LiDAR + GNSS mapping 建图
 void LiDARGNSSMapping(){
@@ -501,10 +595,18 @@ void readAndSaveHesai(std::string path){
 void testFunction(){
 
 }
-
+//功能9 普通的16线建图
+void rslidarmapping(){
+	registration icp;
+	pcl::PointCloud<pcl::PointXYZI> xyzItimeRing;
+	for(int i = 0;  i <file_names_ .size();i++){
+		pcl::io::loadPCDFile<pcl::PointXYZI>(file_names_[i], xyzItimeRing);
+	}
+}
 //intensity 的 edge 可不可以检测的到
 int main(int argc,char** argv){
-
+	//todo 这里可以去掉ros
+	ros::init(argc, argv, "map");
 	//获得参数
 	getParam(argc,argv);
 	//得到所有的pcd名字
@@ -512,11 +614,13 @@ int main(int argc,char** argv){
   
 	switch(status)
 	{
+		//1. g2o+pcd拼图
 		case 1 :
-			g2omapping();//g2o+pcd拼图
+			g2omapping();
 			cout << "g2o mapping start！" << endl;
 			break;
 		case 2 :
+			//2. 对于何塞雷达的建图 需要有时间戳 和线数信息
 			setStartEnd();
 			cout << "point to plane ICP start:" << endl;
 			//读bag的功能测试ok
@@ -524,26 +628,29 @@ int main(int argc,char** argv){
 			point2planeICP();//普通点面icp
 			cout << "point to plane ICP finish!" << endl;
 			break;
-		case 3 ://可通行区域建图
+		case 3 ://3. 可通行区域建图
 			traversableMapping();
 			cout << "traversable Mapping finish!" << endl;
 			break;
-		case 4 ://利用编码器建图
+		case 4 ://4. 利用编码器建图
 			encoderMapping();
 			break;
-		case 5://Calibrating the extrinsic parameters
+		case 5://5. Calibrating the extrinsic parameters
 			LiDARGNSScalibration();
 			LiDARGNSSMapping();
 			break;
-		case 6: //ndt建图
+		case 6: //6. ndt建图
 			setStartEnd();
 			NDTmapping();
 			break;
-		case 7://何塞rawdata
-			readAndSaveHesai("/media/echo/DataDisc/9_rosbag/rsparel_64_ins/2019-11-06-20-47-48_7.bag");
+		case 7://7. 从bag中读何塞rawdata
+			readAndSaveHesai("/media/echo/DataDisc/9_rosbag/zed_pandar64_ins/Hesai_back_afternoon_2.bag");
 			break;
-		case 8:
+		case 8://8. 测试新写的函数
 			testFunction();
+			break;
+		case 9:
+			rslidarmapping();
 			break;
 		default :
 			cout << "无效输入" << endl;

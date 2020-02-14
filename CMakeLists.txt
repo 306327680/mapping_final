@@ -38,6 +38,7 @@ include_directories(${geometry_msgs_INCLUDE_DIRS})
 #libpointmatcher
 find_package(libpointmatcher CONFIG)
 
+
 include_directories( src include ${libpointmatcher_INCLUDE_DIRS})
 
 include_directories( ${Sophus_INCLUDE_DIRS}
@@ -54,9 +55,12 @@ INCLUDE_DIRECTORIES(${CSPARSE_INCLUDE_DIR})
 include_directories(${PCL_INCLUDE_DIRS})
 link_directories(${PCL_LIBRARIES_DIRS})
 add_definitions(${PCL_DEFINITIONS})
-
+#g2o
 find_package(G2O REQUIRED)
 include_directories(${G2O_INCLUDE_DIRS})
+#ceres
+find_package( Ceres REQUIRED)
+include_directories(${CERES_INCLUDE_DIRS})
 #open mp
 find_package(OpenMP)
 if (OPENMP_FOUND)
@@ -126,7 +130,7 @@ add_library(ndt_omp
         )
 target_link_libraries(ndt_omp      ${PCL_LIBRARIES})
 #main program
-add_executable(mapping main.cpp include/otherFunctions.h)
+add_executable(mapping main.cpp include/otherFunctions.h include/6DOFcalib/Calibration6DOF.cpp include/6DOFcalib/Calibration6DOF.h)
 target_link_libraries(mapping ${PCL_LIBRARIES}
         odom
         ground_seg
@@ -140,4 +144,5 @@ target_link_libraries(mapping ${PCL_LIBRARIES}
         g2o_types_slam3d
         poseIO
         spline
-        ndt_omp)
+        ndt_omp
+        ${CERES_LIBRARIES} )

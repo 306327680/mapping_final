@@ -12,6 +12,7 @@
 #include <pcl/registration/icp.h>
 #include <pcl/features/normal_3d.h>
 #include <pcl/filters/filter.h>
+#include "tools/util.h"
 typedef PointMatcher<float> PM;
 class registration {
 	typedef PM::DataPoints DP;
