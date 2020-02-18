@@ -462,7 +462,7 @@ void LiDARGNSScalibration (){
 	std::vector<std::pair<Eigen::Isometry3d,double>>  gps_pose ;
 	Eigen::Vector3d lla_origin;
 	pcl::PointCloud<pcl::PointXYZ>::Ptr gps_position(new pcl::PointCloud<pcl::PointXYZ>);
-	pcl::PointCloud<pcl::PointXYZ> lidar_position;
+	pcl::PointCloud<pcl::PointXYZ> lidar_position,lidar_position_tfed;
 	pcl::PointCloud<pcl::PointXYZ> gps_position_save;
 	//计算外参要用的
 	std::vector<Eigen::Matrix4d> gps_poses;std::vector<Eigen::Matrix4d> LiDAR_poses;Eigen::Isometry3d  T_lidar2INS;
@@ -473,8 +473,8 @@ void LiDARGNSScalibration (){
 	//测试: 存储GPS + Encoder 到点云
 	//测试 step 1. 读取g2o的 位姿
 	//测试 step 2. 读取gps位姿的pcd
-	pcl::io::loadPCDFile<pcl::PointXYZ>("route/gnss.pcd", *gps_position); //gnssPCDExtrinsicParameters 函数得到的gnss轨迹
-	trans_vector = getEigenPoseFromg2oFile("/media/echo/DataDisc/3_program/mapping/cmake-build-debug/g2o/icp.g2o");//通过功能2 得到的位置
+	pcl::io::loadPCDFile<pcl::PointXYZ>("/home/echo/Desktop/gnss.pcd", *gps_position); //gnssPCDExtrinsicParameters 函数得到的gnss轨迹
+	trans_vector = getEigenPoseFromg2oFile("/home/echo/Desktop/icp.g2o");//通过功能2 得到的位置
 	//测试step 3. 虚拟出两个数据来计算出两个T 第一个T LiDAR到gnss中心的位姿 另一个是LiDAR到 LLA坐标的位姿
 	
 	//可视化一下当前的时间戳的对应关系.
@@ -490,23 +490,30 @@ void LiDARGNSScalibration (){
 		lidar_position.push_back(temp);
 		gps_position_save.push_back(gps_position->points[i*5]);
 	}
-	vis.spin();
+	//vis.spin();
 	//0.格式转化
-	for (int j = 0; j < gps_position->size(); ++j) {
+	//todo 这里gps的位置比较多, 所以以 惯导的数量为基础 惯导 50hz lidar 10 hz
+	for (int j = 0; j < trans_vector.size() ; ++j) {
 		Eigen::Matrix4d temp;
 		temp.setIdentity();
-		temp(0,3) = gps_position->points[j].x;
-		temp(1,3) = gps_position->points[j].y;
-		temp(2,3) = gps_position->points[j].z;
+		temp(0,3) = gps_position->points[j*5].x;
+		temp(1,3) = gps_position->points[j*5].y;
+		temp(2,3) = gps_position->points[j*5].z;
 		gps_poses.push_back(temp);
 	}
 	for (int k = 0; k < trans_vector.size(); ++k) {
 		LiDAR_poses.push_back(trans_vector[k].matrix());
 	}
 	//1.计算lidar到gnss 外参
+/*    for (int l = 0; l < LiDAR_poses.size(); ++l) {
+        std::cout<<LiDAR_poses[l].matrix()<<std::endl;
+    }*/
 	calibrate.CalibrateGNSSLiDAR(gps_poses,LiDAR_poses,T_lidar2INS);
-	writer.write("route/lidar_position.pcd",lidar_position);
+    pcl::transformPointCloud(lidar_position,lidar_position_tfed,T_lidar2INS.inverse().matrix());
+	writer.write("route/lidar_position.pcd",lidar_position_tfed);
+    writer.write("route/raw_lidar_position.pcd",lidar_position);
 	writer.write("route/gps_position_save.pcd",gps_position_save);
+	std::cout<<"标定结果:\n"<<T_lidar2INS.inverse().matrix()<<std::endl;
 }
 //功能5.2 LiDAR + GNSS mapping 建图
 void LiDARGNSSMapping(){

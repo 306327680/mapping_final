@@ -34,55 +34,141 @@ public:
 	//构建 ceres的 误差函数
 	struct Calibration
 	{//输入的变量是两次的增量, 优化量是外参
-		Calibration(Eigen::Matrix4d T_g0_g1, Eigen::Matrix4d T_l0_l1) : T_g0_g1(T_g0_g1), T_l0_l1(T_l0_l1) {
+		Calibration(Eigen::Matrix<double,7,1>  T_g0_g1, Eigen::Matrix<double,7,1>  T_l0_l1,
+		        const Eigen::Matrix<double,7,1>  gps_abs, const Eigen::Matrix<double,7,1>  lidar_abs)
+		        : T_g0_g1(T_g0_g1), T_l0_l1(T_l0_l1) ,T_g0_gn(gps_abs),T_l0_ln(lidar_abs){//相邻的增量 和 绝对位置
 		}
-		
+
 		template <typename T>
-		bool operator()(const T *q,  T *residual) const //q是 double[]
+		bool operator()(const T *q, const T *t , T *residual) const //q是 double[]
 		{
-			//todo 这里的旋转平移的公式不多对,需要改成欧拉角的
-			Eigen::Matrix<T, 4, 4> T_w_l0,T_w_g1_est,T_w_g1,error_term,isometry,translate;
-			
-			cv::Mat R_vec = (cv::Mat_<T>(3,1) << q[0],q[1],q[2]);//数组转cv向量
-			cv::Mat R_cvest;
-			Rodrigues(R_vec,R_cvest);//罗德里格斯公式，旋转向量转旋转矩阵
-			
-			Eigen::Matrix<T,3,3> R_est;
-			cv2eigen(R_cvest,R_est);//cv矩阵转eigen矩阵
-			Eigen::Vector3d t_est;//(q[3],q[4],q[5]);
-			cv::Mat t_vec = (cv::Mat_<T>(3,1) << q[3],q[4],q[5]);
-			cv2eigen(t_vec,t_est);
-			
-			Eigen::Isometry3d T_i(R_est);//构造变换矩阵与输出
-			T_i.pretranslate(t_est); //pretranslate 应该就是加上
-			T_w_l0 = T_i.matrix(); //1.赋值给初始雷达的位姿
-			//2.gps的预测
-			T_w_g1_est = (T_i*T_l0_l1*T_i.inverse()).matrix();
-			T_w_g1 = T_w_g1;
-			//两个结果的误差
-			error_term = T_w_g1_est*T_w_g1.inverse();
-			//残差为点点距离
-			residual[0] = q[0];
-			//residual[0] = ceres::sqrt(error_term(0,3)*error_term(0,3)+error_term(1,3)*error_term(1,3)+error_term(2,3)*error_term(2,3));
+            Eigen::Quaternion<T> q_extrinsic{q[3], q[0], q[1], q[2]};
+            Eigen::Matrix<T, 3, 1> t_extrinsic{ t[0],  t[1],  t[2]};
+
+            Eigen::Quaternion<T> q_g{T(T_g0_g1[3]), T(T_g0_g1[0]), T(T_g0_g1[1]), T(T_g0_g1[2])};//w ,x ,y ,z
+            Eigen::Quaternion<T> q_l{T(T_l0_l1[3]), T(T_l0_l1[0]), T(T_l0_l1[1]), T(T_l0_l1[2])};
+            Eigen::Quaternion<T> q_g_n{T(T_g0_gn[3]), T(T_g0_gn[0]), T(T_g0_gn[1]), T(T_g0_gn[2])};//w ,x ,y ,z
+            Eigen::Quaternion<T> q_l_n{T(T_l0_ln[3]), T(T_l0_ln[0]), T(T_l0_ln[1]), T(T_l0_ln[2])};
+
+            Eigen::Matrix<T, 3, 1> t_g{ T(T_g0_g1[4]),  T(T_g0_g1[5]),  T(T_g0_g1[6])};
+            Eigen::Matrix<T, 3, 1> t_l{ T(T_l0_l1[4]),  T(T_l0_l1[5]),  T(T_l0_l1[6])};
+            Eigen::Matrix<T, 3, 1> t_g_n{ T(T_g0_gn[4]),  T(T_g0_gn[5]),  T(T_g0_gn[6])};
+            Eigen::Matrix<T, 3, 1> t_l_n{ T(T_l0_ln[4]),  T(T_l0_ln[5]),  T(T_l0_ln[6])};
+
+            Eigen::Matrix<T, 3, 1> T_w_g1_zero, T_w_g1_x, T_w_g1_y, T_w_g1_z;
+            Eigen::Matrix<T, 3, 1> T_w_g1_est_zero, T_w_g1_est_x, T_w_g1_est_y, T_w_g1_est_z;
+            //设置4个向量
+            Eigen::Matrix<T, 3, 1> zero{T(0), T(0), T(0)};
+            Eigen::Matrix<T, 3, 1> x{T(1), T(0), T(0)};
+            Eigen::Matrix<T, 3, 1> y{T(0), T(1), T(0)};
+            Eigen::Matrix<T, 3, 1> z{T(0), T(0), T(1)};
+            //误差
+            Eigen::Matrix<T, 3, 1> e_zero{T(0), T(0), T(0)};
+            Eigen::Matrix<T, 3, 1> e_x{T(1), T(0), T(0)};
+            Eigen::Matrix<T, 3, 1> e_y{T(0), T(1), T(0)};
+            Eigen::Matrix<T, 3, 1> e_z{T(0), T(0), T(1)};
+
+            //变换1 相邻两镇之间的 误差
+            T_w_g1_zero = q_g * zero + t_g;
+            T_w_g1_x = q_g * x + t_g;
+            T_w_g1_y = q_g * y + t_g;
+            T_w_g1_z = q_g * z + t_g;
+            //变换2
+
+            T_w_g1_est_zero =  q_extrinsic * zero + t_extrinsic;
+            T_w_g1_est_x =  q_extrinsic * x + t_extrinsic;
+            T_w_g1_est_y =  q_extrinsic * y + t_extrinsic;
+            T_w_g1_est_z =  q_extrinsic * z + t_extrinsic;
+
+            T_w_g1_est_zero =  q_l * T_w_g1_est_zero + t_l;
+            T_w_g1_est_x =  q_l * T_w_g1_est_x + t_l;
+            T_w_g1_est_y =  q_l * T_w_g1_est_y + t_l;
+            T_w_g1_est_z =  q_l * T_w_g1_est_z + t_l;
+
+            T_w_g1_est_zero =  q_extrinsic.inverse() * T_w_g1_est_zero - t_extrinsic;
+            T_w_g1_est_x =  q_extrinsic.inverse() * T_w_g1_est_x - t_extrinsic;
+            T_w_g1_est_y =  q_extrinsic.inverse() * T_w_g1_est_y - t_extrinsic;
+            T_w_g1_est_z =  q_extrinsic.inverse() * T_w_g1_est_z - t_extrinsic;
+            //error
+            e_zero = T_w_g1_est_zero - T_w_g1_zero;
+            e_x = T_w_g1_est_x - T_w_g1_x;
+            e_y = T_w_g1_est_y - T_w_g1_y;
+            e_z = T_w_g1_est_z - T_w_g1_z;
+
+            residual[0] = ceres::sqrt(e_zero(0,0)*e_zero(0,0) + e_zero(1,0)*e_zero(1,0) + e_zero(2,0)*e_zero(2,0));
+            residual[1] = ceres::sqrt(e_x(0,0)*e_x(0,0) + e_x(1,0)*e_x(1,0) + e_x(2,0)*e_x(2,0));
+            residual[2] = ceres::sqrt(e_y(0,0)*e_y(0,0) + e_y(1,0)*e_y(1,0) + e_y(2,0)*e_y(2,0));
+            residual[3] = ceres::sqrt(e_z(0,0)*e_z(0,0) + e_z(1,0)*e_z(1,0) + e_z(2,0)*e_z(2,0));
+            //第二部分残差 整体的残差
+            //变换1
+            T_w_g1_zero = q_g_n * zero + t_g_n;
+            T_w_g1_x    = q_g_n * x + t_g_n;
+            T_w_g1_y    = q_g_n * y + t_g_n;
+            T_w_g1_z    = q_g_n * z + t_g_n;
+            //变换2
+
+            T_w_g1_est_zero =  q_extrinsic * zero + t_extrinsic;
+            T_w_g1_est_x    =  q_extrinsic * x + t_extrinsic;
+            T_w_g1_est_y    =  q_extrinsic * y + t_extrinsic;
+            T_w_g1_est_z    =  q_extrinsic * z + t_extrinsic;
+
+            T_w_g1_est_zero =  q_l_n * T_w_g1_est_zero + t_l_n;
+            T_w_g1_est_x    =  q_l_n * T_w_g1_est_x + t_l_n;
+            T_w_g1_est_y    =  q_l_n * T_w_g1_est_y + t_l_n;
+            T_w_g1_est_z    =  q_l_n * T_w_g1_est_z + t_l_n;
+
+            T_w_g1_est_zero =  q_extrinsic.inverse() * T_w_g1_est_zero - t_extrinsic;
+            T_w_g1_est_x =  q_extrinsic.inverse() * T_w_g1_est_x - t_extrinsic;
+            T_w_g1_est_y =  q_extrinsic.inverse() * T_w_g1_est_y - t_extrinsic;
+            T_w_g1_est_z =  q_extrinsic.inverse() * T_w_g1_est_z - t_extrinsic;
+            //error
+            e_zero  = T_w_g1_est_zero - T_w_g1_zero;
+            e_x     = T_w_g1_est_x    - T_w_g1_x;
+            e_y     = T_w_g1_est_y    - T_w_g1_y;
+            e_z     = T_w_g1_est_z    - T_w_g1_z;
+
+            residual[4] = ceres::sqrt(e_zero(0,0)*e_zero(0,0) + e_zero(1,0)*e_zero(1,0) + e_zero(2,0)*e_zero(2,0));
+            residual[5] = ceres::sqrt(e_x(0,0)*e_x(0,0) + e_x(1,0)*e_x(1,0) + e_x(2,0)*e_x(2,0));
+            residual[6] = ceres::sqrt(e_y(0,0)*e_y(0,0) + e_y(1,0)*e_y(1,0) + e_y(2,0)*e_y(2,0));
+            residual[7] = ceres::sqrt(e_z(0,0)*e_z(0,0) + e_z(1,0)*e_z(1,0) + e_z(2,0)*e_z(2,0));
+
 			return true;
 		}
 		
-		static ceres::CostFunction *Create(const Eigen::Matrix4d origin_pt, const Eigen::Matrix4d target_pt){
-			return (new ceres::AutoDiffCostFunction<Calibration, 1, 6>(new Calibration(origin_pt, target_pt))); //残差设置为1维,外参设为6维
+		static ceres::CostFunction *Create(const Eigen::Matrix<double,7,1>  origin_pt, const Eigen::Matrix<double,7,1>  target_pt,
+                                           const Eigen::Matrix<double,7,1>  gps_abs, const Eigen::Matrix<double,7,1>  lidar_abs){
+			return (new ceres::AutoDiffCostFunction<Calibration, 8, 4, 3>(new Calibration(origin_pt, target_pt, gps_abs, lidar_abs))); //残差设置为4维,外参设为4元数和t
 		}
-		
-		Eigen::Matrix4d T_g0_g1; //T_w_G1_est 的RT
-		Eigen::Matrix4d T_l0_l1; //T_w_G1 的 RT
+
+		Eigen::Matrix<double,7,1> T_g0_g1;
+		Eigen::Matrix<double,7,1> T_l0_l1;
+        Eigen::Matrix<double,7,1> T_g0_gn;
+        Eigen::Matrix<double,7,1> T_l0_ln;
+
 	};
 	Calibration6DOF(){};
 	//1. 输入: 雷达和INS时间戳对齐后的位姿 输出:(1). 雷达到gnss的外参  感觉一个就行
 	void CalibrateGNSSLiDAR(std::vector<Eigen::Matrix4d> gps_poses,std::vector<Eigen::Matrix4d> LiDAR_poses,
 			Eigen::Isometry3d & T_lidar2INS);
-	//2. 变量
-	double extrinsic_param[6]={0,0,0,0,0,0};
+	//2. 外参
+	double extrinsic_param[7]={0,0,0,0,0,0};
+	//3. aloam的外参
+    double para_q[4] = {0, 0, 0, 1};
+    double para_t[3] = {0, 0, 0};
 private:
 	Eigen::Isometry3d T_w_G1,T_w_G0,T_G0_L0,T_L0_L1,T_G0_G1,T_w_G1_est;
 };
 
 
 #endif //PCD_COMPARE_CALIBRATION6DOF_H
+//
+/*
+T_w_g1_est_zero =  q_l_n * zero + t_l_n;
+T_w_g1_est_x    =  q_l_n * x + t_l_n;
+T_w_g1_est_y    =  q_l_n * y + t_l_n;
+T_w_g1_est_z    =  q_l_n * z + t_l_n;
+
+T_w_g1_est_zero =  q_extrinsic * T_w_g1_est_zero + t_extrinsic;
+T_w_g1_est_x    =  q_extrinsic * T_w_g1_est_x + t_extrinsic;
+T_w_g1_est_y    =  q_extrinsic * T_w_g1_est_y + t_extrinsic;
+T_w_g1_est_z    =  q_extrinsic * T_w_g1_est_z + t_extrinsic;*/

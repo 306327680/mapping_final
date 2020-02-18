@@ -4,7 +4,7 @@
 
 #include "registration.h"
 
-void registration::setParam(std::string configFileName) {
+/*void registration::setParam(std::string configFileName) {
 	std::ifstream ifs(configFileName.c_str());
 
 	if (ifs.good())
@@ -58,7 +58,7 @@ PM::TransformationParameters  registration::setScan(pcl::PointCloud<pcl::PointXY
 	T_scanner_to_localMap = PM::TransformationParameters::Identity(dimp1, dimp1);
 	icp_result = icp(newPointCloud, T_scanner_to_localMap);
 	return icp_result;
-}
+}*/
 //给一个点云添加normal
 void registration::addNormal(pcl::PointCloud<pcl::PointXYZI>::Ptr cloud,
 							 pcl::PointCloud<pcl::PointXYZINormal>::Ptr cloud_with_normals) {
