@@ -24,10 +24,10 @@ void Calibration6DOF::CalibrateGNSSLiDAR(std::vector<Eigen::Matrix4d> gps_poses,
     } else{
         std::cout<<LiDAR_poses.size()<< " not same size "<<gps_poses.size()<<std::endl;
     }
-	for (int i = 0; i < gps_poses.size()-5; ++i) {
+	for (int i = 0; i < gps_poses.size(); ++i) {
 		//计算增量
-		gps_inc = gps_poses[i].inverse()* gps_poses[i+5];
-		Lidar_inc = LiDAR_poses[i].inverse()*LiDAR_poses[i+5];
+		gps_inc = gps_poses[i].inverse()* gps_poses[i+1];
+		Lidar_inc = LiDAR_poses[i].inverse()*LiDAR_poses[i+1];
         gps_abs = gps_poses[0].inverse()* gps_poses[i+1];
         Lidar_abs = LiDAR_poses[0].inverse()*LiDAR_poses[i+1];
 
