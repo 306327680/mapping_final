@@ -319,7 +319,7 @@ int point2planeICP(){
 				g2osaver.insertPose(Eigen::Isometry3d(current_pose.matrix().cast<double>()));
 				clouds_distortion_origin.push_back(xyzItimeRing);
 				//运行最终的去畸变
-				if(1){ //存大点云
+				if(0){ //存大点云
 					std::cout<<"全局坐标 \n"<<current_pose.matrix()<<std::endl;
 					pcl::transformPointCloud(*cloud_bef,tfed,current_pose);
 					*cloud_map += tfed;
@@ -349,7 +349,7 @@ int point2planeICP(){
 					
 					tools2.timeUsed();
 					//	todo 这里可以去掉ros
-				}else{//存每一帧
+				}else{//存每一帧 防止内存爆炸
 					cloud_continus_time_T_world = continusTimeDistrotion(poses_distortion,clouds_distortion_origin);//这里放的是最新的一帧和位姿
 					std::stringstream pcd_save;
 					pcd_save<<"tfed_pcd/"<<i<<".pcd";
@@ -430,8 +430,6 @@ void traversableMapping(){
 	} else{
 		cout<<"!!!!! PCD & g2o does not have same number "<<endl;
 	}
-
-
 }
 
 // 功能4 使用encoder 和GPS LiDAR 去建图
@@ -493,7 +491,7 @@ void LiDARGNSScalibration (){
 	//vis.spin();
 	//0.格式转化
 	//todo 这里gps的位置比较多, 所以以 惯导的数量为基础 惯导 50hz lidar 10 hz
-	for (int j = 0; j < trans_vector.size() ; ++j) {
+	for (int j = 200; j < trans_vector.size() ; ++j) {
 		Eigen::Matrix4d temp;
 		temp.setIdentity();
 		temp(0,3) = gps_position->points[j*5].x;
@@ -501,7 +499,7 @@ void LiDARGNSScalibration (){
 		temp(2,3) = gps_position->points[j*5].z;
 		gps_poses.push_back(temp);
 	}
-	for (int k = 0; k < trans_vector.size(); ++k) {
+	for (int k = 200; k < trans_vector.size(); ++k) {
 		LiDAR_poses.push_back(trans_vector[k].matrix());
 	}
 	//1.计算lidar到gnss 外参
