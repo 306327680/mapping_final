@@ -4,198 +4,7 @@
 #include "otherFunctions.h"
 //G2O_USE_TYPE_GROUP(slam2d);
 //生成所有的特征地图
-//todo ground seg的地方还不能用
 
-
-
-//设置输入模式: 1.g2o+pcd的传统模式(pcd+g2o路径) 2.point to plane ICP (需要提供pcd路径)
-int status = 0;
-//输入模式的函数
-int getParam(int argc,char** argv){
-	std::cout<<"设置建图模式: 1.g2o+pcd的传统模式(pcd+g2o路径) 2.point to plane ICP (需要提供pcd路径) 3.bpreal ground mapping (pcd+g2o路径)"
-			 <<"4. 使用编码器和GPS LiDAR 建图"<<"5. LiDAR gps 外参标定"<<"6. NDT maping"<<std::endl;
-	cin >> status;
-	std::cout <<"status: " <<status<<std::endl;
-	if(status==1||status==3){
-		if(argc != 3 && argc != 5 ){
-			std::cout<<"argument error! argument number has to be 3/5! The first one should be pcd path the second should be g2o path"<<std::endl;
-			std::cout<<"./pcd_reader /media/echo/35E4DE63622AD713/fushikang/loop_pcd_single /media/echo/35E4DE63622AD713/fushikang/lihaile.g2o "<<std::endl;
-			std::cout<<"/media/echo/DataDisc/1_pcd_file/pku_bin /media/echo/DataDisc/2_g2o/pku/4edges_out.g2o 500 12210"<<std::endl;
-			return(-1);
-		}
-		filepath = argv[1];
-		g2o_path = argv[2];
-		if (argc == 5){
-			start_id = atoi(argv[3]);
-			end_id = atoi(argv[4]);
-		}
-		std::cout<<"start_id "<<start_id<<" end_id "<<end_id;
-	}
-	if(status==2||status==6){
-		if(argc != 2 ){
-			std::cout<<"argument error! argument number has to be 2! The first one should be pcd path"<<std::endl;
-			std::cout<<"e.g.: \n ./pcd_reader /media/echo/35E4DE63622AD713/fushikang/loop_pcd_single"<<std::endl;
-			std::cout<<"输入pcd路径: "<<std::endl;
-			cin >> filepath;
-			cout<<filepath<<endl;
-		} else{
-			filepath = argv[1];
-		}
-	}
-}
-//功能1 用g2o pose 建图*******888888
-int g2omapping(){
-	//得到所有的位姿向量
-	trans_vector = getEigenPoseFromg2oFile(g2o_path);
-	//生成局部地图
-/*	lmOptimizationSufraceCorner lm;
-	std::vector<double>  vector;
-	Eigen::Isometry3d se3;
-	//测试 rpy->se3
-	for (int i = 0; i < trans_vector.size(); ++i) {
-		std::cout<<trans_vector[i].matrix()<<std::endl;
-		lm.eigen2RPYXYZ(trans_vector[i],vector);
-		for (int j = 0; j < vector.size(); ++j) {
-			std::cout<<vector[j]<<std::endl;
-		}
-		lm.RPYXYZ2eigen(vector,se3);
-		std::cout<<i<<std::endl;
-	}*/
-	//样条插值
-	testspline(trans_vector);
-	pcl::PointCloud<pcl::PointXYZI>::Ptr cloud1(new pcl::PointCloud<pcl::PointXYZI>);
-	cout<<"trans_vector.size() : "<<trans_vector.size() <<" file_names_.size() : "<< file_names_.size()<<endl;
-	if(trans_vector.size() == file_names_.size()){
-		//genfeaturemap(trans_vector,filepath,*cloud1);
-		genlocalmap(trans_vector,filepath,*cloud1);
-	} else{
-		cout<<"!!!!! PCD & g2o does not have same number "<<endl;
-		return 0;
-	}
-}
-//设置起始结束的pcd
-void setStartEnd(){
-	std::cout<<"设置起始pcd"<<std::endl;
-	cin >> start_id;
-	std::cout <<"start: " <<start_id<<std::endl;
-	std::cout<<"设置结束pcd"<<std::endl;
-	cin >> end_id;
-	std::cout <<"end: " <<end_id<<std::endl;
-}
-//6.1.2 转换一个点的坐标
-void transformOnePoint(Eigen::Matrix4f t,pcl::PointXYZI & input){
-	Eigen::Matrix<float,4,1> temp_point,result;
-	temp_point(0,0) = input.x;
-	temp_point(1,0) = input.y;
-	temp_point(2,0) = input.z;
-	temp_point(3,0) = 1;
-	result = t*temp_point;
-	input.x = result(0,0);
-	input.y = result(1,0);
-	input.z = result(2,0);
-}
-//6.1.1 对4个位姿的点进行连续去畸变 自己维护一下序列()
-//input 4个位姿 从t-1 到t+2 输入 t时刻的点云
-//输出 continusTime 去过畸变的点云
-pcl::PointCloud<pcl::PointXYZI> continusTimeDistrotion(std::vector<Eigen::Matrix4f> & poses, std::vector<mypcdCloud> & clouds){
-	Eigen::Isometry3d t1,t2,t3,t4,current_trans;
-	pcl::PointCloud<pcl::PointXYZI> result;
-	pcl::PointXYZI temp;
-	std::vector<Eigen::Matrix4f> poses_tmp;
-	std::vector<mypcdCloud> clouds_tmp;
-	double num =3;//两个位姿之间插几个
-	SplineFusion sf;
-
-	//维持队列
-	if(poses.size() == clouds.size()){
-		if(poses.size()<4){
-			printf("等待4次配准结果\n");
-			return result;
-		}
-		for (int j = poses.size()-4; j < poses.size(); ++j) {
-			poses_tmp.push_back(poses[j]);
-			clouds_tmp.push_back(clouds[j]);
-		}
-		poses = poses_tmp;
-		clouds = clouds_tmp;
-	} else{
-		printf("pose clouds 不相等\n");
-		return result;
-	}
-
-	//转存位姿点
-	t1 = poses[0].matrix().cast<double>();
-	t2 = poses[1].matrix().cast<double>();
-	t3 = poses[2].matrix().cast<double>();
-	t4 = poses[3].matrix().cast<double>();
-		
-	for (int i = 0; i < clouds[1].size(); ++i) {
-		current_trans = sf.cumulativeForm(t1,t2,t3,t4,clouds[clouds.size()-3][i].timestamp*10); //10为 10 帧每秒
-		temp.x = clouds[1][i].x;
-		temp.y = clouds[1][i].y;
-		
-		temp.z = clouds[1][i].z;
-		temp.intensity = clouds[1][i].intensity;
-		transformOnePoint(current_trans.matrix().cast<float>(),temp);
-		result.push_back(temp);
-		
-	}
-	printf("continue-time 完成\n");
-	return result;
-}
-//6.1 tools 建立局部地图
-//a. 挑选关键帧(有必要?)
-//b. 维持队列长度
-//d. downsample
-// 15 帧大概1.2 s
-pcl::PointCloud<pcl::PointXYZI> lidarLocalMap(std::vector<Eigen::Matrix4f> & poses,std::vector<pcl::PointCloud<pcl::PointXYZI>> & clouds){
-	pcl::PointCloud<pcl::PointXYZI>::Ptr map_ptr (new pcl::PointCloud<pcl::PointXYZI>);
-	pcl::PointCloud<pcl::PointXYZI> map_temp;
-	std::vector<Eigen::Matrix4f>  poses_tmp;
-	std::vector<pcl::PointCloud<pcl::PointXYZI>>  clouds_tmp;
-	Eigen::Matrix4f tf_all = Eigen::Matrix4f::Identity();
-	//局部地图采用 continues time 的方式生成 先只在10帧上做
-	
-	//note 15帧64线 0.02 大概225520个点 //10帧试试
-	if (poses.size()>=15){
-		for (int i = poses.size() - 15; i <poses.size(); i++) {
-			pcl::transformPointCloud(clouds[i],map_temp,poses[i]);
-			*map_ptr += map_temp;
-			poses_tmp.push_back(poses[i]);
-			clouds_tmp.push_back(clouds[i]);
-		}
-		poses = poses_tmp;
-		clouds = clouds_tmp;
-	}else if(poses.size()>1){//第一开始点云不多的情况 不要第一个帧
-		for (int i = 1 ; i <poses.size() ; i++) {
-			pcl::transformPointCloud(clouds[i],map_temp,poses[i]);
-			*map_ptr += map_temp;
-		}
-	} else{
-		pcl::transformPointCloud(clouds[0],*map_ptr,poses[0]);
-	}
-
-	pcl::transformPointCloud(*map_ptr,map_temp,poses.back().inverse());
-	*map_ptr = map_temp;
-	//显示看一下
-	util tools;
-	tools.timeCalcSet("降采样的时间");
-	pcl::VoxelGrid<pcl::PointXYZI> sor;
-	sor.setInputCloud(map_ptr);
-	sor.setLeafSize(0.15f, 0.15f, 0.15f);
-	sor.filter(map_temp);
-	
-/*	pcl::UniformSampling<pcl::PointXYZI> filter;
-	pcl::PointCloud<int> keypointIndices;
-	filter.setInputCloud(map_ptr);
-	filter.setRadiusSearch(0.15f); //2cm 测距精度 015 haixing
-	filter.compute(keypointIndices);
-	pcl::copyPointCloud(*map_ptr, keypointIndices.points, map_temp);*/
-	//pointCloudRangeFilter(map_temp,75); //距离滤波可以去了
-	tools.timeUsed();
-	std::cout<<" 局部地图大小: "<<map_temp.size() <<std::endl;
-	return  map_temp;
-}
 
 //6.2 建图前端 点面icp
 int point2planeICP(){
@@ -430,8 +239,6 @@ void traversableMapping(){
 	} else{
 		cout<<"!!!!! PCD & g2o does not have same number "<<endl;
 	}
-
-
 }
 
 // 功能4 使用encoder 和GPS LiDAR 去建图
@@ -473,8 +280,8 @@ void LiDARGNSScalibration (){
 	//测试: 存储GPS + Encoder 到点云
 	//测试 step 1. 读取g2o的 位姿
 	//测试 step 2. 读取gps位姿的pcd
-	pcl::io::loadPCDFile<pcl::PointXYZ>("/home/echo/Desktop/gnss.pcd", *gps_position); //gnssPCDExtrinsicParameters 函数得到的gnss轨迹
-	trans_vector = getEigenPoseFromg2oFile("/home/echo/Desktop/icp.g2o");//通过功能2 得到的位置
+	pcl::io::loadPCDFile<pcl::PointXYZ>("route/gnss.pcd", *gps_position); //gnssPCDExtrinsicParameters 函数得到的gnss轨迹
+	trans_vector = getEigenPoseFromg2oFile("/media/echo/DataDisc/3_program/mapping/cmake-build-debug/g2o/icp.g2o");//通过功能2 得到的位置
 	//测试step 3. 虚拟出两个数据来计算出两个T 第一个T LiDAR到gnss中心的位姿 另一个是LiDAR到 LLA坐标的位姿
 	
 	//可视化一下当前的时间戳的对应关系.

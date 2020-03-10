@@ -54,17 +54,38 @@
 https://github.com/ZhenghaoFei/visual_odom.git
 #### 8.registration
 这个地方就放普通的icp接口,或者ndt之类的
+#### 9.GPS_constraint_mapping
+这里用gps构建约束,并且自动读取接近的点云位置,然后自动添加闭环的约束.
+
 
 11/27 准备完成
 
 ### 4. Todo
-1. 首先完成 loam 的特征提取调参
-2. loam 的 mapping 部分完成
-3. lego 的Feature extraction 部分的重构
-4. lego 的 odom 部分 看看如何分成两组优化一个位姿.
-5. 11/16 进行 point to plane icp 的构建,1128 还在写
-6. Visual odom
-7. 还是得改下驱动,现在的时间戳不对回头我看一下,现在用size凑合一下
+1.1 首先完成 loam 的特征提取调参
+
+1.2 loam 的 mapping 部分完成/ 现在使用 a-loam?
+
+1.3 lego 的Feature extraction 部分的重构
+
+1.4 lego 的 odom 部分 看看如何分成两组优化一个位姿.
+
+2.1 11/16 进行 point to plane icp 的构建,1128 还在写/现在完成了,回头试试 libpointmatcher
+
+3.1 Visual odom 添加这个部分进行测试
+
+4. 惯导建图过程
+
+4.1 外参标定的过程/惯导(cpt)还是得改下驱动,现在的时间戳不对回头我看一下,现在用size凑合一下
+
+4.2 现在外参标定是3DOF-6DOF 貌似算法不收敛
+
+4.3 现在为了方便地图扩展的话, LLA的坐标拼接的功能可以加一下,就是所有的LLA之间的位姿转换.
+
+5.1 目前的g2o文件有个问题, 就是没有时间戳,现在看看要不要改数据的格式 2020/3/10
+
+6.1 通过eth的论文的进行去除地图中的动态物体, 需要重构数据格式
+
+
 ### 5. 程序说明
 #### 1.速腾bperal 的地面边线提取
 在util.h中的 tools.GetPointCloudBeam(); 和 tools.GetBeamEdge();
@@ -72,3 +93,6 @@ https://github.com/ZhenghaoFei/visual_odom.git
 1. normal_y 为 timestamp(每个点的到达时间)
 2. GetPointCloudBeam 中返回 normal x 指的是当前的点云的线数.
 3. GetBeamEdge 中 intensity 为 其edge显著度: 保留范围为
+
+### 6. 文件路径及文件夹
+1.
