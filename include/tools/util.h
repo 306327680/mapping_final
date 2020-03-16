@@ -100,7 +100,7 @@ POINT_CLOUD_REGISTER_POINT_STRUCT(PointXYZITR,
 typedef PointXYZITR mypcd;
 typedef pcl::PointCloud<mypcd> mypcdCloud;
 
-//hesai LiDAR
+//0.1. hesai LiDAR
 namespace pandar_pointcloud
 {
 	struct PointXYZIT {
@@ -111,7 +111,7 @@ namespace pandar_pointcloud
 		EIGEN_MAKE_ALIGNED_OPERATOR_NEW // make sure our new allocators are aligned
 	} EIGEN_ALIGN16;
 	
-}; // namespace pandar_pointcloud
+};
 
 POINT_CLOUD_REGISTER_POINT_STRUCT(pandar_pointcloud::PointXYZIT,
 								  (float, x, x)(float, y, y)(float, z, z)
@@ -119,6 +119,40 @@ POINT_CLOUD_REGISTER_POINT_STRUCT(pandar_pointcloud::PointXYZIT,
 
 typedef pandar_pointcloud::PointXYZIT PPoint;
 typedef pcl::PointCloud<PPoint> PPointCloud;
+//0.2 vlp16
+ 
+ 
+	struct PointXYZIR {
+		PCL_ADD_POINT4D
+		float intensity;
+		float time;
+		uint16_t ring;                      ///< laser ring number
+		EIGEN_MAKE_ALIGNED_OPERATOR_NEW // make sure our new allocators are aligned
+	} EIGEN_ALIGN16;
+	
+ 
+
+POINT_CLOUD_REGISTER_POINT_STRUCT( PointXYZIR,
+								  (float, x, x)(float, y, y)(float, z, z)
+										  (float, intensity, intensity)(float, time, time)(uint16_t, ring, ring))
+typedef  PointXYZIR VLPPoint;
+typedef pcl::PointCloud<VLPPoint> VLPPointCloud;
+
+//0.3 robosense
+struct PointRobo {
+	PCL_ADD_POINT4D
+	float intensity;
+	float time;
+	float ring;                      ///< laser ring number
+	EIGEN_MAKE_ALIGNED_OPERATOR_NEW // make sure our new allocators are aligned
+} EIGEN_ALIGN16;
+
+POINT_CLOUD_REGISTER_POINT_STRUCT( PointRobo,
+								   (float, x, x)(float, y, y)(float, z, z)
+										   (float, intensity, intensity)(float, time, time)(float, ring, ring))
+typedef  PointRobo RoboPoint;
+typedef pcl::PointCloud<RoboPoint> RoboPointCLoud;
+
 
 //0. 工具类
 class util {

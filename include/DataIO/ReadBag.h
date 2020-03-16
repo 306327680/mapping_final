@@ -27,12 +27,13 @@
 #include <utility>
 #include <pcl_conversions/pcl_conversions.h>
 #include <pcl/visualization/pcl_visualizer.h>
+#include <pcl/filters/filter.h>
 class ReadBag {
 public:
 	ReadBag(){bag_strat_time.init();};
 	void getPath(std::string path);
 	void gnssLiDARExtrinsicParameters (std::string path);
-	//输入pcd路径读取LLA下面的惯导坐标+时间戳 和pcd计算好的 pcd的先不加_因为现在没有数据gps和lidar对齐的
+	//1. 输入pcd路径读取LLA下面的惯导坐标+时间戳 和pcd计算好的 pcd的先不加_因为现在没有数据gps和lidar对齐的
 	void gnssPCDExtrinsicParameters (std::string path,std::vector<std::pair<Eigen::Isometry3d,double>> & gps_pose , Eigen::Vector3d &lla_origin);
 	std::vector<Eigen::Vector3d> Eigen_encoder;
 	std::vector<Eigen::Vector3d> Eigen_GPS;
@@ -40,8 +41,12 @@ public:
 	pcl::PointCloud<pcl::PointXYZINormal> encoder_pcd;
 	pcl::PointCloud<pcl::PointXYZINormal> gps_pcd;
 	pcl::PointCloud<pcl::PointXYZINormal> cpt_pcd;
+	//2. 这里转换gps惯导等的数据
 	void readCPT(sensor_msgs::NavSatFix input);
+	//3. 这里转换雷达等的数据
 	void readHesai(std::string path);
+	void readVLP16(std::string path,std::string save_path);
+	void readTopRobosense(std::string path,std::string save_path);
 private:
 	rosbag::Bag bag;
 	nav_msgs::Odometry encoder_odom_;
@@ -58,7 +63,11 @@ private:
 	std::string camera3_ = "cam3_";
 	std::string cpt_navsat = "/cpt/ins_fix";
 	pcl::PointCloud<PPoint> hesai_pcd;
+	pcl::PointCloud<VLPPoint> vlp_pcd;
+	pcl::PointCloud<pcl::PointXYZI> robosense_pcd;
 	mypcdCloud pcdtosave;
+	VLPPointCloud vlp_pcdtosave;
+	RoboPointCLoud robo_pcdtosave;
 	//外外参标定的两个topic
 	std::string lidarodom = "/odom_mapped";
 	std::string gps_calibrate = "/ins_linsin_odom";

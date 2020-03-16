@@ -17,9 +17,13 @@ int point2planeICP(){
 	pcl::PointCloud<pcl::PointXYZI>::Ptr cloud_filtered(new pcl::PointCloud<pcl::PointXYZI>);
 	pcl::PointCloud<pcl::PointXYZI> nonan;
 	pcl::PointCloud<pcl::PointXYZI>::Ptr cloud_bef(new pcl::PointCloud<pcl::PointXYZI>);
+	pcl::PointCloud<pcl::PointXYZI> cloud_map_ds;
 	mypcdCloud xyzItimeRing; //现在改了之后的点
+	VLPPointCloud xyzirVLP;
+	RoboPointCLoud xyzirRobo;
 	pcl::PointCloud<pcl::PointXYZI>::Ptr cloud_hesai(new pcl::PointCloud<pcl::PointXYZI>);//io 进来的点
 	pcl::PointCloud<pcl::PointXYZI>::Ptr cloud_local_map(new pcl::PointCloud<pcl::PointXYZI>);
+	pcl::PointCloud<pcl::PointXYZI>::Ptr local_map_to_pub(new pcl::PointCloud<pcl::PointXYZI>);
 	pcl::PointCloud<pcl::PointXYZI>::Ptr cloud_map(new pcl::PointCloud<pcl::PointXYZI>);				//线性去畸变的图
 	pcl::PointCloud<pcl::PointXYZI>::Ptr cloud_map_continus_time(new pcl::PointCloud<pcl::PointXYZI>);//连续时间的
 	pcl::PointCloud<pcl::PointXYZINormal>::Ptr result(new pcl::PointCloud<pcl::PointXYZINormal>);
@@ -35,8 +39,10 @@ int point2planeICP(){
 	pcl::PCLPointCloud2 pcl_frame;
 	ros::Publisher test_frame;
 	ros::Publisher test_frame_linear;
+	ros::Publisher path_publish;
 	test_frame = node.advertise<sensor_msgs::PointCloud2>("/local_map", 5);
 	test_frame_linear = node.advertise<sensor_msgs::PointCloud2>("/current_frame_linear", 5);
+	path_publish = node.advertise<nav_msgs::Path>("/lidar_path", 5);
 	//todo end 这里可以去掉ros
 	//存tf的
 	std::vector<Eigen::Matrix4f> poses;
@@ -47,6 +53,7 @@ int point2planeICP(){
 	//滤波相关
 	pcl::UniformSampling<pcl::PointXYZI> filter;
 	pcl::PointCloud<int> keypointIndices;
+	pcl::UniformSampling<pcl::PointXYZI> filter_us;
 	//车速
 	float curr_speed = 0;
 	//continus-time distortion
@@ -62,12 +69,44 @@ int point2planeICP(){
 	bool distortion = true;
 	std::cout<<file_names_ .size()<<std::endl;
 	std::cout<<start_id<<" "<<end_id<<std::endl;
-	
+	bool VLP = true;
+	std::string LiDAR_type = "robo";
 	for(int i = 0;  i <file_names_ .size();i++){
+		tools2.timeCalcSet("total");
 		if (i>start_id && i<end_id) {
-			tools2.timeCalcSet("total");
-			pcl::io::loadPCDFile<mypcd>(file_names_[i], xyzItimeRing);
+			if(LiDAR_type == "VLP"){//判断用的是不是vlp的,用的话进行转换
+				pcl::io::loadPCDFile<VLPPoint>(file_names_[i], xyzirVLP);
+				xyzItimeRing.clear();
+				for (int j = 0; j < xyzirVLP.size(); ++j) {
+					mypcd temp;
+					temp.x = xyzirVLP[j].x;
+					temp.y = xyzirVLP[j].y;
+					temp.z = xyzirVLP[j].z;
+					temp.intensity = xyzirVLP[j].intensity;
+					temp.timestamp = xyzirVLP[j].time;
+					temp.ring = xyzirVLP[j].ring;
+					xyzItimeRing.push_back(temp);
+				}
+			}else if(LiDAR_type == "Hesai"){
+				pcl::io::loadPCDFile<mypcd>(file_names_[i], xyzItimeRing);
+			} else if(LiDAR_type == "robo"){
+				pcl::io::loadPCDFile<RoboPoint>(file_names_[i], xyzirRobo);
+				xyzItimeRing.clear();
+				for (int j = 0; j < xyzirRobo.size(); ++j) {
+					mypcd temp;
+					temp.x = xyzirRobo[j].x;
+					temp.y = xyzirRobo[j].y;
+					temp.z = xyzirRobo[j].z;
+					temp.intensity = xyzirRobo[j].intensity;
+					temp.timestamp = xyzirRobo[j].time;
+					temp.ring = xyzirRobo[j].ring;
+					xyzItimeRing.push_back(temp);
+				}
+			}else{
+			
+			}
 			pcl::copyPointCloud(xyzItimeRing,*cloud_hesai);
+ 
 			//1. 这里用pcl的 plane to plane icp
 			if(first_cloud){
 				//1.1 第一帧 不进行计算
@@ -100,7 +139,8 @@ int point2planeICP(){
 				tools.timeUsed();
 				//2.3.2 再次icp           *********** &&&&这个当做 lidar mapping
 				tools.timeCalcSet("局部地图用时    ");
-				*cloud_local_map = lidarLocalMap(poses,clouds);  //生成局部地图****
+				//2.3.2.1 局部地图生成
+				*cloud_local_map = lidarLocalMap(poses,clouds,100);  //生成局部地图****
 				tools.timeUsed();
 				tools.timeCalcSet("第二次ICP用时    ");
 				tfed = icp.normalIcpRegistrationlocal(cloud_bef,*cloud_local_map);
@@ -113,7 +153,8 @@ int point2planeICP(){
 				curr_speed = sqrt(icp_result.back()(0,3)*icp_result.back()(0,3)+
 								  icp_result.back()(1,3)*icp_result.back()(1,3))/0.1;
 				std::cout<<"*****点云ID: "<<i<<" ***** speed: "<<3.6*curr_speed<<" km/h ********"<<std::endl;
-				*cloud_local_map = *cloud_bef;
+				*local_map_to_pub = *cloud_local_map;
+				*cloud_local_map = *cloud_bef; 	//下一帧匹配的target是上帧去畸变之后的结果
 				//可以用恢复出来的位姿 tf 以前的点云
 				clouds.push_back(*cloud_bef);
 				//生成地图
@@ -130,8 +171,26 @@ int point2planeICP(){
 				//运行最终的去畸变
 				if(1){ //存大点云
 					std::cout<<"全局坐标 \n"<<current_pose.matrix()<<std::endl;
+					tfed = *cloud_bef;
+					cloud_bef->clear();
+					for (int j = 0; j < tfed.size(); ++j) {
+						if(sqrt(tfed[j].x*tfed[j].x+tfed[j].y*tfed[j].y)>10){
+							cloud_bef->push_back(tfed[j]);
+						}
+					}
 					pcl::transformPointCloud(*cloud_bef,tfed,current_pose);
 					*cloud_map += tfed;
+					//存的点云缩小点,每50帧存一下结果;
+					if(i%100==0){
+						pcl::PointCloud<int> keypointIndices;
+						filter_us.setInputCloud(cloud_map);
+						filter_us.setRadiusSearch(0.1f);
+						filter_us.compute(keypointIndices);
+						pcl::copyPointCloud(*cloud_map, keypointIndices.points, cloud_map_ds);
+						*cloud_map = cloud_map_ds;
+						writer.write("cloud_map.pcd",*cloud_map, true);
+					}
+		
 			/*		tools.timeCalcSet("连续时间去畸变用时:    ");
 					cloud_continus_time_T_world = continusTimeDistrotion(poses_distortion,clouds_distortion_origin);//这里放的是最新的一帧和位姿
 					*cloud_map_continus_time += cloud_continus_time_T_world;
@@ -151,11 +210,10 @@ int point2planeICP(){
 					to_pub_frame_linear.header.frame_id = "/map";
 					test_frame_linear.publish(to_pub_frame_linear);
 					
-					pcl::toPCLPointCloud2(*cloud_local_map, pcl_frame);
+					pcl::toPCLPointCloud2(*local_map_to_pub, pcl_frame);
 					pcl_conversions::fromPCL(pcl_frame, to_pub_frame_linear);
 					to_pub_frame_linear.header.frame_id = "/map";
 					test_frame.publish(to_pub_frame_linear);
-					
 					tools2.timeUsed();
 					//	todo 这里可以去掉ros
 				}else{//存每一帧
@@ -402,7 +460,9 @@ void NDTmapping(){
 //功能7 读取hesaipcd
 void readAndSaveHesai(std::string path){
 	ReadBag a;
-	a.readHesai(path);
+	//a.readHesai(path);
+	a.readVLP16("/media/echo/DataDisc/9_rosbag/5_vlp16_rtk_wuding/2020-03-13-12-14-52.bag","/media/echo/DataDisc/9_rosbag/5_vlp16_rtk_wuding/pcd");
+	//a.readTopRobosense("/media/echo/DataDisc/9_rosbag/louxia/2019-08-31-10-44-13.bag","/media/echo/DataDisc/9_rosbag/louxia/pcd");
 }
 
 //功能8 用来测试模块好使不
@@ -425,7 +485,7 @@ int main(int argc,char** argv){
 	getParam(argc,argv);
 	//得到所有的pcd名字
 	GetFileNames(filepath,"pcd");
-  
+	
 	switch(status)
 	{
 		//1. g2o+pcd拼图
@@ -458,13 +518,19 @@ int main(int argc,char** argv){
 			NDTmapping();
 			break;
 		case 7://7. 从bag中读何塞rawdata
+			cout << "read pcd:" << endl;
 			readAndSaveHesai("/media/echo/DataDisc/9_rosbag/zed_pandar64_ins/Hesai_back_afternoon_2.bag");
+			cout << "read pcd finish:" << endl;
 			break;
 		case 8://8. 测试新写的函数
 			testFunction();
 			break;
 		case 9:
 			rslidarmapping();
+			break;
+		case 10:
+			//10. 格式转化,用于不同的雷达型号 保留ring 和timestamp等信息
+			readAndSaveHesai("/media/echo/DataDisc/9_rosbag/rsparel_64_ins/2019-11-06-20-43-12_0.bag");
 			break;
 		default :
 			cout << "无效输入" << endl;

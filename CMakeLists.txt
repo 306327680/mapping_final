@@ -37,7 +37,10 @@ include_directories(${geometry_msgs_INCLUDE_DIRS})
 
 #libpointmatcher
 find_package(libpointmatcher CONFIG)
+#QT
 
+find_package(Qt5Widgets REQUIRED)
+find_package(Qt5Core REQUIRED)
 
 include_directories( src include ${libpointmatcher_INCLUDE_DIRS})
 
@@ -145,4 +148,6 @@ target_link_libraries(mapping ${PCL_LIBRARIES}
         poseIO
         spline
         ndt_omp
-        ${CERES_LIBRARIES} )
+        ${CERES_LIBRARIES}
+        Qt5::Core
+        Qt5::Widgets)

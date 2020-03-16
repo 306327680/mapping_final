@@ -56,6 +56,22 @@
 #include <pcl/filters/statistical_outlier_removal.h>
 #include <ros/ros.h>
 #include <6DOFcalib/Calibration6DOF.h>
+#include <nav_msgs/Path.h>
+//QT 相关
+#include <QApplication>
+#include <QFormLayout>
+#include <QtGlobal>
+#include <QObject>
+#include <QSlider>
+#include <QSpinBox>
+#include <QWidget>
+#include <QtWidgets/QApplication>
+#include <QtWidgets/QLabel>
+#include <QtWidgets/QVBoxLayout>
+#include <QtWidgets/QMainWindow>
+
+extern const std::string LiDAR_type = "Velodyne";
+//extern const std::string LiDAR_type = "Hesai";
 // 1. 参数初始化
 bool tensorvoting = true;
 using namespace g2o;
@@ -623,25 +639,40 @@ void transformOnePoint(Eigen::Matrix4f t,pcl::PointXYZI & input){
 
 //14. tools 建立局部地图 //a. 挑选关键帧(有必要?) //b. 维持队列长度 //d. downsample 15 帧大概1.2 s
 
-pcl::PointCloud<pcl::PointXYZI> lidarLocalMap(std::vector<Eigen::Matrix4f> & poses,std::vector<pcl::PointCloud<pcl::PointXYZI>> & clouds){
+pcl::PointCloud<pcl::PointXYZI> lidarLocalMap(std::vector<Eigen::Matrix4f> & poses,std::vector<pcl::PointCloud<pcl::PointXYZI>> & clouds,int buffer_size){
 	pcl::PointCloud<pcl::PointXYZI>::Ptr map_ptr (new pcl::PointCloud<pcl::PointXYZI>);
 	pcl::PointCloud<pcl::PointXYZI> map_temp;
+	pcl::PointCloud<pcl::PointXYZI>::Ptr map_temp_ptr (new pcl::PointCloud<pcl::PointXYZI>);
 	std::vector<Eigen::Matrix4f>  poses_tmp;
 	std::vector<pcl::PointCloud<pcl::PointXYZI>>  clouds_tmp;
 	Eigen::Matrix4f tf_all = Eigen::Matrix4f::Identity();
+	pcl::VoxelGrid<pcl::PointXYZI> sor;
+	pcl::StatisticalOutlierRemoval<pcl::PointXYZI> sor1;
 	//局部地图采用 continues time 的方式生成 先只在10帧上做
+	//最新帧降采样
+	*map_temp_ptr = clouds.back();
+	sor.setInputCloud(map_temp_ptr);
+	sor.setLeafSize(0.3f, 0.3f, 0.1f);
+	sor.filter(clouds.back());
+	*map_temp_ptr = clouds.back();
+	sor1.setInputCloud (map_temp_ptr);
+	sor1.setMeanK (50);
+	sor1.setStddevMulThresh (1.0);
+	sor1.filter (clouds.back());
 	
 	//note 15帧64线 0.02 大概225520个点 //10帧试试
-	if (poses.size()>=15){
-		for (int i = poses.size() - 15; i <poses.size(); i++) {
+	if (poses.size()>=buffer_size){
+		for (int i = poses.size() - buffer_size; i <poses.size(); i++) {
 			pcl::transformPointCloud(clouds[i],map_temp,poses[i]);
+			//下面的if 保证了 clouds 里面都是 降采样过的点云
 			*map_ptr += map_temp;
 			poses_tmp.push_back(poses[i]);
 			clouds_tmp.push_back(clouds[i]);
 		}
 		poses = poses_tmp;
 		clouds = clouds_tmp;
-	}else if(poses.size()>1){//第一开始点云不多的情况 不要第一个帧
+		
+	}else if(poses.size()>1){//第一开始点云不多的情况 不要第一个帧,因为没有去畸变
 		for (int i = 1 ; i <poses.size() ; i++) {
 			pcl::transformPointCloud(clouds[i],map_temp,poses[i]);
 			*map_ptr += map_temp;
@@ -654,10 +685,10 @@ pcl::PointCloud<pcl::PointXYZI> lidarLocalMap(std::vector<Eigen::Matrix4f> & pos
 	*map_ptr = map_temp;
 	//显示看一下
 	util tools;
-	tools.timeCalcSet("降采样的时间");
-	pcl::VoxelGrid<pcl::PointXYZI> sor;
+	tools.timeCalcSet("**降采样的时间");
+	
 	sor.setInputCloud(map_ptr);
-	sor.setLeafSize(0.15f, 0.15f, 0.15f);
+	sor.setLeafSize(0.25f, 0.25f, 0.05f);
 	sor.filter(map_temp);
 
 /*	pcl::UniformSampling<pcl::PointXYZI> filter;
