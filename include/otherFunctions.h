@@ -653,6 +653,7 @@ pcl::PointCloud<pcl::PointXYZI> lidarLocalMap(std::vector<Eigen::Matrix4f> & pos
 	*map_temp_ptr = clouds.back();
 	sor.setInputCloud(map_temp_ptr);
 	sor.setLeafSize(0.3f, 0.3f, 0.1f);
+	
 	sor.filter(clouds.back());
 	*map_temp_ptr = clouds.back();
 	sor1.setInputCloud (map_temp_ptr);

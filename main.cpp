@@ -38,9 +38,11 @@ int point2planeICP(){
 	sensor_msgs::PointCloud2 to_pub_frame_linear;
 	pcl::PCLPointCloud2 pcl_frame;
 	ros::Publisher test_frame;
+	ros::Publisher continue_frame;
 	ros::Publisher test_frame_linear;
 	ros::Publisher path_publish;
 	test_frame = node.advertise<sensor_msgs::PointCloud2>("/local_map", 5);
+	continue_frame = node.advertise<sensor_msgs::PointCloud2>("/continue_frame", 5);
 	test_frame_linear = node.advertise<sensor_msgs::PointCloud2>("/current_frame_linear", 5);
 	path_publish = node.advertise<nav_msgs::Path>("/lidar_path", 5);
 	//todo end 这里可以去掉ros
@@ -184,27 +186,27 @@ int point2planeICP(){
 					if(i%100==0){
 						pcl::PointCloud<int> keypointIndices;
 						filter_us.setInputCloud(cloud_map);
-						filter_us.setRadiusSearch(0.1f);
+						filter_us.setRadiusSearch(0.02f);
 						filter_us.compute(keypointIndices);
 						pcl::copyPointCloud(*cloud_map, keypointIndices.points, cloud_map_ds);
 						*cloud_map = cloud_map_ds;
 						writer.write("cloud_map.pcd",*cloud_map, true);
 					}
 		
-			/*		tools.timeCalcSet("连续时间去畸变用时:    ");
+		/*			tools.timeCalcSet("连续时间去畸变用时:    ");
 					cloud_continus_time_T_world = continusTimeDistrotion(poses_distortion,clouds_distortion_origin);//这里放的是最新的一帧和位姿
 					*cloud_map_continus_time += cloud_continus_time_T_world;
-					*//*			if (poses_distortion.size() == 4){ //进行了连续时间的去畸变就替换这个 转换到最新的T的坐标系下面
+								if (poses_distortion.size() == 4){ //进行了连续时间的去畸变就替换这个 转换到最新的T的坐标系下面
 									pcl::transformPointCloud(cloud_continus_time_T_world,cloud_continus_time_T_LiDAR,current_pose.matrix().inverse());
 									clouds[clouds.size()-3] = cloud_continus_time_T_LiDAR;
-								}*//*
-					tools.timeUsed();*/
+								}
+					tools.timeUsed();
 					//todo 这里可以去掉ros
-	/*				pcl::toPCLPointCloud2(*cloud_map_continus_time, pcl_frame);
+					pcl::toPCLPointCloud2(*cloud_map_continus_time, pcl_frame);
 					pcl_conversions::fromPCL(pcl_frame, to_pub_frame);
 					to_pub_frame.header.frame_id = "/map";
-					test_frame.publish(to_pub_frame);*/
-	
+					continue_frame.publish(to_pub_frame);
+	*/
 					pcl::toPCLPointCloud2(tfed, pcl_frame);
 					pcl_conversions::fromPCL(pcl_frame, to_pub_frame_linear);
 					to_pub_frame_linear.header.frame_id = "/map";
@@ -229,7 +231,7 @@ int point2planeICP(){
 	}
 	g2osaver.saveGraph("/media/echo/DataDisc/3_program/mapping/cmake-build-debug/g2o/icp.g2o");
 	writer.write("cloud_map.pcd",*cloud_map, true);
-	//writer.write("distro_final.pcd",*cloud_map_continus_time, true);
+/*	writer.write("distro_final.pcd",*cloud_map_continus_time, true);*/
 	//可视化一下
 /*	pcl::visualization::PCLVisualizer vis("PlICP");
 	pcl::visualization::PointCloudColorHandlerGenericField<pcl::PointXYZI> aligned_handler(cloud_map, "intensity");
@@ -461,7 +463,7 @@ void NDTmapping(){
 void readAndSaveHesai(std::string path){
 	ReadBag a;
 	//a.readHesai(path);
-	a.readVLP16("/media/echo/DataDisc/9_rosbag/5_vlp16_rtk_wuding/2020-03-13-12-14-52.bag","/media/echo/DataDisc/9_rosbag/5_vlp16_rtk_wuding/pcd");
+	a.readVLP16("/media/echo/DataDisc/9_rosbag/7_vlp_bxuda/2020-03-17-18-40-09.bag","/media/echo/DataDisc/9_rosbag/7_vlp_bxuda/pcd");
 	//a.readTopRobosense("/media/echo/DataDisc/9_rosbag/louxia/2019-08-31-10-44-13.bag","/media/echo/DataDisc/9_rosbag/louxia/pcd");
 }
 

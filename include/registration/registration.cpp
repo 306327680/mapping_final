@@ -168,8 +168,11 @@ pcl::PointCloud<pcl::PointXYZI> registration::normalIcpRegistrationlocal(pcl::Po
 	//隔断一下
 	pcl::PointCloud<pcl::PointXYZI>::Ptr target1(new pcl::PointCloud<pcl::PointXYZI>);
 	pcl::copyPointCloud(target,*target1);
+	util tools;
+	tools.timeCalcSet("计算normal时间");
 	addNormal(source, cloud_source_normals);
 	addNormal(target1, cloud_target_normals);
+	tools.timeUsed();
 	*cloud_source_normals_temp = *cloud_source_normals;
 	//0. 上次位姿态*增量
 	icp_init_local = transformation;
