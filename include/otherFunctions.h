@@ -652,8 +652,8 @@ pcl::PointCloud<pcl::PointXYZI> lidarLocalMap(std::vector<Eigen::Matrix4f> & pos
 	//最新帧降采样
 	*map_temp_ptr = clouds.back();
 	sor.setInputCloud(map_temp_ptr);
-	sor.setLeafSize(0.3f, 0.3f, 0.1f);
-	
+	sor.setLeafSize(0.05f, 0.05f, 0.05f);
+	//	sor.setLeafSize(0.3f, 0.3f, 0.1f); //外面
 	sor.filter(clouds.back());
 	*map_temp_ptr = clouds.back();
 	sor1.setInputCloud (map_temp_ptr);
@@ -689,7 +689,7 @@ pcl::PointCloud<pcl::PointXYZI> lidarLocalMap(std::vector<Eigen::Matrix4f> & pos
 	tools.timeCalcSet("**降采样的时间");
 	
 	sor.setInputCloud(map_ptr);
-	sor.setLeafSize(0.25f, 0.25f, 0.05f);
+	sor.setLeafSize(0.05f, 0.05, 0.05f);
 	sor.filter(map_temp);
 
 /*	pcl::UniformSampling<pcl::PointXYZI> filter;

@@ -73,7 +73,7 @@ void registration::addNormal(pcl::PointCloud<pcl::PointXYZI>::Ptr cloud,
 	normalEstimator.setInputCloud(cloud_source_normals);
 	normalEstimator.setSearchMethod(searchTree);
 	//normalEstimator.setRadiusSearch(0.05);
-	normalEstimator.setKSearch(10);
+	normalEstimator.setKSearch(20);
 	normalEstimator.compute(*normals);
 	pcl::concatenateFields(*cloud_source_normals, *normals, *cloud_with_normals);
 }
