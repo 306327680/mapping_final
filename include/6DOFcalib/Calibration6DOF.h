@@ -85,10 +85,10 @@ public:
             T_w_g1_est_y =  q_l * T_w_g1_est_y + t_l;
             T_w_g1_est_z =  q_l * T_w_g1_est_z + t_l;
 
-            T_w_g1_est_zero =  q_extrinsic.inverse() * T_w_g1_est_zero - t_extrinsic;
+/*            T_w_g1_est_zero =  q_extrinsic.inverse() * T_w_g1_est_zero - t_extrinsic;
             T_w_g1_est_x =  q_extrinsic.inverse() * T_w_g1_est_x - t_extrinsic;
             T_w_g1_est_y =  q_extrinsic.inverse() * T_w_g1_est_y - t_extrinsic;
-            T_w_g1_est_z =  q_extrinsic.inverse() * T_w_g1_est_z - t_extrinsic;
+            T_w_g1_est_z =  q_extrinsic.inverse() * T_w_g1_est_z - t_extrinsic;*/
             //error
             e_zero = T_w_g1_est_zero - T_w_g1_zero;
             e_x = T_w_g1_est_x - T_w_g1_x;
@@ -117,16 +117,16 @@ public:
             T_w_g1_est_y    =  q_l_n * T_w_g1_est_y + t_l_n;
             T_w_g1_est_z    =  q_l_n * T_w_g1_est_z + t_l_n;
 
-            T_w_g1_est_zero =  q_extrinsic.inverse() * T_w_g1_est_zero - t_extrinsic;
-            T_w_g1_est_x =  q_extrinsic.inverse() * T_w_g1_est_x - t_extrinsic;
-            T_w_g1_est_y =  q_extrinsic.inverse() * T_w_g1_est_y - t_extrinsic;
-            T_w_g1_est_z =  q_extrinsic.inverse() * T_w_g1_est_z - t_extrinsic;
+/*            T_w_g1_est_zero =  q_extrinsic.inverse() * T_w_g1_est_zero - t_extrinsic;
+            T_w_g1_est_x =     q_extrinsic.inverse() * T_w_g1_est_x    - t_extrinsic;
+            T_w_g1_est_y =     q_extrinsic.inverse() * T_w_g1_est_y    - t_extrinsic;
+            T_w_g1_est_z =     q_extrinsic.inverse() * T_w_g1_est_z    - t_extrinsic;*/
             //error
             e_zero  = T_w_g1_est_zero - T_w_g1_zero;
             e_x     = T_w_g1_est_x    - T_w_g1_x;
             e_y     = T_w_g1_est_y    - T_w_g1_y;
             e_z     = T_w_g1_est_z    - T_w_g1_z;
-
+            //这个error 还是不加了 在下面只用了4 个error项
             residual[4] = ceres::sqrt(e_zero(0,0)*e_zero(0,0) + e_zero(1,0)*e_zero(1,0) + e_zero(2,0)*e_zero(2,0));
             residual[5] = ceres::sqrt(e_x(0,0)*e_x(0,0) + e_x(1,0)*e_x(1,0) + e_x(2,0)*e_x(2,0));
             residual[6] = ceres::sqrt(e_y(0,0)*e_y(0,0) + e_y(1,0)*e_y(1,0) + e_y(2,0)*e_y(2,0));
@@ -137,7 +137,7 @@ public:
 		
 		static ceres::CostFunction *Create(const Eigen::Matrix<double,7,1>  origin_pt, const Eigen::Matrix<double,7,1>  target_pt,
                                            const Eigen::Matrix<double,7,1>  gps_abs, const Eigen::Matrix<double,7,1>  lidar_abs){
-			return (new ceres::AutoDiffCostFunction<Calibration, 8, 4, 3>(new Calibration(origin_pt, target_pt, gps_abs, lidar_abs))); //残差设置为4维,外参设为4元数和t
+			return (new ceres::AutoDiffCostFunction<Calibration,4, 4, 3>(new Calibration(origin_pt, target_pt, gps_abs, lidar_abs))); //残差设置为4维,外参设为4元数和t
 		}
 
 		Eigen::Matrix<double,7,1> T_g0_g1;

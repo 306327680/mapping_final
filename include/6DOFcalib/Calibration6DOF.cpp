@@ -24,7 +24,7 @@ void Calibration6DOF::CalibrateGNSSLiDAR(std::vector<Eigen::Matrix4d> gps_poses,
     } else{
         std::cout<<LiDAR_poses.size()<< " not same size "<<gps_poses.size()<<std::endl;
     }
-	for (int i = 0; i < gps_poses.size()-1; ++i) {
+	for (int i = 0; i < gps_poses.size(); ++i) {
 		//计算增量
 		gps_inc = gps_poses[i].inverse()* gps_poses[i+1];
 		Lidar_inc = LiDAR_poses[i].inverse()*LiDAR_poses[i+1];
@@ -73,9 +73,9 @@ void Calibration6DOF::CalibrateGNSSLiDAR(std::vector<Eigen::Matrix4d> gps_poses,
 	ceres::Solver::Options options;
 	options.linear_solver_type = ceres::DENSE_SCHUR;
 	options.minimizer_progress_to_stdout = true;
-    options.max_num_iterations = 100000;
-    options.function_tolerance = 1e-20;
-    options.min_line_search_step_size = 1e-20;
+    options.max_num_iterations = 20000;
+/*    options.function_tolerance = 1e-20;
+    options.min_line_search_step_size = 1e-20;*/
 
 	ceres::Solver::Summary summary;
 	ceres::Solve(options, &calibration, &summary);
