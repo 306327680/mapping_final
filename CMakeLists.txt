@@ -41,6 +41,12 @@ find_package(libpointmatcher CONFIG)
 
 find_package(Qt5Widgets REQUIRED)
 find_package(Qt5Core REQUIRED)
+find_package(Qt5Gui REQUIRED)
+
+set(CMAKE_AUTOMOC ON) # 设置自动生成moc文件,AUTOMOC打开可以省去QT5_WRAP_CPP命令
+set(CMAKE_AUTORCC ON) # Resource files
+set(CMAKE_AUTOUIC ON) # 设置自动生成ui.h文件,AUTOUIC打开可以省去QT5_WRAP_UI命令
+
 
 include_directories( src include ${libpointmatcher_INCLUDE_DIRS})
 
@@ -132,8 +138,16 @@ add_library(ndt_omp
         include/ndt_omp/src/pclomp/gicp_omp.cpp
         )
 target_link_libraries(ndt_omp      ${PCL_LIBRARIES})
+
+##qt
+qt5_wrap_ui(ui_FILES include/mainwindow.ui)
+#[[qt5_add_resources(qrc_FILES drawable.qrc)]]
+
+
+
 #main program
-add_executable(mapping main.cpp include/otherFunctions.h include/6DOFcalib/Calibration6DOF.cpp include/6DOFcalib/Calibration6DOF.h)
+add_executable(mapping main.cpp include/otherFunctions.h include/6DOFcalib/Calibration6DOF.cpp include/6DOFcalib/Calibration6DOF.h
+        ${ui_FILES}   include/qt/mainwindow.cpp include/qt/mainwindow.h  )
 target_link_libraries(mapping ${PCL_LIBRARIES}
         odom
         ground_seg
@@ -149,5 +163,6 @@ target_link_libraries(mapping ${PCL_LIBRARIES}
         spline
         ndt_omp
         ${CERES_LIBRARIES}
+        Qt5::Widgets
         Qt5::Core
-        Qt5::Widgets)
+        Qt5::Gui)
