@@ -652,36 +652,53 @@ void featureExtraction::adjustDistortion(pcl::PointCloud<PointTypeBeam>::Ptr poi
 										 pcl::PointCloud<PointTypeBeam>::Ptr &pointOut,
 										 Eigen::Isometry3d transform) {
 	pointOut->clear();
-	std::vector<pcl::PointCloud<PointTypeBeam> > laserCloudScans_N(N_SCAN);
-	Eigen::Matrix4d transInput,out,input;
-	Eigen::Isometry3d transpc;
-	input = Eigen::Matrix4d::Identity();
-	transInput.matrix() = transform.matrix();
-//    pointOut->resize(pointIn->size());
-	pcl::PointCloud<PointTypeBeam>::Ptr temp(new pcl::PointCloud<PointTypeBeam>);
-	pcl::PointCloud<PointTypeBeam>::Ptr Individual(new pcl::PointCloud<PointTypeBeam>);
-	pcl::PointCloud<PointTypeBeam>::Ptr Individual_bef(new pcl::PointCloud<PointTypeBeam>);
-	temp->resize(pointIn->size());
-	for(int i = 0; i < pointIn->size(); i++){
-		Individual->resize(1);
-		Individual_bef->resize(1);
-		Individual_bef->points[0] = pointIn->points[i];
-		Individual->points[0] = pointIn->points[i];
-		trinterp(input, transInput,pointIn->points[i].pctime,out);
-		transpc.matrix() = out.matrix();
-		pcl::transformPointCloud(*Individual_bef, *Individual, transpc.inverse().matrix());
-		temp->points[i] = pointIn->points[i];
-		temp->points[i].x = Individual->points[0].x;
-		temp->points[i].y = Individual->points[0].y;
-		temp->points[i].z = Individual->points[0].z;
-		if(pointIn->points[i].beam >= 0 && pointIn->points[i].beam <= N_SCAN){
-			laserCloudScans_N[pointIn->points[i].beam].push_back(temp->points[i]);
+	if(transform.matrix() != Eigen::Isometry3d::Identity().matrix()){
+		std::vector<pcl::PointCloud<PointTypeBeam> > laserCloudScans_N(N_SCAN);
+		Eigen::Matrix4d transInput,out,input;
+		Eigen::Isometry3d transpc;
+		input = Eigen::Matrix4d::Identity();
+		transInput.matrix() = transform.matrix();
+		pcl::PointCloud<PointTypeBeam>::Ptr temp(new pcl::PointCloud<PointTypeBeam>);
+		pcl::PointCloud<PointTypeBeam>::Ptr Individual(new pcl::PointCloud<PointTypeBeam>);
+		pcl::PointCloud<PointTypeBeam>::Ptr Individual_bef(new pcl::PointCloud<PointTypeBeam>);
+		temp->resize(pointIn->size());
+		for(int i = 0; i < pointIn->size(); i++){
+			Individual->resize(1);
+			Individual_bef->resize(1);
+			Individual_bef->points[0] = pointIn->points[i];
+			Individual->points[0] = pointIn->points[i];
+			trinterp(input, transInput,pointIn->points[i].pctime,out);
+			transpc.matrix() = out.matrix();
+			Eigen::Matrix4d convert;
+			convert = transpc.matrix();
+			if(convert(0,3)>0.00001){
+				convert = transpc.matrix().inverse();
+				pcl::transformPointCloud(*Individual_bef, *Individual, convert);
+				temp->points[i] = pointIn->points[i];
+				temp->points[i].x = Individual->points[0].x;
+				temp->points[i].y = Individual->points[0].y;
+				temp->points[i].z = Individual->points[0].z;
+				if(pointIn->points[i].beam >= 0 && pointIn->points[i].beam <= N_SCAN){
+					laserCloudScans_N[pointIn->points[i].beam].push_back(temp->points[i]);
+				}
+			} else{
+				temp->points[i] = pointIn->points[i];
+				temp->points[i].x = Individual_bef->points[0].x;
+				temp->points[i].y = Individual_bef->points[0].y;
+				temp->points[i].z = Individual_bef->points[0].z;
+				if(pointIn->points[i].beam >= 0 && pointIn->points[i].beam <= N_SCAN){
+					laserCloudScans_N[pointIn->points[i].beam].push_back(temp->points[i]);
+				}
+			}
 		}
+		
+		for (int i = 0; i < N_SCAN; i++) {
+			*pointOut += laserCloudScans_N[i];
+		}
+	} else{
+		*pointOut = *pointIn;
 	}
 	
-	for (int i = 0; i < N_SCAN; i++) {
-		*pointOut += laserCloudScans_N[i];
-	}
 
 }
 

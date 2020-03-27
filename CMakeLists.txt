@@ -63,7 +63,7 @@ INCLUDE_DIRECTORIES(${CSPARSE_INCLUDE_DIR})
 
 include_directories(${PCL_INCLUDE_DIRS})
 link_directories(${PCL_LIBRARIES_DIRS})
-add_definitions(${PCL_DEFINITIONS})
+#[[add_definitions(${PCL_DEFINITIONS})]]
 #g2o
 find_package(G2O REQUIRED)
 include_directories(${G2O_INCLUDE_DIRS})

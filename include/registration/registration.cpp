@@ -81,7 +81,7 @@ void registration::addNormal(pcl::PointCloud<pcl::PointXYZI>::Ptr cloud,
 void registration::SetNormalICP() {
 	pcl::IterativeClosestPointWithNormals<pcl::PointXYZINormal, pcl::PointXYZINormal>::Ptr icp(
 			new pcl::IterativeClosestPointWithNormals<pcl::PointXYZINormal, pcl::PointXYZINormal>());
-	icp->setMaximumIterations(20);
+	icp->setMaximumIterations(15);
 	icp->setMaxCorrespondenceDistance(0.8);
 	icp->setTransformationEpsilon(0.0001);
 	icp->setEuclideanFitnessEpsilon(0.0001);
@@ -125,32 +125,35 @@ pcl::PointCloud<pcl::PointXYZI> registration::normalIcpRegistration(pcl::PointCl
 	//上面那个也不对
 	//increase = transformation * increase * pcl_plane_plane_icp->getFinalTransformation();
 	increase = increase * pcl_plane_plane_icp->getFinalTransformation();
-	std::cout << "用上次变化量做初值之后的icp \n" <<   pcl_plane_plane_icp->getFinalTransformation() << std::endl;
-//	std::cout << "两帧之间的实际变化量 \n" << increase << std::endl;
-	std::cout <<"*****  第一次分数 : " << pcl_plane_plane_icp->getFitnessScore() << std::endl;
+	std::cout << "1.T_l-1_l - T_l_l+1 : \n" <<   pcl_plane_plane_icp->getFinalTransformation() << std::endl;
+	std::cout << "2.T_l_l1 :\n" << increase << std::endl;
+	std::cout << "3.第一次分数 : " << pcl_plane_plane_icp->getFitnessScore() << std::endl;
 	pcl::transformPointCloud(*source, tfed, transformation.matrix());
 	//变化量
 	return tfed;
 }
-
+//旋转normalize
 Eigen::Isometry3d registration::ReOrthogonalization(Eigen::Isometry3d input)  {
-	Eigen::Isometry3d result;
-	Eigen::Matrix3d rotation(input.rotation());
-	Eigen::Matrix4d se3;
-	Eigen::Matrix4d diff;
-	Eigen::Quaterniond Quat;
-	Eigen::Matrix3d rotation_normal;
-	se3 = input.matrix();
-	Quat = rotation;
-	Quat.normalize();
-	rotation_normal = Quat;
-	result.setIdentity();
-	result.rotate(rotation_normal);
-	Eigen::Vector3d trans (se3(0,3),se3(1,3),se3(2,3));
-	result.translation() = trans;
-	diff = result.matrix()*input.inverse().matrix();
-	
-	return result;
+ 
+		Eigen::Isometry3d result = Eigen::Isometry3d::Identity() ;
+		Eigen::Matrix3d rotation(input.rotation());
+		Eigen::Matrix4d se3;
+		Eigen::Matrix4d diff;
+		Eigen::Quaterniond Quat;
+		se3 = input.matrix();
+		
+		Quat = rotation;
+		Quat.normalize();
+		//r
+		result.setIdentity();
+		result.rotate(Quat);
+ 		//t
+		result(0,3) = se3(0,3);
+		result(1,3) = se3(1,3);
+		result(2,3) = se3(2,3);
+	 
+		return result;
+ 
 }
 //scan 和 map的匹配
 pcl::PointCloud<pcl::PointXYZI> registration::normalIcpRegistrationlocal(pcl::PointCloud<pcl::PointXYZI>::Ptr source,
@@ -190,8 +193,7 @@ pcl::PointCloud<pcl::PointXYZI> registration::normalIcpRegistrationlocal(pcl::Po
 	transformation_local = icp_init_local * pcl_plane_plane_icp->getFinalTransformation(); //上次结果(结果加预测)
 	transformation = transformation_local;
 	
-	std::cout << "第二次用结果做初值之后的icp调整量 \n"  << pcl_plane_plane_icp->getFinalTransformation() << std::endl;
-//	std::cout << "第二次global \n" << std::endl << transformation_local  << std::endl;
+	std::cout << "2.1 T_scan_l_l+1 - Tmap_l_l+1 \n"  << pcl_plane_plane_icp->getFinalTransformation() << std::endl;
 	std::cout << "*****  第二次分数 : "  << pcl_plane_plane_icp->getFitnessScore()  << std::endl;
 	pcl::transformPointCloud(*source, tfed, transformation.matrix());
 	//变化量

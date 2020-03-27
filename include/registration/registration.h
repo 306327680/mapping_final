@@ -20,7 +20,8 @@ class registration {
 public:
 	//pcl::IterativeClosestPointWithNormals a;
 /*	pcl::IterativeClosestPointWithNormals a;*/
-	registration(){};
+	registration(){reset();};//初始化ptr用的
+	void reset(){pcl_plane_plane_icp.reset(new pcl::IterativeClosestPointWithNormals<pcl::PointXYZINormal, pcl::PointXYZINormal>);}
 	void setParam(std::string configFileName = "/media/echo/DataDisc/3_program/mapping/cfg/icp.yaml"){};
 	void setMap(pcl::PointCloud<pcl::PointXYZI> pcin);
 	//pcl 配准部分

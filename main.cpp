@@ -13,14 +13,16 @@ int main(int argc,char** argv){
 	//todo 这里可以去掉ros
 	ros::init(argc, argv, "map");
 	//获得参数
-	m.getParam(argc,argv);
+/*	m.getParam(argc,argv);
 	//得到所有的pcd名字
 	m.GetFileNames(m.filepath,"pcd");
-	
+	*/
 	//qt
 	
 	QApplication a(argc, argv);
 	MainWindow w;
+/*	w.main_functions.getParam(argc,argv);
+	w.main_functions.GetFileNames(w.main_functions.filepath,"pcd");*/
 	w.show();
 	return a.exec();
 	//

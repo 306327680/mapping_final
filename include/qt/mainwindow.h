@@ -8,6 +8,7 @@
 
 #include <QMainWindow>
 #include "otherFunctions.h"
+
 namespace Ui {
 	class MainWindow;
 }
@@ -19,6 +20,7 @@ Q_OBJECT
 public:
 	explicit MainWindow(QWidget *parent = 0);
 	~MainWindow();
+ 
 	main_function main_functions;
 private slots:
 	
@@ -30,7 +32,7 @@ private slots:
 	
 	void on_spinBox_valueChanged(int arg1);
 	
-	void on_mapping_Button_clicked();
+	void on_mapping_Button_clicked();//3建图
 	
 	void on_g2o_mapping_botton_clicked();
 	

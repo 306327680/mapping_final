@@ -57,9 +57,13 @@
 #include <ros/ros.h>
 #include <6DOFcalib/Calibration6DOF.h>
 #include <nav_msgs/Path.h>
+
+EIGEN_DEFINE_STL_VECTOR_SPECIALIZATION(Eigen::Matrix4d)
+EIGEN_DEFINE_STL_VECTOR_SPECIALIZATION(Eigen::Isometry3d)
 using namespace g2o;
 class main_function {
 public:
+	
 	main_function(){};
 	std::string LiDAR_type = "Velodyne";
 //extern const std::string LiDAR_type = "Hesai";
@@ -68,7 +72,7 @@ public:
 
 	std::vector<std::string> file_names_;
 	std::string filename;
-	std::string filepath = "/media/echo/35E4DE63622AD713/test/";
+	std::string filepath = "/media/echo/DataDisc/9_rosbag/4_vlp16/pcd";
 	Eigen::Isometry3d curICP = Eigen::Isometry3d::Identity();
 	int cur_id = 0;
 	int start_id = 0;//设置开始结束的点
@@ -78,6 +82,8 @@ public:
 	int past = 0;
 //存g2o路径
 	std::string save_g2o_path = "/home/echo/small_program/test.g2o";
+//存点云的路径
+	std::string save_pcd_path = "/home/echo/map.pcd";
 //存储g2o为iso3d
 	std::vector<Eigen::Isometry3d, Eigen::aligned_allocator<Eigen::Isometry3d>> trans_vector;
 
@@ -584,7 +590,6 @@ public:
 			temp.beam = input[i].ring;
 			test->push_back(temp);
 		}
-		
 		Feature.adjustDistortion(test, pcout, se3);
 		pcl::copyPointCloud(*pcout, output);
 	}
@@ -658,8 +663,8 @@ public:
 		//最新帧降采样
 		*map_temp_ptr = clouds.back();
 		sor.setInputCloud(map_temp_ptr);
-		sor.setLeafSize(0.05f, 0.05f, 0.05f);
-		//	sor.setLeafSize(0.3f, 0.3f, 0.1f); //外面
+		//sor.setLeafSize(0.05f, 0.05f, 0.05f);//室内
+		sor.setLeafSize(0.3f, 0.3f, 0.1f); //外面
 		sor.filter(clouds.back());
 		*map_temp_ptr = clouds.back();
 		sor1.setInputCloud(map_temp_ptr);
@@ -695,7 +700,7 @@ public:
 		tools.timeCalcSet("**降采样的时间");
 		
 		sor.setInputCloud(map_ptr);
-		sor.setLeafSize(0.05f, 0.05, 0.05f);
+		sor.setLeafSize(0.25f, 0.25, 0.1f);
 		sor.filter(map_temp);
 
 /*	pcl::UniformSampling<pcl::PointXYZI> filter;
@@ -855,8 +860,8 @@ public:
 //class
 		util tools,tools2;
 		registration icp;
-		icp.setParam("/media/echo/DataDisc/3_program/mapping/cfg/icp.yaml");
-		icp.SetNormalICP();
+/*		icp.setParam("/media/echo/DataDisc/3_program/mapping/cfg/icp.yaml");*/
+		icp.SetNormalICP(); //设定点面icp参数
 		pcl::PCDWriter writer;
 		bool first_cloud = true;
 		bool distortion = true;
@@ -911,33 +916,38 @@ public:
 					g2osaver.insertPose(Eigen::Isometry3d::Identity());
 				} else{
 					//2.1 加个去畸变
-					simpleDistortion(xyzItimeRing,icp.increase.inverse(),*cloud_bef);
+					simpleDistortion(xyzItimeRing,icp.increase.inverse(),*cloud_bef); //T_l-1_l
 					//2.1.1 设为普通icp********
 					icp.transformation = Eigen::Matrix4f::Identity();
 					//2.2 输入的也应该降采样
-					filter.setInputCloud(cloud_bef);
+			/*		filter.setInputCloud(cloud_bef);
 					filter.setRadiusSearch(0.02f); //2cm 根据测距精度设置的
 					filter.compute(keypointIndices);
 					pcl::copyPointCloud(*cloud_bef, keypointIndices.points, *cloud_filtered);
-					*cloud_bef = *cloud_filtered;
+					*cloud_bef = *cloud_filtered;*/
 					//(*cloud_bef,75 - 1.5*(curr_speed/10)); //根据车速减小范围
 					keypointIndices.clear();
-					//2.3 进行point 2 plane ICP ********** 去3次畸变2次icp ****&&&&这个当做 lidar odom
+					
+					//2.3 ICP
 					tools.timeCalcSet("第一次ICP用时     ");
 					tfed = icp.normalIcpRegistration(cloud_bef,*cloud_local_map);
-					icp_result.push_back(icp.increase);
+					icp_result.push_back(icp.increase);//T_l_l+1
+					
 					//2.3.1 再次去畸变 再次减小范围
 					simpleDistortion(xyzItimeRing,icp.increase.inverse(),*cloud_bef);
 					//pointCloudRangeFilter(*cloud_bef,75 - 1.5*(curr_speed/10)); //根据车速减小范围
 					tools.timeUsed();
-					//2.3.2 再次icp           *********** &&&&这个当做 lidar mapping
+					
 					tools.timeCalcSet("局部地图用时    ");
 					//2.3.2.1 局部地图生成
 					*cloud_local_map = lidarLocalMap(poses,clouds,100);  //生成局部地图****
 					tools.timeUsed();
+					
+					//2.3.2 ******再次icp           *********** &&&&这个当做 lidar mapping
 					tools.timeCalcSet("第二次ICP用时    ");
 					tfed = icp.normalIcpRegistrationlocal(cloud_bef,*cloud_local_map);
 					icp_result.back() = icp_result.back()*icp.pcl_plane_plane_icp->getFinalTransformation(); //第一次结果*下一次去畸变icp结果
+					
 					//2.3.3 再次去畸变 再次减小范围
 					simpleDistortion(xyzItimeRing,icp.increase.inverse(),*cloud_bef);
 					//pointCloudRangeFilter(*cloud_bef,75 - 1.5*(curr_speed/10)); //根据车速减小范围
@@ -945,7 +955,7 @@ public:
 					//2.4 speed
 					curr_speed = sqrt(icp_result.back()(0,3)*icp_result.back()(0,3)+
 									  icp_result.back()(1,3)*icp_result.back()(1,3))/0.1;
-					std::cout<<"*****点云ID: "<<i<<" ***** speed: "<<3.6*curr_speed<<" km/h ********"<<std::endl;
+		
 					*local_map_to_pub = *cloud_local_map;
 					*cloud_local_map = *cloud_bef; 	//下一帧匹配的target是上帧去畸变之后的结果
 					//可以用恢复出来的位姿 tf 以前的点云
@@ -961,8 +971,9 @@ public:
 					poses.push_back(current_pose.matrix());
 					g2osaver.insertPose(Eigen::Isometry3d(current_pose.matrix().cast<double>()));
 					clouds_distortion_origin.push_back(xyzItimeRing);
+					std::cout<<"*****上次点云ID: "<<i<<" ***** speed: "<<3.6*curr_speed<<" km/h ******** \n\n\n"<<std::endl;
 					//运行最终的去畸变
-					if(0){ //存大点云
+					if(1){ //存大点云
 						std::cout<<"全局坐标 \n"<<current_pose.matrix()<<std::endl;
 						tfed = *cloud_bef;
 						cloud_bef->clear();
@@ -1020,14 +1031,10 @@ public:
 				}
 			}
 		}
-		g2osaver.saveGraph("/media/echo/DataDisc/3_program/mapping/cmake-build-debug/g2o/icp.g2o");
-		writer.write("cloud_map.pcd",*cloud_map, true);
+		std::cout<<save_g2o_path<<"\n"<<save_pcd_path<<std::endl;
+		g2osaver.saveGraph(save_g2o_path);
+		writer.write(save_pcd_path,*cloud_map, true);
 /*	writer.write("distro_final.pcd",*cloud_map_continus_time, true);*/
-		//可视化一下
-/*	pcl::visualization::PCLVisualizer vis("PlICP");
-	pcl::visualization::PointCloudColorHandlerGenericField<pcl::PointXYZI> aligned_handler(cloud_map, "intensity");
-	vis.addPointCloud(cloud_map, aligned_handler, "map");
-	vis.spin();*/
 		return(0);
 	}
 

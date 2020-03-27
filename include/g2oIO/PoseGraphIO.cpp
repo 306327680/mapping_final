@@ -35,7 +35,10 @@ void PoseGraphIO::saveGraph(std::string g2o_path) {
 		
 		// 生成边
 		if (i > 0) {
-			Eigen::Isometry3d t_e = _odom_buffer_t[i-1].inverse() * _odom_buffer_t[i] ;
+			Eigen::Matrix4d t_e_m;
+			t_e_m = _odom_buffer_t[i-1].matrix();
+			Eigen::Isometry3d t_e;
+			t_e = t_e_m.inverse()* _odom_buffer_t[i].matrix() ;
 			g2o::EdgeSE3 *e = new g2o::EdgeSE3();
 			e->setVertex(0, optimizer.vertices()[i-1]); //debug
 			e->setVertex(1, optimizer.vertices()[i]); //debug
