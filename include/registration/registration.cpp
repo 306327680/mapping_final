@@ -82,13 +82,22 @@ void registration::SetNormalICP() {
 	pcl::IterativeClosestPointWithNormals<pcl::PointXYZINormal, pcl::PointXYZINormal>::Ptr icp(
 			new pcl::IterativeClosestPointWithNormals<pcl::PointXYZINormal, pcl::PointXYZINormal>());
 	icp->setMaximumIterations(15);
-	icp->setMaxCorrespondenceDistance(0.8);
-	icp->setTransformationEpsilon(0.0001);
-	icp->setEuclideanFitnessEpsilon(0.0001);
+	icp->setMaxCorrespondenceDistance(1);
+	icp->setTransformationEpsilon(0.001);
+	icp->setEuclideanFitnessEpsilon(0.001);
 	this->pcl_plane_plane_icp = icp;
 	
 }
-
+void registration::SetPlaneICP() {
+	pcl::IterativeClosestPointWithNormals<pcl::PointXYZINormal, pcl::PointXYZINormal>::Ptr icp(
+			new pcl::IterativeClosestPointWithNormals<pcl::PointXYZINormal, pcl::PointXYZINormal>());
+	icp->setMaximumIterations(25);
+	icp->setMaxCorrespondenceDistance(0.2);
+	icp->setTransformationEpsilon(0.001);
+	icp->setEuclideanFitnessEpsilon(0.001);
+	this->pcl_plane_plane_icp = icp;
+	
+}
 pcl::PointCloud<pcl::PointXYZI> registration::normalIcpRegistration(pcl::PointCloud<pcl::PointXYZI>::Ptr source,
 																	pcl::PointCloud<pcl::PointXYZI>  target) {
 	//todo 改成xyz
@@ -102,8 +111,11 @@ pcl::PointCloud<pcl::PointXYZI> registration::normalIcpRegistration(pcl::PointCl
 	//隔断一下
 	pcl::PointCloud<pcl::PointXYZI>::Ptr target1(new pcl::PointCloud<pcl::PointXYZI>);
 	pcl::copyPointCloud(target,*target1);
+	pcl::PointCloud<pcl::PointXYZI>::Ptr source1(new pcl::PointCloud<pcl::PointXYZI>);
+	pcl::copyPointCloud(*source,*source1);
 	
-	addNormal(source, cloud_source_normals);
+	
+	addNormal(source1, cloud_source_normals);
 	addNormal(target1, cloud_target_normals);
 	*cloud_source_normals_temp = *cloud_source_normals;
 	//0. 当前预测量 = 上次位姿态*增量

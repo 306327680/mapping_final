@@ -108,7 +108,7 @@ void MainWindow::on_spinBox_2_valueChanged(int arg1)
 void MainWindow::on_mapping_Button_clicked()
 {
 	//获取现在的pcd路径
-	QString srcDirPath = QFileDialog::getExistingDirectory(this, "Mapping save g2o path", "/");
+	QString srcDirPath = QFileDialog::getExistingDirectory(this, "Mapping save pcd and g2o path", "/");
 	
 	if (srcDirPath.isEmpty())
 	{
@@ -118,7 +118,7 @@ void MainWindow::on_mapping_Button_clicked()
 	if (!srcDirPath.isEmpty())
 		ui->plainTextEdit_4->appendPlainText(srcDirPath);
 	QString message;
-	message.append("Mapping save g2o path: ");
+	message.append("Mapping save pcd and g2o path: ");
 	message.append( srcDirPath);
 	ui-> textBrowser->append(message);
 	//重新构建g2o
@@ -126,20 +126,8 @@ void MainWindow::on_mapping_Button_clicked()
 	g2o_save<<srcDirPath.toStdString()<<"/result.g2o";
 	main_functions.save_g2o_path = g2o_save.str();
 	
-	//pcd的存放路径
-	QString pcdDirPath = QFileDialog::getExistingDirectory(this, "Mapping save PCD path", "/");
-	if (pcdDirPath.isEmpty())
-	{
-		return;
-	}
-	if (!pcdDirPath.isEmpty())
-		ui->plainTextEdit_4->appendPlainText(pcdDirPath);
-	QString message1;
-	message1.append("Mapping save PCD path: ");
-	message1.append( pcdDirPath);
-	ui-> textBrowser->append(message1);
 	std::stringstream pcd_save;
-	pcd_save<<pcdDirPath.toStdString()<<"/map.pcd";
+	pcd_save<<srcDirPath.toStdString()<<"/map.pcd";
 	main_functions.save_pcd_path = pcd_save.str();
 	
 	//开始建图

@@ -27,8 +27,10 @@ public:
 	//pcl 配准部分
 	void addNormal(pcl::PointCloud<pcl::PointXYZI>::Ptr cloud,
 				   pcl::PointCloud<pcl::PointXYZINormal>::Ptr cloud_with_normals);
-	
+	//scan-scan 参数
 	void SetNormalICP();
+	//scan-map参数
+	void SetPlaneICP();
 	pcl::PointCloud<pcl::PointXYZI> normalIcpRegistration(pcl::PointCloud<pcl::PointXYZI>::Ptr source,
 									 pcl::PointCloud<pcl::PointXYZI> target);
 	pcl::PointCloud<pcl::PointXYZI> normalIcpRegistrationlocal(pcl::PointCloud<pcl::PointXYZI>::Ptr source,

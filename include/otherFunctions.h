@@ -5,6 +5,7 @@
 #ifndef PCD_COMPARE_MAIN_H
 #define PCD_COMPARE_MAIN_H
 
+#define PCL_NO_PRECOMPILE
 #include <iostream>
 #include <pcl/io/pcd_io.h>//不能两次引用头文件
 #include <pcl/point_types.h>
@@ -659,7 +660,7 @@ public:
 		Eigen::Matrix4f tf_all = Eigen::Matrix4f::Identity();
 		pcl::VoxelGrid<pcl::PointXYZI> sor;
 		pcl::StatisticalOutlierRemoval<pcl::PointXYZI> sor1;
-		//局部地图采用 continues time 的方式生成 先只在10帧上做
+ 
 		//最新帧降采样
 		*map_temp_ptr = clouds.back();
 		sor.setInputCloud(map_temp_ptr);
@@ -695,10 +696,7 @@ public:
 		
 		pcl::transformPointCloud(*map_ptr, map_temp, poses.back().inverse());
 		*map_ptr = map_temp;
-		//显示看一下
-		util tools;
-		tools.timeCalcSet("**降采样的时间");
-		
+ 
 		sor.setInputCloud(map_ptr);
 		sor.setLeafSize(0.25f, 0.25, 0.1f);
 		sor.filter(map_temp);
@@ -710,7 +708,7 @@ public:
 	filter.compute(keypointIndices);
 	pcl::copyPointCloud(*map_ptr, keypointIndices.points, map_temp);*/
 		//pointCloudRangeFilter(map_temp,75); //距离滤波可以去了
-		tools.timeUsed();
+ 
 		std::cout << " 局部地图大小: " << map_temp.size() << std::endl;
 		return map_temp;
 	}
@@ -797,8 +795,112 @@ public:
 			return 0;
 		}
 	}
-
-
+//16 LiDAR 局部地图生成(){} 通过距离来
+	pcl::PointCloud<pcl::PointXYZI>
+	lidarLocalMapDistance(std::vector<Eigen::Matrix4f> &poses, std::vector<pcl::PointCloud<pcl::PointXYZI>> &clouds,
+				  double distiance, int buffer_size,bool & local_map_updated,	pcl::PointCloud<pcl::PointXYZI> last_local_map) {
+		pcl::PointCloud<pcl::PointXYZI>::Ptr map_ptr(new pcl::PointCloud<pcl::PointXYZI>);
+		pcl::PointCloud<pcl::PointXYZI> map_temp;
+		pcl::PointCloud<pcl::PointXYZI>::Ptr map_temp_ptr(new pcl::PointCloud<pcl::PointXYZI>);
+		std::vector<Eigen::Matrix4f> poses_tmp;
+		std::vector<pcl::PointCloud<pcl::PointXYZI>> clouds_tmp;
+		Eigen::Matrix4f tf_all = Eigen::Matrix4f::Identity();
+		pcl::VoxelGrid<pcl::PointXYZI> sor;
+		pcl::StatisticalOutlierRemoval<pcl::PointXYZI> sor1;
+ 		//存放两帧的位姿
+		Eigen::Matrix4f pose_latest;
+		Eigen::Matrix4f pose_last;
+		Eigen::Matrix4f pose_diff;
+		double distance_calc;
+		//0. 得到这一阵位姿和上一阵位姿
+		if(poses.size()>1){
+			pose_latest =  poses.back();
+			pose_last = poses.at(poses.size()-2);
+			pose_diff = pose_latest*pose_last.inverse();
+			distance_calc = sqrtf(pose_diff(0,3)*pose_diff(0,3)+
+								  pose_diff(1,3)*pose_diff(1,3)+
+								  pose_diff(2,3)*pose_diff(2,3));
+		}else{
+			distance_calc = 100;
+		}
+		std::cout<<"distance_calc: "<<distance_calc<<std::endl;
+		//满足运动距离
+		if(distance_calc>distiance){
+			local_map_updated = true;
+			//1 最新帧降采样
+			*map_temp_ptr = clouds.back();
+			sor.setInputCloud(map_temp_ptr);
+			//sor.setLeafSize(0.05f, 0.05f, 0.05f);//室内
+			sor.setLeafSize(0.3f, 0.3f, 0.1f); //外面
+			sor.filter(clouds.back());
+			*map_temp_ptr = clouds.back();
+			sor1.setInputCloud(map_temp_ptr);
+			sor1.setMeanK(50);
+			sor1.setStddevMulThresh(1.0);
+			sor1.filter(clouds.back());
+			
+			//2. note 15帧64线 0.02 大概225520个点 //10帧试试
+			if (poses.size() >= buffer_size) {
+				for (int i = poses.size() - buffer_size; i < poses.size(); i++) {
+					pcl::transformPointCloud(clouds[i], map_temp, poses[i]);
+					//下面的if 保证了 clouds 里面都是 降采样过的点云
+					*map_ptr += map_temp;
+					poses_tmp.push_back(poses[i]);
+					clouds_tmp.push_back(clouds[i]);
+				}
+				poses = poses_tmp;
+				clouds = clouds_tmp;
+				
+			} else if (poses.size() > 1) {//第一开始点云不多的情况 不要第一个帧,因为没有去畸变
+				for (int i = 1; i < poses.size(); i++) {
+					pcl::transformPointCloud(clouds[i], map_temp, poses[i]);
+					*map_ptr += map_temp;
+				}
+			} else {
+				pcl::transformPointCloud(clouds[0], *map_ptr, poses[0]);
+			}
+			//3. 地图转换到当前的最后一帧的位姿
+			pcl::transformPointCloud(*map_ptr, map_temp, poses.back().inverse());
+			*map_ptr = map_temp;
+			//4.降采样
+			sor.setInputCloud(map_ptr);
+			sor.setLeafSize(0.25f, 0.25, 0.1f);
+			sor.filter(map_temp);
+			std::cout << " 局部地图大小: " << map_temp.size() << std::endl;
+			return map_temp;
+		}else{
+			local_map_updated = false;
+			//2. 这个只保留前面的点云和位姿
+			if (poses.size() >= buffer_size) {
+				for (int i = 0; i < buffer_size; i++) {
+					pcl::transformPointCloud(clouds[i], map_temp, poses[i]);
+					//下面的if 保证了 clouds 里面都是 降采样过的点云
+					*map_ptr += map_temp;
+					poses_tmp.push_back(poses[i]);
+					clouds_tmp.push_back(clouds[i]);
+				}
+				poses = poses_tmp;
+				clouds = clouds_tmp;
+				
+			} else if (poses.size() > 1) {//第一开始点云不多的情况 不要第一个帧,因为没有去畸变
+				for (int i = 1; i < poses.size(); i++) {
+					pcl::transformPointCloud(clouds[i], map_temp, poses[i]);
+					*map_ptr += map_temp;
+				}
+			} else {
+				pcl::transformPointCloud(clouds[0], *map_ptr, poses[0]);
+			}
+			//3. 地图转换到最新的一帧下位位置,继续计算增量 last_local_map
+			pcl::transformPointCloud(*map_ptr, map_temp, pose_latest.inverse());
+			*map_ptr = map_temp;
+			//4.降采样
+			sor.setInputCloud(map_ptr);
+			sor.setLeafSize(0.25f, 0.25, 0.1f);
+			sor.filter(map_temp);
+			std::cout << " 局部地图大小: " << map_temp.size() << std::endl;
+			return map_temp;
+		}
+	}
 
 
 
@@ -813,6 +915,7 @@ public:
 		pcl::PointCloud<pcl::PointXYZI>::Ptr cloud_filtered(new pcl::PointCloud<pcl::PointXYZI>);
 		pcl::PointCloud<pcl::PointXYZI> nonan;
 		pcl::PointCloud<pcl::PointXYZI>::Ptr cloud_bef(new pcl::PointCloud<pcl::PointXYZI>);
+		pcl::PointCloud<pcl::PointXYZI>::Ptr cloud_bef_ds(new pcl::PointCloud<pcl::PointXYZI>);
 		pcl::PointCloud<pcl::PointXYZI> cloud_map_ds;
 		mypcdCloud xyzItimeRing; //现在改了之后的点
 		VLPPointCloud xyzirVLP;
@@ -849,7 +952,7 @@ public:
 		std::vector<Eigen::Matrix4f> icp_result;
 		Eigen::Matrix4f current_scan_pose = Eigen::Matrix4f::Identity();
 		//滤波相关
-		pcl::UniformSampling<pcl::PointXYZI> filter;
+ 
 		pcl::PointCloud<int> keypointIndices;
 		pcl::UniformSampling<pcl::PointXYZI> filter_us;
 		//车速
@@ -861,19 +964,36 @@ public:
 		util tools,tools2;
 		registration icp;
 /*		icp.setParam("/media/echo/DataDisc/3_program/mapping/cfg/icp.yaml");*/
-		icp.SetNormalICP(); //设定点面icp参数
+
 		pcl::PCDWriter writer;
 		bool first_cloud = true;
 		bool distortion = true;
 		std::cout<<file_names_ .size()<<std::endl;
 		std::cout<<start_id<<" "<<end_id<<std::endl;
 		bool VLP = true;
-		std::string LiDAR_type = "robo";
+		std::string LiDAR_type = "VLP";
+		bool local_map_updated = true; //todo 加入地图更新判断 1100-3000
+		
+		
+		
+		//开始迭代
 		for(int i = 0;  i <file_names_ .size();i++){
 			tools2.timeCalcSet("total");
 			if (i>start_id && i<end_id) {
 				if(LiDAR_type == "VLP"){//判断用的是不是vlp的,用的话进行转换
 					pcl::io::loadPCDFile<VLPPoint>(file_names_[i], xyzirVLP);
+					//滤波
+					VLPPointCloud::Ptr xyzirVLP_ptr(new VLPPointCloud);
+					VLPPointCloud::Ptr xyzirVLP_ds_ptr(new VLPPointCloud);
+					pcl::copyPointCloud(xyzirVLP,*xyzirVLP_ptr);
+			 
+					pcl::StatisticalOutlierRemoval<VLPPoint> sor;
+					sor.setInputCloud (xyzirVLP_ptr);
+					sor.setMeanK (50);
+					sor.setStddevMulThresh (2);
+					sor.filter (*xyzirVLP_ds_ptr);
+					pcl::copyPointCloud(*xyzirVLP_ds_ptr, xyzirVLP);
+					
 					xyzItimeRing.clear();
 					for (int j = 0; j < xyzirVLP.size(); ++j) {
 						mypcd temp;
@@ -915,21 +1035,18 @@ public:
 					first_cloud = false;
 					g2osaver.insertPose(Eigen::Isometry3d::Identity());
 				} else{
+					//todo 有个bug,就是第二次去畸变没有用完全的tf去畸变 没问题
 					//2.1 加个去畸变
 					simpleDistortion(xyzItimeRing,icp.increase.inverse(),*cloud_bef); //T_l-1_l
 					//2.1.1 设为普通icp********
 					icp.transformation = Eigen::Matrix4f::Identity();
 					//2.2 输入的也应该降采样
-			/*		filter.setInputCloud(cloud_bef);
-					filter.setRadiusSearch(0.02f); //2cm 根据测距精度设置的
-					filter.compute(keypointIndices);
-					pcl::copyPointCloud(*cloud_bef, keypointIndices.points, *cloud_filtered);
-					*cloud_bef = *cloud_filtered;*/
+ 
 					//(*cloud_bef,75 - 1.5*(curr_speed/10)); //根据车速减小范围
-					keypointIndices.clear();
 					
 					//2.3 ICP
 					tools.timeCalcSet("第一次ICP用时     ");
+					icp.SetNormalICP(); //设定scan-scan icp参数
 					tfed = icp.normalIcpRegistration(cloud_bef,*cloud_local_map);
 					icp_result.push_back(icp.increase);//T_l_l+1
 					
@@ -940,11 +1057,13 @@ public:
 					
 					tools.timeCalcSet("局部地图用时    ");
 					//2.3.2.1 局部地图生成
-					*cloud_local_map = lidarLocalMap(poses,clouds,100);  //生成局部地图****
+					//*cloud_local_map = lidarLocalMap(poses,clouds,50);  //生成局部地图****
+					*cloud_local_map = lidarLocalMapDistance(poses,clouds,0.5,50,local_map_updated,*cloud_local_map);  //生成局部地图****
 					tools.timeUsed();
 					
 					//2.3.2 ******再次icp           *********** &&&&这个当做 lidar mapping
 					tools.timeCalcSet("第二次ICP用时    ");
+					icp.SetPlaneICP();	//设定点面 icp参数
 					tfed = icp.normalIcpRegistrationlocal(cloud_bef,*cloud_local_map);
 					icp_result.back() = icp_result.back()*icp.pcl_plane_plane_icp->getFinalTransformation(); //第一次结果*下一次去畸变icp结果
 					
@@ -953,13 +1072,15 @@ public:
 					//pointCloudRangeFilter(*cloud_bef,75 - 1.5*(curr_speed/10)); //根据车速减小范围
 					tools.timeUsed();
 					//2.4 speed
-					curr_speed = sqrt(icp_result.back()(0,3)*icp_result.back()(0,3)+
-									  icp_result.back()(1,3)*icp_result.back()(1,3))/0.1;
+					curr_speed = sqrt(icp_result.back()(0,3)*icp_result.back()(0,3)+icp_result.back()(1,3)*icp_result.back()(1,3))/0.1;
 		
 					*local_map_to_pub = *cloud_local_map;
 					*cloud_local_map = *cloud_bef; 	//下一帧匹配的target是上帧去畸变之后的结果
 					//可以用恢复出来的位姿 tf 以前的点云
 					clouds.push_back(*cloud_bef);
+					std::stringstream pcd_save;
+					pcd_save<<"dist_pcd/"<<i<<".pcd";
+					writer.write(pcd_save.str(),*cloud_bef, true);
 					//生成地图
 					Eigen::Matrix4f current_pose = Eigen::Matrix4f::Identity();
 					//试一下这样恢复出来的位姿
