@@ -870,6 +870,7 @@ public:
 			return map_temp;
 		}else{
 			local_map_updated = false;
+			std::cout<<"false"<<std::endl;
 			//2. 这个只保留前面的点云和位姿
 			if (poses.size() >= buffer_size) {
 				for (int i = 0; i < buffer_size; i++) {
@@ -881,24 +882,38 @@ public:
 				}
 				poses = poses_tmp;
 				clouds = clouds_tmp;
+				//3. 地图转换到最新的一帧下位位置,继续计算增量 last_local_map
+				sor.setInputCloud(map_ptr);
+				sor.setLeafSize(0.25f, 0.25, 0.1f);
+				sor.filter(map_temp);
+				pcl::transformPointCloud(map_temp, *map_ptr, pose_latest.inverse());
+				return *map_ptr;
 				
 			} else if (poses.size() > 1) {//第一开始点云不多的情况 不要第一个帧,因为没有去畸变
 				for (int i = 1; i < poses.size(); i++) {
 					pcl::transformPointCloud(clouds[i], map_temp, poses[i]);
 					*map_ptr += map_temp;
 				}
+				//3. 地图转换到最新的一帧下位位置,继续计算增量 last_local_map
+				pcl::transformPointCloud(*map_ptr, map_temp, pose_latest.inverse());
+				*map_ptr = map_temp;
+				//4.降采样
+				sor.setInputCloud(map_ptr);
+				sor.setLeafSize(0.25f, 0.25, 0.1f);
+				sor.filter(map_temp);
+				return map_temp;
 			} else {
 				pcl::transformPointCloud(clouds[0], *map_ptr, poses[0]);
+				//3. 地图转换到最新的一帧下位位置,继续计算增量 last_local_map
+				pcl::transformPointCloud(*map_ptr, map_temp, pose_latest.inverse());
+				*map_ptr = map_temp;
+				//4.降采样
+				sor.setInputCloud(map_ptr);
+				sor.setLeafSize(0.25f, 0.25, 0.1f);
+				sor.filter(map_temp);
+				return map_temp;
 			}
-			//3. 地图转换到最新的一帧下位位置,继续计算增量 last_local_map
-			pcl::transformPointCloud(*map_ptr, map_temp, pose_latest.inverse());
-			*map_ptr = map_temp;
-			//4.降采样
-			sor.setInputCloud(map_ptr);
-			sor.setLeafSize(0.25f, 0.25, 0.1f);
-			sor.filter(map_temp);
-			std::cout << " 局部地图大小: " << map_temp.size() << std::endl;
-			return map_temp;
+			
 		}
 	}
 
@@ -1021,7 +1036,7 @@ public:
 						xyzItimeRing.push_back(temp);
 					}
 				}else{
-				
+					std::cout<<"unknown pcd type"<<std::endl;
 				}
 				pcl::copyPointCloud(xyzItimeRing,*cloud_hesai);
 				
@@ -1058,7 +1073,7 @@ public:
 					tools.timeCalcSet("局部地图用时    ");
 					//2.3.2.1 局部地图生成
 					//*cloud_local_map = lidarLocalMap(poses,clouds,50);  //生成局部地图****
-					*cloud_local_map = lidarLocalMapDistance(poses,clouds,0.5,50,local_map_updated,*cloud_local_map);  //生成局部地图****
+					*cloud_local_map = lidarLocalMapDistance(poses,clouds,0.75,20 ,local_map_updated,*cloud_local_map);  //生成局部地图****
 					tools.timeUsed();
 					
 					//2.3.2 ******再次icp           *********** &&&&这个当做 lidar mapping

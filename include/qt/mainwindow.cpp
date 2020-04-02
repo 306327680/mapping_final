@@ -160,9 +160,21 @@ void MainWindow::on_pushButton_3_clicked()
 
 }
 
-
+//bag 转换格式
 void MainWindow::on_pushButton_4_clicked()
 {
+	//获取bag 的路径
+	QString curPath=QDir::currentPath();//获取系统当前目录
+	//获取应用程序的路径
+	QString dlgTitle="choose ros bag"; //对话框标题
+	QString filter="bag(*.bag*)"; //文件过滤器
+	QString aFileName=QFileDialog::getOpenFileName(this,dlgTitle,curPath,filter);
+	if (!aFileName.isEmpty())
+		ui->plainTextEdit_2->appendPlainText(aFileName);
+	
+	main_functions.g2o_path = aFileName.toStdString();
+	
+	//获取pcd的路径
 	QString srcDirPath = QFileDialog::getExistingDirectory(
 			this, "Save converted bag to :",
 			"/");
@@ -179,4 +191,6 @@ void MainWindow::on_pushButton_4_clicked()
 	message.append( srcDirPath);
 	ui-> textBrowser->append(message);
 	
+	ReadBag a;
+	a.readVLP16(aFileName.toStdString(),srcDirPath.toStdString());
 }
