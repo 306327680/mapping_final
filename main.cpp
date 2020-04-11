@@ -51,7 +51,7 @@ int main(int argc,char** argv){
 			m.encoderMapping();
 			break;
 		case 5://5. Calibrating the extrinsic parameters
-			m.LiDARGNSScalibration();
+			m.LiDARGNSScalibration("w","w");
 			m.LiDARGNSSMapping();
 			break;
 		case 6: //6. ndt建图

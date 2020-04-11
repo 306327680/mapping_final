@@ -56,6 +56,11 @@ https://github.com/ZhenghaoFei/visual_odom.git
 这个地方就放普通的icp接口,或者ndt之类的
 #### 9.GPS_constraint_mapping
 这里用gps构建约束,并且自动读取接近的点云位置,然后自动添加闭环的约束.
+#### 10. 6DOfcalib
+这里是用来放 6DOF - 3DOF 或者 6DOF-6DOF 基于优化的外参标定的库/eg: IMU-LiDAR/LiDAR-Camera/Camera-IMU
+#### imgAddColir2Lidar
+这里是将图像投影到点云的相关函数
+
 
 
 11/27 准备完成
@@ -73,7 +78,7 @@ https://github.com/ZhenghaoFei/visual_odom.git
 
 3.1 Visual odom 添加这个部分进行测试
 
-4. 惯导建图过程
+4.0 惯导建图过程
 
 4.1 外参标定的过程/惯导(cpt)还是得改下驱动,现在的时间戳不对回头我看一下,现在用size凑合一下
 
@@ -88,6 +93,7 @@ https://github.com/ZhenghaoFei/visual_odom.git
 7.1 关于建图本身,这个现在有一个问题,就是local map的选取,如果 是采用运动距离大于多少保留关键帧还是?有没有其他1更好的保留关键帧的方法,
 比如切割组合这样的,切割成小块再在小块中滤波更新,或者分割出再更新?
 
+8.0 先把移动端的建图设备的外参挑出来
 
 ### 5. 程序说明
 #### 1.速腾bperal 的地面边线提取
@@ -96,6 +102,10 @@ https://github.com/ZhenghaoFei/visual_odom.git
 1. normal_y 为 timestamp(每个点的到达时间)
 2. GetPointCloudBeam 中返回 normal x 指的是当前的点云的线数.
 3. GetBeamEdge 中 intensity 为 其edge显著度: 保留范围为
-
+#### 2.标定LiDAR-GPS外参的基本流程
+1. 转换GPS到LLA,并且存为PCD/intensity放关于第一帧的时间戳增量
+2. 进行LiDAR的 odom, LiDAR的odom存为G2O格式,添加一个txt或者文档放时间戳和G2o的关系
+3. LiDARGNSScalibration 中读取位置,调整并且对齐.
+4. 进行优化
 ### 6. 文件路径及文件夹
 1.

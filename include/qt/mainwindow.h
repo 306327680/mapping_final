@@ -27,7 +27,7 @@ private slots:
 	void on_pushButton_clicked();
 	
 	void on_pushButton_2_clicked();
-	
+	//标定外参
 	void on_pushButton_3_clicked();
 	
 	void on_spinBox_valueChanged(int arg1);
@@ -37,7 +37,7 @@ private slots:
 	void on_g2o_mapping_botton_clicked();
 	
 	void on_spinBox_2_valueChanged(int arg1);
-	
+
 	void on_pushButton_4_clicked();
 
 private:

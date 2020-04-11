@@ -32,6 +32,7 @@ class ReadBag {
 public:
 	ReadBag(){bag_strat_time.init();};
 	void getPath(std::string path);
+	//0. jlx那个topic
 	void gnssLiDARExtrinsicParameters (std::string path);
 	//1. 输入pcd路径读取LLA下面的惯导坐标+时间戳 和pcd计算好的 pcd的先不加_因为现在没有数据gps和lidar对齐的
 	void gnssPCDExtrinsicParameters (std::string path,std::vector<std::pair<Eigen::Isometry3d,double>> & gps_pose , Eigen::Vector3d &lla_origin);

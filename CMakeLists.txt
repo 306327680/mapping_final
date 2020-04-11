@@ -111,7 +111,11 @@ target_link_libraries(odom ${OpenCV_LIBS})
 add_library(ground_seg
         include/oneFrameGND/ground_seg.h
         include/oneFrameGND/ground_seg.cpp
-        include/DataIO/ReadBag.cpp include/DataIO/ReadBag.h include/registration/registration.cpp include/registration/registration.h include/GPS/gpsTools.cpp include/GPS/gpsTools.h)
+        include/DataIO/ReadBag.cpp include/DataIO/ReadBag.h
+        include/registration/registration.cpp
+        include/registration/registration.h
+        include/GPS/gpsTools.cpp include/GPS/gpsTools.h
+)
 target_link_libraries(ground_seg
         ${roscpp_LIBRARIES} ${std_msgs_LIBRARIES}
         ${rosbag_LIBRARIES} ${nav_msgs_LIBRARIES}
@@ -146,8 +150,17 @@ qt5_wrap_ui(ui_FILES include/mainwindow.ui)
 
 
 #main program
-add_executable(mapping main.cpp include/otherFunctions.h include/6DOFcalib/Calibration6DOF.cpp include/6DOFcalib/Calibration6DOF.h
-        ${ui_FILES}   include/qt/mainwindow.cpp include/qt/mainwindow.h  )
+add_executable(mapping main.cpp
+        include/otherFunctions.h
+        include/6DOFcalib/Calibration6DOF.cpp
+        include/6DOFcalib/Calibration6DOF.h
+        ${ui_FILES}
+        include/qt/mainwindow.cpp
+        include/qt/mainwindow.h
+        include/imgAddColor2Lidar/imgAddColor2Lidar.cpp
+        include/imgAddColor2Lidar/imgAddColor2Lidar.h
+        include/CSV/CSVio.cpp include/CSV/CSVio.h)
+
 target_link_libraries(mapping ${PCL_LIBRARIES}
         odom
         ground_seg

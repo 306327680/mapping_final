@@ -986,7 +986,7 @@ public:
 		std::cout<<file_names_ .size()<<std::endl;
 		std::cout<<start_id<<" "<<end_id<<std::endl;
 		bool VLP = true;
-		std::string LiDAR_type = "VLP";
+		std::string LiDAR_type = "robo";
 		bool local_map_updated = true; //todo 加入地图更新判断 1100-3000
 		
 		
@@ -1249,14 +1249,14 @@ public:
 		writer.write("/home/echo/gps_pcd.pcd",rb.gps_pcd);
 	}
 
-//功能5.1 LiDAR + GNSS mapping 标定
+//功能5.1 LiDAR + GNSS mapping 杆臂值 标定
 //程序准备设计的方案: 1. 读取一个bag 取其中的一段时间 eg 60s 600 帧进行 odom的计算
 //2. 读取gps 转成lla
 //3. 时间戳对齐
 //4. 设置两个优化变量 一个是两个传感器的外参 一个是旋转的角度,就是雷达初始时刻相对于正北的朝向;
 //5.
 // /media/echo/DataDisc/9_rosbag/rsparel_64_ins 这个好像能work gps时间戳不太对 就用时间戳减1s
-	void LiDARGNSScalibration (){
+	void LiDARGNSScalibration (std::string lidar_g2o,std::string gps_pcd){
 		pcl::PCDWriter writer;
 		ReadBag rb;
 		Calibration6DOF calibrate; //用来标定外参的
@@ -1274,8 +1274,8 @@ public:
 		//测试: 存储GPS + Encoder 到点云
 		//测试 step 1. 读取g2o的 位姿
 		//测试 step 2. 读取gps位姿的pcd
-		pcl::io::loadPCDFile<pcl::PointXYZ>("route/gnss.pcd", *gps_position); //gnssPCDExtrinsicParameters 函数得到的gnss轨迹
-		trans_vector = getEigenPoseFromg2oFile("/media/echo/DataDisc/3_program/mapping/cmake-build-debug/g2o/icp.g2o");//通过功能2 得到的位置
+		pcl::io::loadPCDFile<pcl::PointXYZ>(gps_pcd, *gps_position); //gnssPCDExtrinsicParameters 函数得到的gnss轨迹
+		trans_vector = getEigenPoseFromg2oFile(lidar_g2o);//通过功能2 得到的位置
 		//测试step 3. 虚拟出两个数据来计算出两个T 第一个T LiDAR到gnss中心的位姿 另一个是LiDAR到 LLA坐标的位姿
 		
 		//可视化一下当前的时间戳的对应关系.
@@ -1293,6 +1293,7 @@ public:
 		}
 		//vis.spin();
 		//0.格式转化
+		//这一部分产生一一对应的关系
 		//todo 这里gps的位置比较多, 所以以 惯导的数量为基础 惯导 50hz lidar 10 hz
 		for (int j = 200; j < trans_vector.size() ; ++j) {
 			Eigen::Matrix4d temp;
@@ -1397,8 +1398,8 @@ public:
 	void readAndSaveHesai(std::string path){
 		ReadBag a;
 		//a.readHesai(path);
-		a.readVLP16("/media/echo/DataDisc/9_rosbag/7_vlp_bxuda/2020-03-17-18-40-09.bag","/media/echo/DataDisc/9_rosbag/7_vlp_bxuda/pcd");
-		//a.readTopRobosense("/media/echo/DataDisc/9_rosbag/louxia/2019-08-31-10-44-13.bag","/media/echo/DataDisc/9_rosbag/louxia/pcd");
+		//a.readVLP16("/media/echo/DataDisc/9_rosbag/7_vlp_bxuda/2020-03-17-18-40-09.bag","/media/echo/DataDisc/9_rosbag/7_vlp_bxuda/pcd");
+		a.readTopRobosense("/media/echo/DataDisc/9_rosbag/9_huawei_jialuowuliu/2020-04-09-11-44-45.bag","/home/echo/2_huawei");
 	}
 
 //功能8 用来测试模块好使不

@@ -256,7 +256,8 @@ void ReadBag::gnssPCDExtrinsicParameters(std::string path, std::vector<std::pair
 					}
 				}
 	pcl::PCDWriter writer;
-
+	ofstream out;
+	out.open("route/lla.pcd");
 	writer.write("route/gnss.pcd",*gps_route);
 }
 //转换vlp16 到建图的数据格式

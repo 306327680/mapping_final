@@ -154,10 +154,33 @@ void MainWindow::on_g2o_mapping_botton_clicked()
 	message.append( srcDirPath);
 	ui-> textBrowser->append(message);
 }
-
+//标定外参
 void MainWindow::on_pushButton_3_clicked()
 {
-
+	//获取bag 的路径
+	QString curPath=QDir::currentPath();//获取系统当前目录
+	//获取应用程序的路径
+	QString dlgTitle="Choose LiDAR pose file"; //对话框标题
+	QString filter="g2o(*.g2o*)"; //文件过滤器
+	QString aFileName=QFileDialog::getOpenFileName(this,dlgTitle,curPath,filter);
+	
+	if (!aFileName.isEmpty())
+		ui->plainTextEdit_2->appendPlainText(aFileName);
+	main_functions.g2o_path = aFileName.toStdString();
+	
+	//获取pcd的路径
+	dlgTitle="Choose GPS PCD file";
+	filter="pcd(*.pcd*)";
+	QString srcDirPath = QFileDialog::getOpenFileName(this,dlgTitle,curPath,filter);
+	
+ 
+	ui->plainTextEdit_4->appendPlainText(srcDirPath);
+	//显示到下面的提示框中
+	QString message;
+	message.append("Save converted bag to Dir: ");
+	message.append( srcDirPath);
+	ui-> textBrowser->append(message);
+	main_functions.LiDARGNSScalibration(aFileName.toStdString(),srcDirPath.toStdString());
 }
 
 //bag 转换格式
