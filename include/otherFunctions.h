@@ -58,6 +58,9 @@
 #include <ros/ros.h>
 #include <6DOFcalib/Calibration6DOF.h>
 #include <nav_msgs/Path.h>
+#include <string>
+#include <iostream>
+#include "imgAddColor2Lidar/imgAddColor2Lidar.h"
 
 EIGEN_DEFINE_STL_VECTOR_SPECIALIZATION(Eigen::Matrix4d)
 EIGEN_DEFINE_STL_VECTOR_SPECIALIZATION(Eigen::Isometry3d)
@@ -72,8 +75,9 @@ public:
 	bool tensorvoting = true;
 
 	std::vector<std::string> file_names_;
+	std::vector<std::string> PNG_file_names_;
 	std::string filename;
-	std::string filepath = "/media/echo/DataDisc/9_rosbag/4_vlp16/pcd";
+	std::string filepath = "/media/echo/DataDisc/9_rosbag/8_imu_camera_rtk_vlp/small_pcd";
 	Eigen::Isometry3d curICP = Eigen::Isometry3d::Identity();
 	int cur_id = 0;
 	int start_id = 0;//设置开始结束的点
@@ -85,6 +89,7 @@ public:
 	std::string save_g2o_path = "/home/echo/small_program/test.g2o";
 //存点云的路径
 	std::string save_pcd_path = "/home/echo/map.pcd";
+	std::string save_color_pcd_path = "/home/echo/map_color.pcd";
 //存储g2o为iso3d
 	std::vector<Eigen::Isometry3d, Eigen::aligned_allocator<Eigen::Isometry3d>> trans_vector;
 
@@ -102,92 +107,13 @@ public:
 	int status = 0;
 
 //2. 输入模式的函数
-	int getParam(int argc, char **argv) {
-		std::cout
-				<< "设置建图模式: 1.g2o+pcd的传统模式(pcd+g2o路径) 2.point to plane ICP (需要提供pcd路径) 3.bpreal ground mapping (pcd+g2o路径)"
-				<< "4. 使用编码器和GPS LiDAR 建图" << "5. LiDAR gps 外参标定" << "6. NDT maping" << std::endl;
-		cin >> status;
-		std::cout << "status: " << status << std::endl;
-		if (status == 1 || status == 3) {
-			if (argc != 3 && argc != 5) {
-				std::cout
-						<< "argument error! argument number has to be 3/5! The first one should be pcd path the second should be g2o path"
-						<< std::endl;
-				std::cout
-						<< "./pcd_reader /media/echo/35E4DE63622AD713/fushikang/loop_pcd_single /media/echo/35E4DE63622AD713/fushikang/lihaile.g2o "
-						<< std::endl;
-				std::cout
-						<< "/media/echo/DataDisc/1_pcd_file/pku_bin /media/echo/DataDisc/2_g2o/pku/4edges_out.g2o 500 12210"
-						<< std::endl;
-				return (-1);
-			}
-			filepath = argv[1];
-			g2o_path = argv[2];
-			if (argc == 5) {
-				start_id = atoi(argv[3]);
-				end_id = atoi(argv[4]);
-			}
-			std::cout << "start_id " << start_id << " end_id " << end_id;
-		}
-		if (status == 2 || status == 6) {
-			if (argc != 2) {
-				std::cout << "argument error! argument number has to be 2! The first one should be pcd path"
-						  << std::endl;
-				std::cout << "e.g.: \n ./pcd_reader /media/echo/35E4DE63622AD713/fushikang/loop_pcd_single"
-						  << std::endl;
-				std::cout << "输入pcd路径: " << std::endl;
-				cin >> filepath;
-				cout << filepath << endl;
-			} else {
-				filepath = argv[1];
-			}
-		}
-	}
-
+	int getParam(int argc, char **argv) ;
 
 // 3. 得到名称
-	bool GetFileNames(const std::string directory, const std::string suffix) {
-		file_names_.clear();
-		DIR *dp;
-		struct dirent *dirp;
-		dp = opendir(directory.c_str());
-		if (!dp) {
-			std::cerr << "cannot open directory:" << directory << std::endl;
-			return false;
-		}
-		std::string file;
-		while (dirp = readdir(dp)) {
-			file = dirp->d_name;
-			if (file.find(".") != std::string::npos) {
-				file = directory + "/" + file;
-				if (suffix == file.substr(file.size() - suffix.size())) {
-					file_names_.push_back(file);
-				}
-			}
-		}
-		closedir(dp);
-		std::sort(file_names_.begin(), file_names_.end());
-		
-		if (file_names_.empty()) {
-			std::cerr << "directory:" << directory << "is empty" << std::endl;
-			return false;
-		}
-		std::cerr << "路径: " << directory << " 有" << file_names_.size() << "个pcd文件" << std::endl;
-		return true;
-	}
-
+	bool GetFileNames(const std::string directory, const std::string suffix) ;
+	bool GetPNGFileNames(const std::string directory, const std::string suffix) ;
 //4. 排序
-	bool FindFileseq(int64_t seq) {
-		int64_t idx_file = seq;
-		if (idx_file > file_names_.size() - 1) {
-			return INT64_MAX;
-		}
-		pcl::PointCloud<pcl::PointXYZ>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZ>);
-		uint64_t idx_seperator = file_names_[idx_file].find_last_of("/");
-		filename = file_names_[idx_file].substr(idx_seperator + 1);
-		std::cout << "PCD file is " << filename << " seq is" << idx_file << std::endl;
-		return true;
-	}
+	bool FindFileseq(int64_t seq);
 
 //5. 保存g2o
 	void saveFile(std::string outFilename, std::vector<VertexSE3 *> vertices,
@@ -916,14 +842,14 @@ public:
 			
 		}
 	}
-
-
+	ros::Time fromPath2Time(std::string s);
 
 //6.2 建图前端 点面icp
 	int point2planeICP(){
 		//g2o结果存储
 		PoseGraphIO g2osaver;
 		pcl::PointCloud<pcl::PointXYZI> tfed;
+		pcl::PointCloud<pcl::PointXYZRGB> tfed_color;
 		pcl::PointCloud<pcl::PointXYZI> cloud_continus_time_T_world;
 		pcl::PointCloud<pcl::PointXYZI> cloud_continus_time_T_LiDAR;
 		pcl::PointCloud<pcl::PointXYZI>::Ptr filteredCloud(new pcl::PointCloud<pcl::PointXYZI>);
@@ -939,6 +865,7 @@ public:
 		pcl::PointCloud<pcl::PointXYZI>::Ptr cloud_local_map(new pcl::PointCloud<pcl::PointXYZI>);
 		pcl::PointCloud<pcl::PointXYZI>::Ptr local_map_to_pub(new pcl::PointCloud<pcl::PointXYZI>);
 		pcl::PointCloud<pcl::PointXYZI>::Ptr cloud_map(new pcl::PointCloud<pcl::PointXYZI>);				//线性去畸变的图
+		pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_map_color(new 	pcl::PointCloud<pcl::PointXYZRGB>);
 		pcl::PointCloud<pcl::PointXYZI>::Ptr cloud_map_continus_time(new pcl::PointCloud<pcl::PointXYZI>);//连续时间的
 		pcl::PointCloud<pcl::PointXYZINormal>::Ptr result(new pcl::PointCloud<pcl::PointXYZINormal>);
 		pcl::PointCloud<pcl::PointXYZINormal>::Ptr filter1(new pcl::PointCloud<pcl::PointXYZINormal>);
@@ -978,6 +905,14 @@ public:
 //class
 		util tools,tools2;
 		registration icp;
+		//位姿存成csv
+		CSVio csvio;//位姿csv
+		imgAddColor2Lidar a;//投影点云
+		a.readExInt("/home/echo/fusion_ws/src/coloured_cloud/ex_params.txt");
+		//投影相关
+		pcl::PointCloud<pcl::PointXYZRGB> tosave;
+		cv::Mat mat;VLPPointCloud cloudin;
+
 /*		icp.setParam("/media/echo/DataDisc/3_program/mapping/cfg/icp.yaml");*/
 
 		pcl::PCDWriter writer;
@@ -986,17 +921,26 @@ public:
 		std::cout<<file_names_ .size()<<std::endl;
 		std::cout<<start_id<<" "<<end_id<<std::endl;
 		bool VLP = true;
-		std::string LiDAR_type = "robo";
+		std::string LiDAR_type = "VLP";
 		bool local_map_updated = true; //todo 加入地图更新判断 1100-3000
-		
-		
-		
+		std::vector<nav_msgs::Odometry> odoms;//当前结果转成odom 存储
+		nav_msgs::Odometry current_odom;
+	
 		//开始迭代
+		if(file_names_ .size() != PNG_file_names_ .size()){
+			std::cout<<"wrong size, pcd: "<<file_names_.size()<<" PNG "<<PNG_file_names_ .size()<<std::endl;
+			return(0);
+		}
 		for(int i = 0;  i <file_names_ .size();i++){
 			tools2.timeCalcSet("total");
 			if (i>start_id && i<end_id) {
+				//存储时间戳
+				ros::Time cur_time;
+				cur_time = fromPath2Time(file_names_[i]);
+				//0. 读取不同pcd类型
+				//存储完成
 				if(LiDAR_type == "VLP"){//判断用的是不是vlp的,用的话进行转换
-					pcl::io::loadPCDFile<VLPPoint>(file_names_[i], xyzirVLP);
+					pcl::io::loadPCDFile<VLPPoint>(file_names_[i+1], xyzirVLP);
 					//滤波
 					VLPPointCloud::Ptr xyzirVLP_ptr(new VLPPointCloud);
 					VLPPointCloud::Ptr xyzirVLP_ds_ptr(new VLPPointCloud);
@@ -1039,7 +983,7 @@ public:
 					std::cout<<"unknown pcd type"<<std::endl;
 				}
 				pcl::copyPointCloud(xyzItimeRing,*cloud_hesai);
-				
+				//0. 读取完毕
 				//1. 这里用pcl的 plane to plane icp
 				if(first_cloud){
 					//1.1 第一帧 不进行计算
@@ -1073,7 +1017,7 @@ public:
 					tools.timeCalcSet("局部地图用时    ");
 					//2.3.2.1 局部地图生成
 					//*cloud_local_map = lidarLocalMap(poses,clouds,50);  //生成局部地图****
-					*cloud_local_map = lidarLocalMapDistance(poses,clouds,0.75,20 ,local_map_updated,*cloud_local_map);  //生成局部地图****
+					*cloud_local_map = lidarLocalMapDistance(poses,clouds,0.5,20 ,local_map_updated,*cloud_local_map);  //生成局部地图****
 					tools.timeUsed();
 					
 					//2.3.2 ******再次icp           *********** &&&&这个当做 lidar mapping
@@ -1088,7 +1032,10 @@ public:
 					tools.timeUsed();
 					//2.4 speed
 					curr_speed = sqrt(icp_result.back()(0,3)*icp_result.back()(0,3)+icp_result.back()(1,3)*icp_result.back()(1,3))/0.1;
-		
+					// 2.5 点云投影
+					mat = cv::imread(PNG_file_names_[i]);
+					tosave  = a.pclalignImg2LiDAR(mat,*cloud_bef);
+					//2.6 存储结果
 					*local_map_to_pub = *cloud_local_map;
 					*cloud_local_map = *cloud_bef; 	//下一帧匹配的target是上帧去畸变之后的结果
 					//可以用恢复出来的位姿 tf 以前的点云
@@ -1108,17 +1055,22 @@ public:
 					g2osaver.insertPose(Eigen::Isometry3d(current_pose.matrix().cast<double>()));
 					clouds_distortion_origin.push_back(xyzItimeRing);
 					std::cout<<"*****上次点云ID: "<<i<<" ***** speed: "<<3.6*curr_speed<<" km/h ******** \n\n\n"<<std::endl;
+					//存一下'csvio
+					Eigen::Isometry3d se3_save;
+					csvio.LiDARsaveOnePose(Eigen::Isometry3d(current_pose.matrix().cast<double>()),cur_time);//转csv用的
 					//运行最终的去畸变
 					if(1){ //存大点云
 						std::cout<<"全局坐标 \n"<<current_pose.matrix()<<std::endl;
 						tfed = *cloud_bef;
 						cloud_bef->clear();
-						for (int j = 0; j < tfed.size(); ++j) {
+						for (int j = 0; j < tfed.size(); ++j) {//距离滤波
 							if(sqrt(tfed[j].x*tfed[j].x+tfed[j].y*tfed[j].y)>10){
 								cloud_bef->push_back(tfed[j]);
 							}
 						}
 						pcl::transformPointCloud(*cloud_bef,tfed,current_pose);
+						pcl::transformPointCloud(tosave,tfed_color,current_pose);
+						*cloud_map_color += tfed_color;
 						*cloud_map += tfed;
 						//存的点云缩小点,每50帧存一下结果;
 						if(i%100==0){
@@ -1129,6 +1081,7 @@ public:
 							pcl::copyPointCloud(*cloud_map, keypointIndices.points, cloud_map_ds);
 							*cloud_map = cloud_map_ds;
 							writer.write("cloud_map.pcd",*cloud_map, true);
+							writer.write("cloud_map_color.pcd",*cloud_map_color, true);
 						}
 						
 						/*			tools.timeCalcSet("连续时间去畸变用时:    ");
@@ -1155,6 +1108,7 @@ public:
 						to_pub_frame_linear.header.frame_id = "/map";
 						test_frame.publish(to_pub_frame_linear);
 						tools2.timeUsed();
+						
 						//	todo 这里可以去掉ros
 					}else{//存每一帧 防止内存爆炸
 						cloud_continus_time_T_world = continusTimeDistrotion(poses_distortion,clouds_distortion_origin);//这里放的是最新的一帧和位姿
@@ -1170,7 +1124,9 @@ public:
 		std::cout<<save_g2o_path<<"\n"<<save_pcd_path<<std::endl;
 		g2osaver.saveGraph(save_g2o_path);
 		writer.write(save_pcd_path,*cloud_map, true);
+		writer.write(save_color_pcd_path,*cloud_map_color, true);
 /*	writer.write("distro_final.pcd",*cloud_map_continus_time, true);*/
+		csvio.LiDARsaveAll("wtf");
 		return(0);
 	}
 
@@ -1395,16 +1351,31 @@ public:
 		vis.spin();
 	}
 //功能7 读取hesaipcd
-	void readAndSaveHesai(std::string path){
+	void readAndSaveHesai(std::string path) {
 		ReadBag a;
 		//a.readHesai(path);
-		//a.readVLP16("/media/echo/DataDisc/9_rosbag/7_vlp_bxuda/2020-03-17-18-40-09.bag","/media/echo/DataDisc/9_rosbag/7_vlp_bxuda/pcd");
-		a.readTopRobosense("/media/echo/DataDisc/9_rosbag/9_huawei_jialuowuliu/2020-04-09-11-44-45.bag","/home/echo/2_huawei");
+		a.readVLP16("/media/echo/DataDisc/9_rosbag/8_imu_camera_rtk_vlp/small_fov.bag",
+					"/media/echo/DataDisc/9_rosbag/8_imu_camera_rtk_vlp/small_pcd");
+		//a.readTopRobosense("/media/echo/DataDisc/9_rosbag/9_huawei_jialuowuliu/2020-04-09-11-44-45.bag","/home/echo/2_huawei");
+/*		std::vector<std::pair<Eigen::Isometry3d,double>>  gps_pose ;
+		Eigen::Vector3d lla_origin;
+		a.readcamera("/media/echo/DataDisc/9_rosbag/8_imu_camera_rtk_vlp/small_fov.bag","/media/echo/DataDisc/9_rosbag/8_imu_camera_rtk_vlp/pic");
+		a.gnssPCDExtrinsicParameters("/media/echo/DataDisc/9_rosbag/8_imu_camera_rtk_vlp/small_fov.bag",gps_pose,lla_origin);
+	}*/
 	}
-
 //功能8 用来测试模块好使不
 	void testFunction(){
-	
+		pcl::PCDWriter writer;
+		imgAddColor2Lidar a;
+		a.readExInt("/home/echo/fusion_ws/src/coloured_cloud/ex_params.txt");
+		pcl::PointCloud<pcl::PointXYZRGB> tosave;
+		cv::Mat mat;VLPPointCloud cloudin;
+		mat = cv::imread("/media/echo/DataDisc/9_rosbag/8_imu_camera_rtk_vlp/pic/1586507671.986369610.png");
+		pcl::io::loadPCDFile<VLPPoint>("/media/echo/DataDisc/9_rosbag/8_imu_camera_rtk_vlp/small_pcd/1586507671.84489393.pcd", cloudin);
+		GetFileNames("/media/echo/DataDisc/9_rosbag/8_imu_camera_rtk_vlp/pic","png");
+		tosave  = a.pclalignImg2LiDAR(mat,cloudin);
+		pcl::PointXYZRGB a1;
+		writer.write("/home/echo/fusion_ws/result.pcd",tosave, true);
 	}
 //功能9 普通的16线建图
 	void rslidarmapping(){
