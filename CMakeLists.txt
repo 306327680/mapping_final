@@ -34,7 +34,11 @@ include_directories(${nav_msgs_INCLUDE_DIRS})
 
 find_package(geometry_msgs REQUIRED)
 include_directories(${geometry_msgs_INCLUDE_DIRS})
+find_package(tf_conversions REQUIRED)
+include_directories(${tf_conversions_INCLUDE_DIRS})
 
+find_package(cv_bridge REQUIRED)
+include_directories(${cv_bridge_INCLUDE_DIRS})
 #libpointmatcher
 find_package(libpointmatcher CONFIG)
 #QT
@@ -121,7 +125,8 @@ target_link_libraries(ground_seg
         ${rosbag_LIBRARIES} ${nav_msgs_LIBRARIES}
         ${geometry_msgs_LIBRARIES} ${sensor_msgs_LIBRARIES}
         yaml-cpp ${PCL_LIBRARIES}
-        ${libpointmatcher_LIBRARIES})
+        ${libpointmatcher_LIBRARIES}
+        ${cv_bridge_LIBRARIES})
 
 #5. spline fusion 插值
 add_library(spline
@@ -159,9 +164,10 @@ add_executable(mapping main.cpp
         include/qt/mainwindow.h
         include/imgAddColor2Lidar/imgAddColor2Lidar.cpp
         include/imgAddColor2Lidar/imgAddColor2Lidar.h
-        include/CSV/CSVio.cpp include/CSV/CSVio.h)
+        include/CSV/CSVio.cpp include/CSV/CSVio.h include/otherFunctions.cpp include/VO/VisualOdom.cpp include/VO/VisualOdom.h)
 
 target_link_libraries(mapping ${PCL_LIBRARIES}
+        ${tf_conversions_LIBRARIES}
         odom
         ground_seg
         ${OpenCV_LIBS}

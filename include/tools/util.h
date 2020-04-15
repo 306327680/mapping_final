@@ -152,8 +152,19 @@ POINT_CLOUD_REGISTER_POINT_STRUCT( PointRobo,
 										   (float, intensity, intensity)(float, time, time)(float, ring, ring))
 typedef  PointRobo RoboPoint;
 typedef pcl::PointCloud<RoboPoint> RoboPointCLoud;
+//0.4 xyzirgb
+struct PointXYZIRGB {
+	PCL_ADD_POINT4D
+	PCL_ADD_RGB
+	float intensity;
+                      ///< laser ring number
+	EIGEN_MAKE_ALIGNED_OPERATOR_NEW // make sure our new allocators are aligned
+} EIGEN_ALIGN16;
 
-
+POINT_CLOUD_REGISTER_POINT_STRUCT( PointXYZIRGB,
+								   (float, x, x)(float, y, y)(float, z, z)(uint8_t,r,r)(uint8_t,g,g)(uint8_t,b,b)(uint8_t,a,a)
+										   (float, intensity, intensity))
+typedef pcl::PointCloud<PointXYZIRGB> PPointXYZIRGB;
 //0. 工具类
 class util {
 public:

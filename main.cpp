@@ -13,18 +13,18 @@ int main(int argc,char** argv){
 	//todo 这里可以去掉ros
 	ros::init(argc, argv, "map");
 	//获得参数
-/*	m.getParam(argc,argv);
+	m.getParam(argc,argv);
 	//得到所有的pcd名字
 	m.GetFileNames(m.filepath,"pcd");
-	*/
+	m.GetPNGFileNames("/media/echo/DataDisc/9_rosbag/8_imu_camera_rtk_vlp/pic","png");
 	//qt
 	
-	QApplication a(argc, argv);
+/*	QApplication a(argc, argv);
 	MainWindow w;
-/*	w.main_functions.getParam(argc,argv);
-	w.main_functions.GetFileNames(w.main_functions.filepath,"pcd");*/
+*//*	w.main_functions.getParam(argc,argv);
+	w.main_functions.GetFileNames(w.main_functions.filepath,"pcd");*//*
 	w.show();
-	return a.exec();
+	return a.exec();*/
 	//
 	
 	switch(m.status)
@@ -70,6 +70,10 @@ int main(int argc,char** argv){
 			m.rslidarmapping();
 			break;
 		case 10:
+			//10. 格式转化,用于不同的雷达型号 保留ring 和timestamp等信息
+			m.readAndSaveHesai("/media/echo/DataDisc/9_rosbag/rsparel_64_ins/2019-11-06-20-43-12_0.bag");
+			break;
+		case 11:
 			//10. 格式转化,用于不同的雷达型号 保留ring 和timestamp等信息
 			m.readAndSaveHesai("/media/echo/DataDisc/9_rosbag/rsparel_64_ins/2019-11-06-20-43-12_0.bag");
 			break;

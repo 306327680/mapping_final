@@ -28,6 +28,10 @@
 #include <pcl_conversions/pcl_conversions.h>
 #include <pcl/visualization/pcl_visualizer.h>
 #include <pcl/filters/filter.h>
+#include <CSV/CSVio.h>
+#include <sensor_msgs/CompressedImage.h>
+#include <cv_bridge/cv_bridge.h>
+#include<opencv2/opencv.hpp>
 class ReadBag {
 public:
 	ReadBag(){bag_strat_time.init();};
@@ -48,6 +52,9 @@ public:
 	void readHesai(std::string path);
 	void readVLP16(std::string path,std::string save_path);
 	void readTopRobosense(std::string path,std::string save_path);
+	//4. 读取图片
+	void readcamera(std::string path,std::string save_path);
+	void readCalibratedCamera(std::string path,std::string cali_path,std::string save_path);
 private:
 	rosbag::Bag bag;
 	nav_msgs::Odometry encoder_odom_;
@@ -73,6 +80,8 @@ private:
 	std::string lidarodom = "/odom_mapped";
 	std::string gps_calibrate = "/ins_linsin_odom";
 	ros::Time bag_strat_time;
+	//转换csv
+	CSVio csvio;
 };
 
 

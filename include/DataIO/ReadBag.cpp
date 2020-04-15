@@ -227,22 +227,26 @@ void ReadBag::gnssLiDARExtrinsicParameters(std::string path) {
 	bag.close();
 	std::cout<<"read bag finish! "<<Eigen_GPS.size()<<" "<<Eigen_encoder.size()<<std::endl;
 }
-
+//gps存成lla的pcd
 void ReadBag::gnssPCDExtrinsicParameters(std::string path, std::vector<std::pair<Eigen::Isometry3d, double>> &gps_pose,
 										 Eigen::Vector3d &lla_origin) {
 	bool first_gps = true;
 	gpsTools gt;
 	std::vector<std::string> topics;
+	std::vector<sensor_msgs::NavSatFix> gnss_tosave;//测试转换csv用
 	pcl::PointCloud<pcl::PointXYZ>::Ptr gps_route(new pcl::PointCloud<pcl::PointXYZ>);//可视化gps路径
 	
 	std::cout<<"the bag path is: "<<path<<std::endl;
 	bag.open(path, rosbag::bagmode::Read);
-	topics.push_back(std::string("/cpt/ins_fix"));
+	//topics.push_back(std::string("/cpt/ins_fix"));
+	topics.push_back(std::string("/fix"));
+
 	rosbag::View view(bag, rosbag::TopicQuery(topics));
 
 	BOOST_FOREACH(rosbag::MessageInstance const m, view)
 				{
 					sensor_msgs::NavSatFix::ConstPtr s = m.instantiate<sensor_msgs::NavSatFix>();
+					gnss_tosave.push_back(*s);
 					if(first_gps){
 						//把第一个坐标转化位lla
 						lla_origin = gt.GpsMsg2Eigen(*s);
@@ -256,8 +260,9 @@ void ReadBag::gnssPCDExtrinsicParameters(std::string path, std::vector<std::pair
 					}
 				}
 	pcl::PCDWriter writer;
-	ofstream out;
-	out.open("route/lla.pcd");
+	std::cout<<"saving the data"<<std::endl;
+//	csvio.NavSat2CSV(gnss_tosave,"",gnss_tosave[0].header.stamp);
+	csvio.NavSat2CSVLLA(gnss_tosave,"",gnss_tosave[0].header.stamp,gnss_tosave[0]);
 	writer.write("route/gnss.pcd",*gps_route);
 }
 //转换vlp16 到建图的数据格式
@@ -364,5 +369,55 @@ void ReadBag::readTopRobosense(std::string path, std::string save_path) {
 					robo_pcdtosave.clear();
 					std::cout<<pcd_save.str()<<" saved " <<std::endl;
 					inter_times++;
+				}
+}
+
+void ReadBag::readcamera(std::string path, std::string save_path) {
+	std::cout<<"the bag path is: "<<path<<std::endl;
+	bag.open(path, rosbag::bagmode::Read);
+	std::vector<std::string> topics;
+ 
+	double timestamp;
+	//可以加挺多topic的?
+	topics.push_back(std::string("/usb_cam/image_raw/compressed"));
+	rosbag::View view(bag, rosbag::TopicQuery(topics));
+	
+	BOOST_FOREACH(rosbag::MessageInstance const m, view)
+				{
+				 
+					sensor_msgs::CompressedImage::ConstPtr s = m.instantiate<sensor_msgs::CompressedImage>();
+					cv_bridge::CvImagePtr cv_cam = cv_bridge::toCvCopy(s, sensor_msgs::image_encodings::BGR8);
+					cv::Mat src = cv_cam->image;
+					//用来找最大最小intensity的
+					std::stringstream ss;
+					ss.setf(std::ios::fixed);
+					ss<<setprecision(9)<<save_path.c_str()<<"/"<<s->header.stamp.toSec() <<".png";
+					std::cout<<ss.str()<<std::endl;
+					cv::imwrite(ss.str(),src);
+				}
+}
+
+void ReadBag::readCalibratedCamera(std::string path,std::string cali_path, std::string save_path) {
+	std::cout<<"the bag path is: "<<path<<std::endl;
+	bag.open(path, rosbag::bagmode::Read);
+	std::vector<std::string> topics;
+	
+	double timestamp;
+	//可以加挺多topic的?
+	topics.push_back(std::string("/usb_cam/image_raw/compressed"));
+	rosbag::View view(bag, rosbag::TopicQuery(topics));
+	
+	BOOST_FOREACH(rosbag::MessageInstance const m, view)
+				{
+					
+					sensor_msgs::CompressedImage::ConstPtr s = m.instantiate<sensor_msgs::CompressedImage>();
+					cv_bridge::CvImagePtr cv_cam = cv_bridge::toCvCopy(s, sensor_msgs::image_encodings::BGR8);
+					cv::Mat src = cv_cam->image;
+					//用来找最大最小intensity的
+					std::stringstream ss;
+					ss.setf(std::ios::fixed);
+					ss<<setprecision(9)<<save_path.c_str()<<"/"<<s->header.stamp.toSec() <<".png";
+					std::cout<<ss.str()<<std::endl;
+					cv::imwrite(ss.str(),src);
 				}
 }

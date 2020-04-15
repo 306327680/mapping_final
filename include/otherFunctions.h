@@ -931,7 +931,7 @@ public:
 			std::cout<<"wrong size, pcd: "<<file_names_.size()<<" PNG "<<PNG_file_names_ .size()<<std::endl;
 			return(0);
 		}
-		for(int i = 0;  i <file_names_ .size();i++){
+		for(int i = 0;  i <file_names_ .size()-1;i++){
 			tools2.timeCalcSet("total");
 			if (i>start_id && i<end_id) {
 				//存储时间戳

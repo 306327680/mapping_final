@@ -95,6 +95,8 @@ https://github.com/ZhenghaoFei/visual_odom.git
 
 8.0 先把移动端的建图设备的外参挑出来
 
+9.0 csv的时候,发现时间有问题,bag转pcd时候检查一下
+
 ### 5. 程序说明
 #### 1.速腾bperal 的地面边线提取
 在util.h中的 tools.GetPointCloudBeam(); 和 tools.GetBeamEdge();
