@@ -164,7 +164,7 @@ add_executable(mapping main.cpp
         include/qt/mainwindow.h
         include/imgAddColor2Lidar/imgAddColor2Lidar.cpp
         include/imgAddColor2Lidar/imgAddColor2Lidar.h
-        include/CSV/CSVio.cpp include/CSV/CSVio.h include/otherFunctions.cpp include/VO/VisualOdom.cpp include/VO/VisualOdom.h)
+        include/CSV/CSVio.cpp include/CSV/CSVio.h include/otherFunctions.cpp include/VO/VisualOdom.cpp include/VO/VisualOdom.h include/loopClosure/loopClosure.cpp include/loopClosure/loopClosure.h)
 
 target_link_libraries(mapping ${PCL_LIBRARIES}
         ${tf_conversions_LIBRARIES}

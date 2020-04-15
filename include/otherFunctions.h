@@ -61,6 +61,7 @@
 #include <string>
 #include <iostream>
 #include "imgAddColor2Lidar/imgAddColor2Lidar.h"
+#include "loopClosure/loopClosure.h"
 
 EIGEN_DEFINE_STL_VECTOR_SPECIALIZATION(Eigen::Matrix4d)
 EIGEN_DEFINE_STL_VECTOR_SPECIALIZATION(Eigen::Isometry3d)
@@ -86,12 +87,14 @@ public:
 	std::string g2o_path = "null";
 	int past = 0;
 //存g2o路径
-	std::string save_g2o_path = "/home/echo/small_program/test.g2o";
+	std::string save_g2o_path = "/home/echo/test.g2o";
 //存点云的路径
 	std::string save_pcd_path = "/home/echo/map.pcd";
 	std::string save_color_pcd_path = "/home/echo/map_color.pcd";
 //存储g2o为iso3d
 	std::vector<Eigen::Isometry3d, Eigen::aligned_allocator<Eigen::Isometry3d>> trans_vector;
+//闭环测试
+	loopClosure lc;
 
 //0.设置起始结束的pcd
 	void setStartEnd() {
@@ -931,16 +934,16 @@ public:
 			std::cout<<"wrong size, pcd: "<<file_names_.size()<<" PNG "<<PNG_file_names_ .size()<<std::endl;
 			return(0);
 		}
-		for(int i = 0;  i <file_names_ .size()-1;i++){
+		for(int i = 0;  i <file_names_ .size();i++){
 			tools2.timeCalcSet("total");
-			if (i>start_id && i<end_id) {
+			if (i>=start_id && i<=end_id) {
 				//存储时间戳
 				ros::Time cur_time;
 				cur_time = fromPath2Time(file_names_[i]);
 				//0. 读取不同pcd类型
 				//存储完成
 				if(LiDAR_type == "VLP"){//判断用的是不是vlp的,用的话进行转换
-					pcl::io::loadPCDFile<VLPPoint>(file_names_[i+1], xyzirVLP);
+					pcl::io::loadPCDFile<VLPPoint>(file_names_[i], xyzirVLP);
 					//滤波
 					VLPPointCloud::Ptr xyzirVLP_ptr(new VLPPointCloud);
 					VLPPointCloud::Ptr xyzirVLP_ds_ptr(new VLPPointCloud);
@@ -1017,7 +1020,7 @@ public:
 					tools.timeCalcSet("局部地图用时    ");
 					//2.3.2.1 局部地图生成
 					//*cloud_local_map = lidarLocalMap(poses,clouds,50);  //生成局部地图****
-					*cloud_local_map = lidarLocalMapDistance(poses,clouds,0.5,20 ,local_map_updated,*cloud_local_map);  //生成局部地图****
+					*cloud_local_map = lidarLocalMapDistance(poses,clouds,0.5,25 ,local_map_updated,*cloud_local_map);  //生成局部地图****
 					tools.timeUsed();
 					
 					//2.3.2 ******再次icp           *********** &&&&这个当做 lidar mapping
@@ -1033,8 +1036,10 @@ public:
 					//2.4 speed
 					curr_speed = sqrt(icp_result.back()(0,3)*icp_result.back()(0,3)+icp_result.back()(1,3)*icp_result.back()(1,3))/0.1;
 					// 2.5 点云投影
-					mat = cv::imread(PNG_file_names_[i]);
-					tosave  = a.pclalignImg2LiDAR(mat,*cloud_bef);
+					if(i-1>=0){
+						mat = cv::imread(PNG_file_names_[i-1]);
+						tosave  = a.pclalignImg2LiDAR(mat,*cloud_bef);
+					}
 					//2.6 存储结果
 					*local_map_to_pub = *cloud_local_map;
 					*cloud_local_map = *cloud_bef; 	//下一帧匹配的target是上帧去畸变之后的结果
@@ -1126,7 +1131,7 @@ public:
 		writer.write(save_pcd_path,*cloud_map, true);
 		writer.write(save_color_pcd_path,*cloud_map_color, true);
 /*	writer.write("distro_final.pcd",*cloud_map_continus_time, true);*/
-		csvio.LiDARsaveAll("wtf");
+		csvio.LiDARsaveAll("useless");
 		return(0);
 	}
 
@@ -1365,7 +1370,7 @@ public:
 	}
 //功能8 用来测试模块好使不
 	void testFunction(){
-		pcl::PCDWriter writer;
+/*		pcl::PCDWriter writer;
 		imgAddColor2Lidar a;
 		a.readExInt("/home/echo/fusion_ws/src/coloured_cloud/ex_params.txt");
 		pcl::PointCloud<pcl::PointXYZRGB> tosave;
@@ -1375,7 +1380,9 @@ public:
 		GetFileNames("/media/echo/DataDisc/9_rosbag/8_imu_camera_rtk_vlp/pic","png");
 		tosave  = a.pclalignImg2LiDAR(mat,cloudin);
 		pcl::PointXYZRGB a1;
-		writer.write("/home/echo/fusion_ws/result.pcd",tosave, true);
+		writer.write("/home/echo/fusion_ws/result.pcd",tosave, true);*/
+//测闭环
+		lc.addLoopEdge(100,2750,"/home/echo/test.g2o","/home/echo/test1.g2o","/media/echo/DataDisc/9_rosbag/8_imu_camera_rtk_vlp/small_pcd/");
 	}
 //功能9 普通的16线建图
 	void rslidarmapping(){
