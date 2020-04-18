@@ -97,6 +97,10 @@ https://github.com/ZhenghaoFei/visual_odom.git
 
 9.0 csv的时候,发现时间有问题,bag转pcd时候检查一下
 
+10.0 闭环的模块 回头加下优化啥的
+
+11.0 加入vo
+
 ### 5. 程序说明
 #### 1.速腾bperal 的地面边线提取
 在util.h中的 tools.GetPointCloudBeam(); 和 tools.GetBeamEdge();

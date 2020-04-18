@@ -66,10 +66,10 @@ PPointXYZIRGB imgAddColor2Lidar::alignImg2LiDAR(cv::Mat mat, VLPPointCloud cloud
 		float r_2 = point_t3d[0] * point_t3d[0] + point_t3d[1] * point_t3d[1];
 		float x_ori = point_t3d[0];
 		float y_ori = point_t3d[1];
-		//这里用内参啥的 投影公式
+		//这里用去畸变
 		point_t3d[0] = x_ori*(1 + k1*r_2 + k2*pow(r_2, 2) + k3*pow(r_2, 3)) + 2*p1*x_ori*y_ori + p2*(r_2 + 2*pow(x_ori,2));
 		point_t3d[1] = y_ori*(1 + k1*r_2 + k2*pow(r_2, 2) + k3*pow(r_2, 3)) + 2*p2*x_ori*y_ori + p1*(r_2 + 2*pow(y_ori,2));
-		
+		//内参投影
 		int image_u = (int)(intrinsics(0,0)*point_t3d[0] + intrinsics(0,2));
 		int image_v = (int)(intrinsics(1,1)*point_t3d[1] + intrinsics(1,2));
 		
@@ -104,7 +104,7 @@ pcl::PointCloud<pcl::PointXYZRGB> imgAddColor2Lidar::pclalignImg2LiDAR(cv::Mat m
 		float r_2 = point_t3d[0] * point_t3d[0] + point_t3d[1] * point_t3d[1];
 		float x_ori = point_t3d[0];
 		float y_ori = point_t3d[1];
-		//这里用内参啥的 投影公式
+		//这里用内参啥的 投影公式 公式5.1
 		point_t3d[0] = x_ori*(1 + k1*r_2 + k2*pow(r_2, 2) + k3*pow(r_2, 3)) + 2*p1*x_ori*y_ori + p2*(r_2 + 2*pow(x_ori,2));
 		point_t3d[1] = y_ori*(1 + k1*r_2 + k2*pow(r_2, 2) + k3*pow(r_2, 3)) + 2*p2*x_ori*y_ori + p1*(r_2 + 2*pow(y_ori,2));
 		
@@ -144,7 +144,7 @@ imgAddColor2Lidar::pclalignImg2LiDAR(cv::Mat mat, pcl::PointCloud<pcl::PointXYZI
 		float r_2 = point_t3d[0] * point_t3d[0] + point_t3d[1] * point_t3d[1];
 		float x_ori = point_t3d[0];
 		float y_ori = point_t3d[1];
-		//这里用内参啥的 投影公式
+	 
 		point_t3d[0] = x_ori*(1 + k1*r_2 + k2*pow(r_2, 2) + k3*pow(r_2, 3)) + 2*p1*x_ori*y_ori + p2*(r_2 + 2*pow(x_ori,2));
 		point_t3d[1] = y_ori*(1 + k1*r_2 + k2*pow(r_2, 2) + k3*pow(r_2, 3)) + 2*p2*x_ori*y_ori + p1*(r_2 + 2*pow(y_ori,2));
 		
