@@ -4,7 +4,7 @@
 //todo 现在只是测试版,回头应该要有严格的时间戳和数量对齐的操作
 
 #include "Calibration6DOF.h"
-
+//优化的方法直接标定3DOF-6DOF外参
 void Calibration6DOF::CalibrateGNSSLiDAR(std::vector<Eigen::Matrix4d> gps_poses, std::vector<Eigen::Matrix4d> LiDAR_poses,
 									Eigen::Isometry3d &T_lidar2INS ) {
  
@@ -90,4 +90,76 @@ void Calibration6DOF::CalibrateGNSSLiDAR(std::vector<Eigen::Matrix4d> gps_poses,
     T_lidar2INS.rotate(q_extrinsic);
     T_lidar2INS.pretranslate(t_extrinsic);
 
+}
+
+void
+Calibration6DOF::CalibrateGNSSLiDARICP(std::vector<Eigen::Matrix4d> gps_poses, std::vector<Eigen::Matrix4d> LiDAR_poses,
+									   Eigen::Isometry3d &T_lidar2INS, Eigen::Vector3d arm ) {
+
+	std::vector<cv::Point3f> pts1;
+	std::vector<cv::Point3f> pts2;
+	for (int j = 0; j < gps_poses.size(); ++j) {
+		cv::Point3f temp;
+		temp.x = gps_poses[j](0,3);
+		temp.y = gps_poses[j](1,3);
+		temp.z = gps_poses[j](2,3);
+		pts2.push_back(temp);
+		temp.x = LiDAR_poses[j](0,3);
+		temp.y = LiDAR_poses[j](1,3);
+		temp.z = LiDAR_poses[j](2,3);
+		pts1.push_back(temp);
+	}
+	cv::Mat R;
+	cv::Mat t;
+	Eigen::Isometry3d se3;
+	
+	cv::Point3f p1, p2;     // center of mass
+	int N = pts1.size();
+	for (int i = 0; i < N; i++) {
+		p1 += pts1[i];
+		p2 += pts2[i];
+	}
+	p1 = cv::Point3f(cv::Vec3f(p1) / N);
+	p2 = cv::Point3f(cv::Vec3f(p2) / N);
+	std::vector<cv::Point3f> q1(N), q2(N); // remove the center
+	for (int i = 0; i < N; i++) {
+		q1[i] = pts1[i] - p1;
+		q2[i] = pts2[i] - p2;
+	}
+	
+	// compute q1*q2^T
+	Eigen::Matrix3d W = Eigen::Matrix3d::Zero();
+	for (int i = 0; i < N; i++) {
+		W += Eigen::Vector3d(q1[i].x, q1[i].y, q1[i].z) * Eigen::Vector3d(q2[i].x, q2[i].y, q2[i].z).transpose();
+	}
+	Eigen::Matrix3d cc = W.transpose()*W;
+	
+	Eigen::EigenSolver<Eigen::Matrix3d> es(cc);
+	std::cout<<"eigenvalue:\n"<<es.eigenvalues()<<"\n"<<std::endl;
+	std::cout<<"eigenvector:\n"<<es.eigenvectors()<<"\n"<<std::endl;
+	// SVD on W
+	Eigen::JacobiSVD<Eigen::Matrix3d> svd(W, Eigen::ComputeFullU | Eigen::ComputeFullV);
+	Eigen::Matrix3d U = svd.matrixU();
+	Eigen::Matrix3d V = svd.matrixV();
+	std::cout << "W=\n" << W << std::endl;
+	std::cout << "U=\n" << U << std::endl;
+	std::cout << "V=\n" << V << std::endl;
+	
+	Eigen::Matrix3d R_ = U * (V.transpose());
+	if (R_.determinant() < 0) {
+		R_ = -R_;
+	}
+	Eigen::Vector3d t_ = Eigen::Vector3d(p1.x, p1.y, p1.z) - R_ * Eigen::Vector3d(p2.x, p2.y, p2.z);
+	
+	// convert to cv::Mat
+	R = (cv::Mat_<double>(3, 3) <<
+								R_(0, 0), R_(0, 1), R_(0, 2),
+			R_(1, 0), R_(1, 1), R_(1, 2),
+			R_(2, 0), R_(2, 1), R_(2, 2)
+	);
+	t = (cv::Mat_<double>(3, 1) << t_(0, 0), t_(1, 0), t_(2, 0));
+	se3 = Eigen::Isometry3d::Identity();
+	se3.rotate(R_);
+	se3.pretranslate(t_);
+	T_lidar2INS = se3;
 }

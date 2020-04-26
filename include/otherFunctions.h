@@ -159,23 +159,24 @@ public:
 //功能5.1 LiDAR + GNSS mapping 杆臂值 标定
 //程序准备设计的方案: 1. 读取一个bag 取其中的一段时间 eg 60s 600 帧进行 odom的计算//2. 读取gps 转成lla//3. 时间戳对齐//4. 设置两个优化变量 一个是两个传感器的外参 一个是旋转的角度,就是雷达初始时刻相对于正北的朝向;
 // /media/echo/DataDisc/9_rosbag/rsparel_64_ins 这个好像能work gps时间戳不太对 就用时间戳减1s
-	void LiDARGNSScalibration (std::string lidar_g2o,std::string gps_pcd);
-//功能5.2 LiDAR + GNSS mapping 建图
+	Eigen::Isometry3d  LiDARGNSScalibration (std::string lidar_g2o,std::string gps_pcd);
+ 
 	void LiDARGNSSMapping(){}
 //功能6. NDT mapping
 	void NDTmapping();
 //功能7 读取hesaipcd
 	void readAndSaveHesai(std::string path) {
 		ReadBag a;
-		//a.readHesai(path);
+/*		//a.readHesai(path);
 		a.readVLP16("/media/echo/DataDisc/9_rosbag/8_imu_camera_rtk_vlp/small_fov.bag",
 					"/media/echo/DataDisc/9_rosbag/8_imu_camera_rtk_vlp/small_pcd");
 		//a.readTopRobosense("/media/echo/DataDisc/9_rosbag/9_huawei_jialuowuliu/2020-04-09-11-44-45.bag","/home/echo/2_huawei");
-/*		std::vector<std::pair<Eigen::Isometry3d,double>>  gps_pose ;
-		Eigen::Vector3d lla_origin;
-		a.readcamera("/media/echo/DataDisc/9_rosbag/8_imu_camera_rtk_vlp/small_fov.bag","/media/echo/DataDisc/9_rosbag/8_imu_camera_rtk_vlp/pic");
-		a.gnssPCDExtrinsicParameters("/media/echo/DataDisc/9_rosbag/8_imu_camera_rtk_vlp/small_fov.bag",gps_pose,lla_origin);
-	}*/
+		std::vector<std::pair<Eigen::Isometry3d,double>>  gps_pose ;
+		Eigen::Vector3d lla_origin;*/
+		a.saveRTK2PCD("/media/echo/DataDisc/9_rosbag/8_imu_camera_rtk_vlp/small_fov.bag");
+		//a.readcamera("/media/echo/DataDisc2/2020-04-18-20-41-45.bag","/home/echo/5_png/shinei");
+/*		a.gnssPCDExtrinsicParameters("/media/echo/DataDisc/9_rosbag/8_imu_camera_rtk_vlp/small_fov.bag",gps_pose,lla_origin);*/
+	
 	}
 //功能8 用来测试模块好使不
 	void testFunction(){
@@ -201,6 +202,8 @@ public:
 //功能9 普通的16线建图
 	void rslidarmapping(){
 	}
+//功能10. gpsbased mapping
+void gpsBasedOptimziation(std::string lidar_path,std::string gps_path,Eigen::Isometry3d lidar_to_gps,std::string save_path);
 
 private:
 };

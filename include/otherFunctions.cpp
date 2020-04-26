@@ -767,7 +767,7 @@ void main_function::NDTmapping() {
 	vis.spin();
 }
 
-void main_function::LiDARGNSScalibration(std::string lidar_g2o, std::string gps_pcd) {
+Eigen::Isometry3d  main_function::LiDARGNSScalibration(std::string lidar_g2o, std::string gps_pcd) {
 	pcl::PCDWriter writer;
 	ReadBag rb;
 	Calibration6DOF calibrate; //用来标定外参的
@@ -790,43 +790,41 @@ void main_function::LiDARGNSScalibration(std::string lidar_g2o, std::string gps_
 	//测试step 3. 虚拟出两个数据来计算出两个T 第一个T LiDAR到gnss中心的位姿 另一个是LiDAR到 LLA坐标的位姿
 	
 	//可视化一下当前的时间戳的对应关系.
-	pcl::visualization::PCLVisualizer vis("gps2lidar");
-	pcl::visualization::PointCloudColorHandlerGenericField<pcl::PointXYZ> aligned_handler(gps_position, "intensity");
-	vis.addPointCloud(gps_position, aligned_handler, "map");
-	for (int i = 0; i < trans_vector.size(); ++i) {
+ 
+ 
+	for (int i = 0; i < gps_position->size(); ++i) {
 		pcl::PointXYZ temp;
-		temp.x = trans_vector[i](0,3);
-		temp.y = trans_vector[i](1,3);
-		temp.z = trans_vector[i](2,3);
-		vis.addLine<pcl::PointXYZ>(gps_position->points[i*5], temp, i*2%255, (i*3+100)%255, 0, std::to_string(i));
+		temp.x = trans_vector[i*10](0,3);
+		temp.y = trans_vector[i*10](1,3);
+		temp.z = trans_vector[i*10](2,3);
+ 
 		lidar_position.push_back(temp);
-		gps_position_save.push_back(gps_position->points[i*5]);
+		gps_position_save.push_back(gps_position->points[i]);
 	}
-	//vis.spin();
-	//0.格式转化
-	//这一部分产生一一对应的关系
+ 
+	//**这一部分产生一一对应的关系
 	//todo 这里gps的位置比较多, 所以以 惯导的数量为基础 惯导 50hz lidar 10 hz
-	for (int j = 200; j < trans_vector.size() ; ++j) {
+	//改成lidar10hz gps 1hz
+	for (int j = 0; j < 150 ; ++j) {
 		Eigen::Matrix4d temp;
 		temp.setIdentity();
-		temp(0,3) = gps_position->points[j*5].x;
-		temp(1,3) = gps_position->points[j*5].y;
-		temp(2,3) = gps_position->points[j*5].z;
+		temp(0,3) = gps_position->points[j].x;
+		temp(1,3) = gps_position->points[j].y;
+		temp(2,3) = gps_position->points[j].z;
 		gps_poses.push_back(temp);
 	}
-	for (int k = 200; k < trans_vector.size(); ++k) {
-		LiDAR_poses.push_back(trans_vector[k].matrix());
+	for (int k = 0; k < 150; ++k) {
+		LiDAR_poses.push_back(trans_vector[k*10].matrix());
 	}
-	//1.计算lidar到gnss 外参
-/*    for (int l = 0; l < LiDAR_poses.size(); ++l) {
-        std::cout<<LiDAR_poses[l].matrix()<<std::endl;
-    }*/
-	calibrate.CalibrateGNSSLiDAR(gps_poses,LiDAR_poses,T_lidar2INS);
+	Eigen::Vector3d arm;
+	arm(2) = 0.3;//杆臂值
+	calibrate.CalibrateGNSSLiDARICP(gps_poses,LiDAR_poses,T_lidar2INS, arm);//用icp算法确定外参
 	pcl::transformPointCloud(lidar_position,lidar_position_tfed,T_lidar2INS.inverse().matrix());
 	writer.write("route/lidar_position.pcd",lidar_position_tfed);
 	writer.write("route/raw_lidar_position.pcd",lidar_position);
 	writer.write("route/gps_position_save.pcd",gps_position_save);
 	std::cout<<"标定结果:\n"<<T_lidar2INS.inverse().matrix()<<std::endl;
+	return  T_lidar2INS;
 }
 
 void main_function::transformOnePoint(Eigen::Matrix4f t, pcl::PointXYZI &input) {
@@ -1362,6 +1360,10 @@ int main_function::g2oColorMapping() {
 		cout << "!!!!! PCD & g2o does not have same number " << endl;
 		return 0;
 	}
+}
+//构建gps的因子图
+void main_function::gpsBasedOptimziation(std::string lidar_path,std::string gps_path,Eigen::Isometry3d lidar_to_gps,std::string save_path) {
+
 }
 
 void main_function::genColormap(std::vector<Eigen::Isometry3d, Eigen::aligned_allocator<Eigen::Isometry3d>> trans_vector,std::string picParam) {

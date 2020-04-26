@@ -51,7 +51,7 @@ int main(int argc,char** argv){
 			m.encoderMapping();
 			break;
 		case 5://5. Calibrating the extrinsic parameters
-			m.LiDARGNSScalibration("w","w");
+			m.LiDARGNSScalibration("/home/echo/small_fov.g2o","/media/echo/DataDisc/3_program/mapping/cmake-build-debug/gnss.pcd");
 			m.LiDARGNSSMapping();
 			break;
 		case 6: //6. ndt建图

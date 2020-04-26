@@ -12,8 +12,9 @@
 #include <opencv2/core/core.hpp>
 #include <opencv2/calib3d/calib3d.hpp>
 #include <opencv2/core/eigen.hpp>
-//#include <pcl/io/pcd_io.h>
-//#include <pcl/point_types.h>
+#define PCL_NO_PRECOMPILE
+#include <pcl/io/pcd_io.h>
+#include <pcl/point_types.h>
 #include <ceres/ceres.h>
 //#include <pcl/registration/ndt.h>      				//NDT(正态分布)配准类头文件
 //#include <pcl/filters/approximate_voxel_grid.h>     //滤波类头文件  （使用体素网格过滤器处理的效果比较好）
@@ -150,6 +151,9 @@ public:
 	//1. 输入: 雷达和INS时间戳对齐后的位姿 输出:(1). 雷达到gnss的外参  感觉一个就行
 	void CalibrateGNSSLiDAR(std::vector<Eigen::Matrix4d> gps_poses,std::vector<Eigen::Matrix4d> LiDAR_poses,
 			Eigen::Isometry3d & T_lidar2INS);
+	//1.1 ICP 求解
+	void CalibrateGNSSLiDARICP(std::vector<Eigen::Matrix4d> gps_poses,std::vector<Eigen::Matrix4d> LiDAR_poses,
+							Eigen::Isometry3d & T_lidar2INS,Eigen::Vector3d arm);
 	//2. 外参
 	double extrinsic_param[7]={0,0,0,0,0,0};
 	//3. aloam的外参

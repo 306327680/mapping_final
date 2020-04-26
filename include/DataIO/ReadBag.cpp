@@ -421,3 +421,41 @@ void ReadBag::readCalibratedCamera(std::string path,std::string cali_path, std::
 					cv::imwrite(ss.str(),src);
 				}
 }
+
+void ReadBag::saveRTK2PCD(std::string path) {
+	std::cout<<"the bag path is: "<<path<<std::endl;
+	bag.open(path, rosbag::bagmode::Read);
+	std::vector<std::string> topics;
+	std::vector<sensor_msgs::NavSatFix> gnss_tosave;//测试转换csv用
+	pcl::PointCloud<pcl::PointXYZI>::Ptr gps_route(new pcl::PointCloud<pcl::PointXYZI>);//可视化gps路径
+	topics.push_back(std::string("/fix"));
+	gpsTools gt;
+	rosbag::View view1(bag, rosbag::TopicQuery(topics));
+	bool first_gps=true;
+	Eigen::Vector3d lla_origin;
+	bag_strat_time.init();
+	BOOST_FOREACH(rosbag::MessageInstance const m, view1)
+				{
+					sensor_msgs::NavSatFix::ConstPtr s = m.instantiate<sensor_msgs::NavSatFix>();
+					gnss_tosave.push_back(*s);
+					pcl::PointXYZI onepoint;
+					if(first_gps){
+						//把第一个坐标转化位lla
+						lla_origin = gt.GpsMsg2Eigen(*s);
+						gt.lla_origin_ = lla_origin;
+						gps_route->push_back(onepoint);
+						first_gps = false;
+					}else{
+						gt.updateGPSpose(*s);
+						onepoint.x = gt.gps_pos_(0);
+						onepoint.y = gt.gps_pos_(1);
+						onepoint.z = gt.gps_pos_(2);
+						onepoint.intensity = s->status.status;
+						gps_route->push_back(onepoint);
+					}
+				}
+	pcl::PCDWriter writer;
+	std::cout<<"saving the data"<<std::endl;
+	csvio.NavSat2CSVLLA(gnss_tosave,"aa",gnss_tosave[0].header.stamp,gnss_tosave[0]);
+	writer.write("gnss.pcd",*gps_route);
+}
