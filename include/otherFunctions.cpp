@@ -55,12 +55,7 @@ ros::Time main_function::fromPath2Time(std::string s) {
 		buffer.push_back(*it);
 	cur_time.sec = std::atoi(buffer[buffer.size()-3].c_str());
 	int nsec_check = std::atoi(buffer[buffer.size()-2].c_str());
-	if(nsec_check<100000000){
-		cur_time.nsec = nsec_check*10;
-	}else{
-		cur_time.nsec = nsec_check;
-	}
-	std::cout<<cur_time.sec<<" "<<cur_time.nsec<<endl;
+	cur_time.nsec = nsec_check;
 	return cur_time;
 }
 
@@ -404,14 +399,13 @@ int main_function::point2planeICP() {
 	//投影相关
 	pcl::PointCloud<pcl::PointXYZRGB> tosave;
 	cv::Mat mat;VLPPointCloud cloudin;
-
 /*		icp.setParam("/media/echo/DataDisc/3_program/mapping/cfg/icp.yaml");*/
-	
 	pcl::PCDWriter writer;
 	bool first_cloud = true;
 	bool distortion = true;
 	std::cout<<file_names_ .size()<<std::endl;
 	std::cout<<start_id<<" "<<end_id<<std::endl;
+	
 	bool VLP = true;
 	std::string LiDAR_type = "VLP";
 	bool local_map_updated = true; //todo 加入地图更新判断 1100-3000
@@ -533,8 +527,8 @@ int main_function::point2planeICP() {
 				//可以用恢复出来的位姿 tf 以前的点云
 				clouds.push_back(*cloud_bef);
 				std::stringstream pcd_save;
-				pcd_save<<"dist_pcd/"<<i<<".pcd";
-				writer.write(pcd_save.str(),*cloud_bef, true);
+		/*		pcd_save<<"dist_pcd/"<<i<<".pcd";
+				writer.write(pcd_save.str(),*cloud_bef, true);*/
 				//生成地图
 				Eigen::Matrix4f current_pose = Eigen::Matrix4f::Identity();
 				//试一下这样恢复出来的位姿
@@ -565,7 +559,7 @@ int main_function::point2planeICP() {
 					*cloud_map_color += tfed_color;
 					*cloud_map += tfed;
 					//存的点云缩小点,每50帧存一下结果;
-					if(i%100==0){
+					if(i%100==1){
 						pcl::PointCloud<int> keypointIndices;
 						filter_us.setInputCloud(cloud_map);
 						filter_us.setRadiusSearch(0.02f);

@@ -62,6 +62,7 @@
 #include <iostream>
 #include "imgAddColor2Lidar/imgAddColor2Lidar.h"
 #include "loopClosure/loopClosure.h"
+#include "GPS_constraint_mapping/GPS_loop_mapping.h"
 
 EIGEN_DEFINE_STL_VECTOR_SPECIALIZATION(Eigen::Matrix4d)
 EIGEN_DEFINE_STL_VECTOR_SPECIALIZATION(Eigen::Isometry3d)
@@ -167,19 +168,29 @@ public:
 //功能7 读取hesaipcd
 	void readAndSaveHesai(std::string path) {
 		ReadBag a;
-/*		//a.readHesai(path);
+		//a.readHesai(path);
 		a.readVLP16("/media/echo/DataDisc/9_rosbag/8_imu_camera_rtk_vlp/small_fov.bag",
 					"/media/echo/DataDisc/9_rosbag/8_imu_camera_rtk_vlp/small_pcd");
 		//a.readTopRobosense("/media/echo/DataDisc/9_rosbag/9_huawei_jialuowuliu/2020-04-09-11-44-45.bag","/home/echo/2_huawei");
-		std::vector<std::pair<Eigen::Isometry3d,double>>  gps_pose ;
-		Eigen::Vector3d lla_origin;*/
-		a.saveRTK2PCD("/media/echo/DataDisc/9_rosbag/8_imu_camera_rtk_vlp/small_fov.bag");
+
+		//a.saveRTK2PCD("/media/echo/DataDisc/9_rosbag/8_imu_camera_rtk_vlp/small_fov.bag");//把rtk保存成 csv+pcd
 		//a.readcamera("/media/echo/DataDisc2/2020-04-18-20-41-45.bag","/home/echo/5_png/shinei");
-/*		a.gnssPCDExtrinsicParameters("/media/echo/DataDisc/9_rosbag/8_imu_camera_rtk_vlp/small_fov.bag",gps_pose,lla_origin);*/
+/*		std::vector<std::pair<Eigen::Isometry3d,double>>  gps_pose ;
+		Eigen::Vector3d lla_origin;
+ 		a.gnssPCDExtrinsicParameters("/media/echo/DataDisc/9_rosbag/8_imu_camera_rtk_vlp/small_fov.bag",gps_pose,lla_origin);*/
 	
 	}
 //功能8 用来测试模块好使不
 	void testFunction(){
+		//测时间戳
+		ros::Time first_time;
+		first_time = fromPath2Time(file_names_[0]);
+		for(int i = 0;  i <file_names_ .size();i++){
+			ros::Time cur_time;
+			cur_time = fromPath2Time(file_names_[i]);
+			std::cout<<(cur_time-first_time).toSec()<<std::endl;
+		}
+		//测彩色点云
 /*		pcl::PCDWriter writer;
 		imgAddColor2Lidar a;
 		a.readExInt("/home/echo/fusion_ws/src/coloured_cloud/ex_params.txt");
@@ -193,11 +204,15 @@ public:
 		writer.write("/home/echo/fusion_ws/result.pcd",tosave, true);*/
 //测闭环
 //		lc.addLoopEdge(100,2750,"/home/echo/test.g2o","/home/echo/test1.g2o","/media/echo/DataDisc/9_rosbag/8_imu_camera_rtk_vlp/small_pcd/");
-		//测闭环后的建图
+	/*	//测闭环后的建图
 		trans_vector = getEigenPoseFromg2oFile("/home/echo/result.g2o");
 		start_id = 0;
 		end_id = 6000;
-		genColormap(trans_vector,"");
+		genColormap(trans_vector,"");*/
+	//测闭环gps约束
+		/*GPS_loop_mapping g;
+		g.GPSandPose("/home/echo/small_fov.g2o","/media/echo/DataDisc/3_program/mapping/cmake-build-debug/gnss.pcd",
+				LiDARGNSScalibration("/home/echo/small_fov.g2o","/media/echo/DataDisc/3_program/mapping/cmake-build-debug/gnss.pcd"));*/
 	}
 //功能9 普通的16线建图
 	void rslidarmapping(){

@@ -125,7 +125,7 @@ void ReadBag::readHesai(std::string path) {
 			
 		
 					pcl::fromROSMsg(*s,hesai_pcd);
-					std::cout<<"pcd size: "<<hesai_pcd.size()<<std::endl;
+ 
  					if(!pcd_start){
 						time_begin = hesai_pcd[0].timestamp;
  					}
@@ -286,7 +286,7 @@ void ReadBag::readVLP16(std::string path,std::string save_path) {
 					sensor_msgs::PointCloud2::ConstPtr s = m.instantiate<sensor_msgs::PointCloud2>();
 					pcl::PCLPointCloud2 pcl_pc2;
 					pcl::fromROSMsg(*s,vlp_pcd);
-					std::cout<<"pcd size: "<<vlp_pcd.size()<<std::endl;
+			 
 					if(!pcd_start){
 						time_begin = vlp_pcd[0].time;
 					}
@@ -303,13 +303,28 @@ void ReadBag::readVLP16(std::string path,std::string save_path) {
 						vlp_pcdtosave.push_back(temp);
 					}
 					vlp_pcdtosave.width = vlp_pcdtosave.size();
- 
-					timestamp = s->header.stamp.toSec();
-					pcd_save<<save_path.c_str()<<"/"<<timestamp<<".pcd";
+ 					//
+ 					int nsec_c[9];
+				 
+ 					nsec_c[8] = s->header.stamp.nsec%10;
+					nsec_c[7] = (s->header.stamp.nsec/10)%10;
+					nsec_c[6] = (s->header.stamp.nsec/100)%10;
+					nsec_c[5] = (s->header.stamp.nsec/1000)%10;
+					nsec_c[4] = (s->header.stamp.nsec/10000)%10;
+					nsec_c[3] = (s->header.stamp.nsec/100000)%10;
+					nsec_c[2] = (s->header.stamp.nsec/1000000)%10;
+					nsec_c[1] = (s->header.stamp.nsec/10000000)%10;
+					nsec_c[0] = (s->header.stamp.nsec/100000000)%10;
+					
+					std::cout<<nsec_c[0]<<nsec_c[1]<<nsec_c[2]<<nsec_c[3]<<nsec_c[4]<<nsec_c[5]
+					<<nsec_c[6]<<nsec_c[7]<<nsec_c[8]<<" "<<s->header.stamp.nsec<<std::endl;
+					timestamp = s->header.stamp.sec;
+					pcd_save<<save_path.c_str()<<"/"<<timestamp<<"."<<nsec_c[0]<<nsec_c[1]<<nsec_c[2]<<nsec_c[3]
+					<<nsec_c[4]<<nsec_c[5]<<nsec_c[6]<<nsec_c[7]<<nsec_c[8]<<".pcd";
 					std::cout<<pcd_save.str()<<" size: "<<vlp_pcd.size()<<" times: "<<inter_times<<std::endl;
 					writer.write(pcd_save.str(),vlp_pcdtosave,true);
 					vlp_pcdtosave.clear();
-					std::cout<<pcd_save.str()<<" saved " <<std::endl;
+			 
 					inter_times++;
 				}
 }
@@ -337,7 +352,7 @@ void ReadBag::readTopRobosense(std::string path, std::string save_path) {
 					sensor_msgs::PointCloud2::ConstPtr s = m.instantiate<sensor_msgs::PointCloud2>();
 					pcl::PCLPointCloud2 pcl_pc2;
 					pcl::fromROSMsg(*s,robosense_pcd);
-					std::cout<<"pcd size: "<<robosense_pcd.size()<<std::endl;
+	 
 					beam_size = robosense_pcd.size()/16;
 					for (int i = 0; i < robosense_pcd.size(); ++i) {
 						
@@ -456,6 +471,9 @@ void ReadBag::saveRTK2PCD(std::string path) {
 				}
 	pcl::PCDWriter writer;
 	std::cout<<"saving the data"<<std::endl;
-	csvio.NavSat2CSVLLA(gnss_tosave,"aa",gnss_tosave[0].header.stamp,gnss_tosave[0]);
-	writer.write("gnss.pcd",*gps_route);
+	ros::Time lidar_first; //第一帧雷达来的时间
+	lidar_first.sec = 1586507671;
+	lidar_first.nsec = 84489393;
+	csvio.NavSat2CSVLLA(gnss_tosave,"aa",lidar_first,gnss_tosave[0]);
+	writer.write("gps.pcd",*gps_route);
 }

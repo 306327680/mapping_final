@@ -32,6 +32,8 @@
 #include <sensor_msgs/CompressedImage.h>
 #include <cv_bridge/cv_bridge.h>
 #include<opencv2/opencv.hpp>
+#include <stdio.h>
+#include <stdlib.h>
 class ReadBag {
 public:
 	ReadBag(){bag_strat_time.init();};

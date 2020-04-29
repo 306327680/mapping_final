@@ -32,6 +32,7 @@
 
 class Calibration6DOF {
 public:
+	Calibration6DOF(){};
 	//构建 ceres的 误差函数
 	struct Calibration
 	{//输入的变量是两次的增量, 优化量是外参
@@ -147,7 +148,7 @@ public:
         Eigen::Matrix<double,7,1> T_l0_ln;
 
 	};
-	Calibration6DOF(){};
+
 	//1. 输入: 雷达和INS时间戳对齐后的位姿 输出:(1). 雷达到gnss的外参  感觉一个就行
 	void CalibrateGNSSLiDAR(std::vector<Eigen::Matrix4d> gps_poses,std::vector<Eigen::Matrix4d> LiDAR_poses,
 			Eigen::Isometry3d & T_lidar2INS);

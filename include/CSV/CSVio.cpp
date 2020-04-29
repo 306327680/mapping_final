@@ -98,7 +98,7 @@ void CSVio::LiDARsaveAll(std::string path) {
 	
 	std::ofstream outFile;
 	outFile.open("LiDAR_pose.csv", std::ios::out);
-	outFile<< std::setprecision(10)<<"x,y,z,q_x,q_y,q_z,q_w,v_x,v_y,v_z,r_x,r_y,r_z,time"<<"\n";
+	outFile<< std::setprecision(10)<<"x,y,z,q_x,q_y,q_z,q_w,v_x,v_y,v_z,r_x,r_y,r_z,time,"<<time_seq[0]<<"\n";
 	for (int i = 0; i < odoms.size(); ++i) {
 		outFile << odoms[i].pose.pose.position.x << ',';
 		outFile << odoms[i].pose.pose.position.y << ',';
@@ -113,7 +113,6 @@ void CSVio::LiDARsaveAll(std::string path) {
 		outFile << odoms[i].twist.twist.angular.x << ',';
 		outFile << odoms[i].twist.twist.angular.y << ',';
 		outFile << odoms[i].twist.twist.angular.z << ',';
-	 
 		outFile << (time_seq[i]-time_seq[0]).toSec() << '\n';
 	}
 }
