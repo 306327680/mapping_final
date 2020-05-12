@@ -472,8 +472,8 @@ void ReadBag::saveRTK2PCD(std::string path) {
 	pcl::PCDWriter writer;
 	std::cout<<"saving the data"<<std::endl;
 	ros::Time lidar_first; //第一帧雷达来的时间
-	lidar_first.sec = 1586507671;
-	lidar_first.nsec = 84489393;
+	lidar_first.sec = 1589184480;
+	lidar_first.nsec = 234091043;
 	csvio.NavSat2CSVLLA(gnss_tosave,"aa",lidar_first,gnss_tosave[0]);
 	writer.write("gps.pcd",*gps_route);
 }

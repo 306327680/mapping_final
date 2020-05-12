@@ -56,9 +56,11 @@ void featureExtraction::calcFeature(pcl::PointCloud<PointXYZIBS>::Ptr &laserClou
 		
 		for (int j = 1; j <= CURVATURE_REGION; j++) {
 			//左5 右5 取点 求和
-			diffX += laserCloud->points[i + j].x + laserCloud->points[i - j].x;
-			diffY += laserCloud->points[i + j].y + laserCloud->points[i - j].y;
-			diffZ += laserCloud->points[i + j].z + laserCloud->points[i - j].z;
+			if(i + j < laserCloud->size()){
+				diffX += laserCloud->points[i + j].x + laserCloud->points[i - j].x;
+				diffY += laserCloud->points[i + j].y + laserCloud->points[i - j].y;
+				diffZ += laserCloud->points[i + j].z + laserCloud->points[i - j].z;
+			}
 		}
 		// i = 0 -5
 		//todo 这个算曲率的有问题 应该改进

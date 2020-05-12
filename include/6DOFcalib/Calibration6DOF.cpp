@@ -89,7 +89,6 @@ void Calibration6DOF::CalibrateGNSSLiDAR(std::vector<Eigen::Matrix4d> gps_poses,
     T_lidar2INS.setIdentity();
     T_lidar2INS.rotate(q_extrinsic);
     T_lidar2INS.pretranslate(t_extrinsic);
-
 }
 
 void

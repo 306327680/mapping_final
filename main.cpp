@@ -16,7 +16,8 @@ int main(int argc,char** argv){
 	m.getParam(argc,argv);
 	//得到所有的pcd名字
 	m.GetFileNames(m.filepath,"pcd");
-	m.GetPNGFileNames("/media/echo/DataDisc/9_rosbag/8_imu_camera_rtk_vlp/pic","png");
+	//读取png 彩色图
+	//m.GetPNGFileNames("/media/echo/DataDisc/9_rosbag/8_imu_camera_rtk_vlp/pic","png");
 	//qt
 	
 /*	QApplication a(argc, argv);

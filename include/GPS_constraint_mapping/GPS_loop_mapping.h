@@ -120,7 +120,7 @@ namespace ceres {
 			return true;
 		}
 		//************ 设定数据格式
-		
+		//pq
 		struct Pose3d {//pose
 			Eigen::Vector3d p;
 			Eigen::Quaterniond q;
@@ -140,8 +140,7 @@ namespace ceres {
 			return input;
 		}
 		//
-		typedef std::map<int, Pose3d, std::less<int>,Eigen::aligned_allocator<std::pair<const int, Pose3d> > >
-				MapOfPoses;
+		typedef std::map<int, Pose3d, std::less<int>,Eigen::aligned_allocator<std::pair<const int, Pose3d> > > MapOfPoses;
 // 两个顶点之间的位姿图约束,约束是指begin到end的
 // The constraint between two vertices in the pose graph. The constraint is the
 // transformation from vertex id_begin to vertex id_end.
@@ -210,7 +209,7 @@ namespace ceres {
 				// Represent the displacement between the two frames in the A frame. 两针之间位移
 				Eigen::Matrix<T, 3, 1> p_ab_estimated = q_a_inverse * (p_b - p_a);
 				
-				// Compute the error between the two orientation estimates. measure和estimate朝向之间的error
+				// Compute the error between the two orientation estimates. measure和estimate朝向之间的error conjugate 共轭
 				Eigen::Quaternion<T> delta_q = t_ab_measured_.q.template cast<T>() * q_ab_estimated.conjugate();
 				
 				// Compute the residuals.
@@ -242,61 +241,44 @@ namespace ceres {
 			// The square root of the measurement information matrix.
 			const Eigen::Matrix<double, 6, 6> sqrt_information_;
 		};
-		//gps的约束
+		
+		
+		//***gps的约束
+		//输入: 1.gps测量值 2.当前位姿
+		//误差: 当前位姿的杆臂值坐标-gps测量值
 		class PoseGraphGPSErrorTerm {
 		public:
 			//用来赋值 Create 里面的 放到了这里
-			PoseGraphGPSErrorTerm(const Pose3d& t_ab_measured,const Eigen::Matrix<double, 6, 6>& sqrt_information)
+			PoseGraphGPSErrorTerm(const Eigen::Vector3d& t_ab_measured,const Eigen::Matrix<double, 6, 6>& sqrt_information)
 					: t_ab_measured_(t_ab_measured), sqrt_information_(sqrt_information) {}
 			
 			template <typename T>
 			//前四个是 ceres要调整的, 最后一个是残差项,通过调整 前面4个使得residuals_ptr最小
 			bool operator()(const T* const p_a_ptr, const T* const q_a_ptr,
-							const T* const p_b_ptr, const T* const q_b_ptr,
 							T* residuals_ptr) const {
 				Eigen::Map<const Eigen::Matrix<T, 3, 1> > p_a(p_a_ptr);
 				Eigen::Map<const Eigen::Quaternion<T> > q_a(q_a_ptr);
-				
-				Eigen::Map<const Eigen::Matrix<T, 3, 1> > p_b(p_b_ptr);
-				Eigen::Map<const Eigen::Quaternion<T> > q_b(q_b_ptr);
-				
-				// Compute the relative transformation between the two frames.
-				//两针之间的相对旋转
-				Eigen::Quaternion<T> q_a_inverse = q_a.conjugate();//四元数的共轭 x,y,z 都负
-				Eigen::Quaternion<T> q_ab_estimated = q_a_inverse * q_b;
-				
-				// Represent the displacement between the two frames in the A frame. 两针之间位移
-				Eigen::Matrix<T, 3, 1> p_ab_estimated = q_a_inverse * (p_b - p_a);
-				
-				// Compute the error between the two orientation estimates. measure和estimate朝向之间的error
-				Eigen::Quaternion<T> delta_q = t_ab_measured_.q.template cast<T>() * q_ab_estimated.conjugate();
-				
-				// Compute the residuals.
-				// [ position         ]   [ delta_p          ]
-				// [ orientation (3x1)] = [ 2 * delta_q(0:2) ]
-				//计算残差
-				Eigen::Map<Eigen::Matrix<T, 6, 1> > residuals(residuals_ptr);
-				residuals.template block<3, 1>(0, 0) = p_ab_estimated - t_ab_measured_.p.template cast<T>();//前三位是位移残差
-				residuals.template block<3, 1>(3, 0) = T(2.0) * delta_q.vec();//这三位是旋转残差
-				
-				// Scale the residuals by the measurement uncertainty.
-				residuals.applyOnTheLeft(sqrt_information_.template cast<T>());//测量不确定性去scale这些measurement
+				Eigen::Map<Eigen::Matrix<T, 3, 1> > residuals(residuals_ptr);
+				//当前的
+				residuals(0,0) = p_a(0,0) - t_ab_measured_(0);
+				residuals(1,0) = p_a(1,0) - t_ab_measured_(1);
+				residuals(2,0) = p_a(2,0) - t_ab_measured_(2);
 				
 				return true;
 			}
 			
 			static ceres::CostFunction* Create(
-					const Pose3d& t_ab_measured,
+					const Eigen::Vector3d& t_ab_measured,
 					const Eigen::Matrix<double, 6, 6>& sqrt_information) {
-				//残差6位 tq tq 输入两个位姿
-				return new ceres::AutoDiffCostFunction<PoseGraph3dErrorTerm, 6, 3, 4, 3, 4>(new PoseGraph3dErrorTerm(t_ab_measured, sqrt_information));
+				//残差3位 tq   输入1个位姿
+				return new ceres::AutoDiffCostFunction<PoseGraphGPSErrorTerm, 3, 3, 4>(new PoseGraphGPSErrorTerm(t_ab_measured, sqrt_information));
 			}
 			
 			EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 		
 		private:
 			// The measurement for the position of B relative to A in the A frame.
-			const Pose3d t_ab_measured_;
+			const Eigen::Vector3d t_ab_measured_;
 			// The square root of the measurement information matrix.
 			const Eigen::Matrix<double, 6, 6> sqrt_information_;
 		};
@@ -315,57 +297,22 @@ public:
  	void G2OandPCD(std::string lidar_pose,std::string gps_constraint,
  			std::map<int, Pose, std::less<int>, MapAllocator>* poses,
 				   std::vector<Constraint, VectorAllocator>* constraints);//通过闭环的点云构建 poses(顶点)和constraints(边)
-	//这个函数是为了找到gps的值和pose的index的关系
+	//这个函数是为了找到gps的值和pose的index的关系,之后可以加入方差矩阵传递参数
 	void RelationG2OGPS(std::string lidar_pose,std::string gps_constraint,std::vector<std::pair<int,Eigen::Vector3d>>& relation);
+	void RelationG2OGPS(std::string lidar_pose,std::string gps_constraint,std::vector<std::pair<int,Eigen::Vector3d>>& relation,std::vector<Eigen::Vector3d> & conv_gps);
 // 1.构建优化问题
-	void BuildOptimizationProblem(const ceres::examples::VectorOfConstraints& constraints,ceres::examples::MapOfPoses* poses, ceres::Problem* problem) {
-		CHECK(poses != NULL);
-		CHECK(problem != NULL);
-		if (constraints.empty()) {
-			LOG(INFO) << "No constraints, no problem to optimize.";
-			return;
-		}
-		
-		ceres::LossFunction* loss_function = NULL;
-		ceres::LocalParameterization* quaternion_local_parameterization =new ceres::EigenQuaternionParameterization;//函数就是定义四元数的加
-		//这里吧所有的边都扔进去了
-		for (ceres::examples::VectorOfConstraints::const_iterator constraints_iter = constraints.begin();
-			 constraints_iter != constraints.end(); ++constraints_iter) {//迭代约束
-			const ceres::examples::Constraint3d& constraint = *constraints_iter;//iterator是指针
-			//确定开始结束 pose_begin_iter->poses pose_end_iter->poses
-			ceres::examples::MapOfPoses::iterator pose_begin_iter = poses->find(constraint.id_begin);
-			CHECK(pose_begin_iter != poses->end())<< "Pose with ID: " << constraint.id_begin << " not found.";
-			ceres::examples::MapOfPoses::iterator pose_end_iter = poses->find(constraint.id_end);
-			CHECK(pose_end_iter != poses->end())<< "Pose with ID: " << constraint.id_end << " not found.";
-			//信息矩阵
-			const Eigen::Matrix<double, 6, 6> sqrt_information = constraint.information.llt().matrixL();
-			// 自定义的pose graph error项 把约束的测量放进去(闭环)
-			ceres::CostFunction* cost_function = ceres::examples::PoseGraph3dErrorTerm::Create(constraint.t_be, sqrt_information);
-	 		//后4个是要优化的量 需要调整的位姿,邮储结果通过这个传出来,这些值要被调整的 最后pose是被调整了
-			problem->AddResidualBlock(cost_function, loss_function,
-									  pose_begin_iter->second.p.data(),
-									  pose_begin_iter->second.q.coeffs().data(),
-									  pose_end_iter->second.p.data(),
-									  pose_end_iter->second.q.coeffs().data());
-			
-			problem->SetParameterization(pose_begin_iter->second.q.coeffs().data(),
-										 quaternion_local_parameterization);
-			problem->SetParameterization(pose_end_iter->second.q.coeffs().data(),
-										 quaternion_local_parameterization);
-		}
-		//需要设定一个node为constant
-		ceres::examples::MapOfPoses::iterator pose_start_iter = poses->begin();
-		CHECK(pose_start_iter != poses->end()) << "There are no poses.";
-		problem->SetParameterBlockConstant(pose_start_iter->second.p.data());
-		problem->SetParameterBlockConstant(pose_start_iter->second.q.coeffs().data());
-	}
-
+	void BuildOptimizationProblem(const ceres::examples::VectorOfConstraints& constraints,ceres::examples::MapOfPoses* poses, ceres::Problem* problem) ;
+	//2.加入gps约束的问题
+	void BuildGPSOptimizationProblem(const ceres::examples::VectorOfConstraints& constraints,
+			ceres::examples::MapOfPoses* poses, ceres::Problem* problem,	std::vector<std::pair<int,Eigen::Vector3d>> relation) ;
+	
 // Returns true if the solve was successful.
 	bool SolveOptimizationProblem(ceres::Problem* problem) {
+		std::cout<<" Solving the problem"<<std::endl;
 		CHECK(problem != NULL);
 		
 		ceres::Solver::Options options;
-		options.max_num_iterations = 200;
+		options.max_num_iterations = 50000;
 		options.linear_solver_type = ceres::SPARSE_NORMAL_CHOLESKY;
 		
 		ceres::Solver::Summary summary;

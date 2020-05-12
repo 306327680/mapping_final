@@ -133,6 +133,7 @@ pcl::PointCloud<pcl::PointXYZ> loopClosure::GICP(const pcl::PointCloud<pcl::Poin
 	pcl::GeneralizedIterativeClosestPoint<pcl::PointXYZ, pcl::PointXYZ> gicp; //创建ICP对象，用于ICP配准
 	gicp.setTransformationEpsilon(0.01);
 	gicp.setMaximumIterations(100);
+	gicp.setMaxCorrespondenceDistance(200);
 	gicp.setInputSource(pcl::PointCloud<pcl::PointXYZ>::Ptr(new pcl::PointCloud<pcl::PointXYZ>(cloud_source)));
 	gicp.setInputTarget(pcl::PointCloud<pcl::PointXYZ>::Ptr(new pcl::PointCloud<pcl::PointXYZ>(cloud_target)));
 	gicp.align(result);
@@ -252,8 +253,7 @@ void loopClosure::addLoopEdge(int num1, int num2, std::string g2o_read, std::str
 	
 	genlocalmap(trans_vector,past,filepath,*cloud1);
 	genlocalmap(trans_vector,cur_id,filepath,*cloud2);
-	//todo 有可能有问题
-	pcl::IterativeClosestPoint<pcl::PointXYZ,pcl::PointXYZ>icp;
+ 
 	//初始位姿
 	Eigen::Isometry3d init_pose = trans_vector[past].inverse()*trans_vector[cur_id];
 	init_pose = init_pose.inverse();
@@ -263,13 +263,7 @@ void loopClosure::addLoopEdge(int num1, int num2, std::string g2o_read, std::str
 	*cloud1 = *temp;
 	pcl::PointCloud<pcl::PointXYZ>::Ptr Final_cloud(
 			new pcl::PointCloud<pcl::PointXYZ>);
-	
-	icp.setInputSource(cloud1);
-	icp.setInputTarget(cloud2);//InputTarget不动的
-	icp.setMaxCorrespondenceDistance(10);
-	icp.setTransformationEpsilon(1e-2);
-	icp.setEuclideanFitnessEpsilon(1e-6);
-	icp.setMaximumIterations(120);
+ 
 //  icp.align(Final_cloud);
 	Eigen::Isometry3d gicp_result;
 	*Final_cloud = GICP(*cloud1,*cloud2,gicp_result);
