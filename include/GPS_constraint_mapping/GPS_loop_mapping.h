@@ -217,8 +217,8 @@ namespace ceres {
 				// [ orientation (3x1)] = [ 2 * delta_q(0:2) ]
 				//计算残差
 				Eigen::Map<Eigen::Matrix<T, 6, 1> > residuals(residuals_ptr);
-				residuals.template block<3, 1>(0, 0) = p_ab_estimated - t_ab_measured_.p.template cast<T>();//前三位是位移残差
-				residuals.template block<3, 1>(3, 0) = T(2.0) * delta_q.vec();//这三位是旋转残差
+				residuals.template block<3, 1>(0, 0) = T(100000.0)*(p_ab_estimated - t_ab_measured_.p.template cast<T>());//前三位是位移残差
+				residuals.template block<3, 1>(3, 0) = T(200000.0) * delta_q.vec();//这三位是旋转残差
 				
 				// Scale the residuals by the measurement uncertainty.
 				residuals.applyOnTheLeft(sqrt_information_.template cast<T>());//测量不确定性去scale这些measurement
@@ -262,7 +262,7 @@ namespace ceres {
 				//当前的
 				residuals(0,0) = p_a(0,0) - t_ab_measured_(0);
 				residuals(1,0) = p_a(1,0) - t_ab_measured_(1);
-				residuals(2,0) = p_a(2,0) - t_ab_measured_(2);
+				residuals(2,0) = T(5.0)*(p_a(2,0) - t_ab_measured_(2));
 				
 				return true;
 			}
@@ -271,6 +271,7 @@ namespace ceres {
 					const Eigen::Vector3d& t_ab_measured,
 					const Eigen::Matrix<double, 6, 6>& sqrt_information) {
 				//残差3位 tq   输入1个位姿
+				//残差
 				return new ceres::AutoDiffCostFunction<PoseGraphGPSErrorTerm, 3, 3, 4>(new PoseGraphGPSErrorTerm(t_ab_measured, sqrt_information));
 			}
 			

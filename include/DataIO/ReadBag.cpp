@@ -394,7 +394,7 @@ void ReadBag::readcamera(std::string path, std::string save_path) {
  
 	double timestamp;
 	//可以加挺多topic的?
-	topics.push_back(std::string("/usb_cam/image_raw/compressed"));
+	topics.push_back(std::string("/stereo/right/image_color/compressed"));
 	rosbag::View view(bag, rosbag::TopicQuery(topics));
 	
 	BOOST_FOREACH(rosbag::MessageInstance const m, view)

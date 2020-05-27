@@ -65,17 +65,28 @@ void registration::addNormal(pcl::PointCloud<pcl::PointXYZI>::Ptr cloud,
 	pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_source_normals(
 			new pcl::PointCloud<pcl::PointXYZ>());
 	pcl::copyPointCloud(*cloud,*cloud_source_normals);
-	
 	pcl::PointCloud<pcl::Normal>::Ptr normals(new pcl::PointCloud<pcl::Normal>);
 	pcl::search::KdTree<pcl::PointXYZ>::Ptr searchTree(new pcl::search::KdTree<pcl::PointXYZ>);
 	searchTree->setInputCloud(cloud_source_normals);
+	pcl::NormalEstimationOMP<pcl::PointXYZ, pcl::Normal> normalEstimator_pa;
 	pcl::NormalEstimation<pcl::PointXYZ, pcl::Normal> normalEstimator;
-	normalEstimator.setInputCloud(cloud_source_normals);
-	normalEstimator.setSearchMethod(searchTree);
-	//normalEstimator.setRadiusSearch(0.05);
-	normalEstimator.setKSearch(20);
-	normalEstimator.compute(*normals);
-	pcl::concatenateFields(*cloud_source_normals, *normals, *cloud_with_normals);
+	bool omp = true;
+	if(omp){
+		normalEstimator_pa.setInputCloud(cloud_source_normals);
+		normalEstimator_pa.setSearchMethod(searchTree);
+		//normalEstimator_pa.setRadiusSearch(0.05);
+		normalEstimator_pa.setKSearch(10);
+		normalEstimator_pa.compute(*normals);
+		pcl::concatenateFields(*cloud_source_normals, *normals, *cloud_with_normals);
+	}else{
+		normalEstimator.setInputCloud(cloud_source_normals);
+		normalEstimator.setSearchMethod(searchTree);
+		//normalEstimator.setRadiusSearch(0.05);
+		normalEstimator.setKSearch(20);
+		normalEstimator.compute(*normals);
+		pcl::concatenateFields(*cloud_source_normals, *normals, *cloud_with_normals);
+	}
+
 }
 
 void registration::SetNormalICP() {
@@ -91,10 +102,10 @@ void registration::SetNormalICP() {
 void registration::SetPlaneICP() {
 	pcl::IterativeClosestPointWithNormals<pcl::PointXYZINormal, pcl::PointXYZINormal>::Ptr icp(
 			new pcl::IterativeClosestPointWithNormals<pcl::PointXYZINormal, pcl::PointXYZINormal>());
-	icp->setMaximumIterations(25);
+	icp->setMaximumIterations(30);
 	icp->setMaxCorrespondenceDistance(0.2);
-	icp->setTransformationEpsilon(0.001);
-	icp->setEuclideanFitnessEpsilon(0.001);
+	icp->setTransformationEpsilon(0.0001);
+	icp->setEuclideanFitnessEpsilon(0.0001);
 	this->pcl_plane_plane_icp = icp;
 	
 }
@@ -113,10 +124,11 @@ pcl::PointCloud<pcl::PointXYZI> registration::normalIcpRegistration(pcl::PointCl
 	pcl::copyPointCloud(target,*target1);
 	pcl::PointCloud<pcl::PointXYZI>::Ptr source1(new pcl::PointCloud<pcl::PointXYZI>);
 	pcl::copyPointCloud(*source,*source1);
-	
-	
+	util tools;
+	tools.timeCalcSet("1.计算normal时间");
 	addNormal(source1, cloud_source_normals);
 	addNormal(target1, cloud_target_normals);
+	tools.timeUsed();
 	*cloud_source_normals_temp = *cloud_source_normals;
 	//0. 当前预测量 = 上次位姿态*增量
 	icp_init = transformation * increase;
@@ -184,10 +196,16 @@ pcl::PointCloud<pcl::PointXYZI> registration::normalIcpRegistrationlocal(pcl::Po
 	pcl::PointCloud<pcl::PointXYZI>::Ptr target1(new pcl::PointCloud<pcl::PointXYZI>);
 	pcl::copyPointCloud(target,*target1);
 	util tools;
-	tools.timeCalcSet("计算normal时间");
+	
+	tools.timeCalcSet("2.0 计算normal时间");
+/*	addNormalRadius(source, cloud_source_normals);
+	addNormalRadius(target1, cloud_target_normals);*/
 	addNormal(source, cloud_source_normals);
 	addNormal(target1, cloud_target_normals);
+	local_map_with_normal = *cloud_target_normals;
 	tools.timeUsed();
+	
+	tools.timeCalcSet("2.1 icp求解时间");
 	*cloud_source_normals_temp = *cloud_source_normals;
 	//0. 上次位姿态*增量
 	icp_init_local = transformation;
@@ -204,10 +222,51 @@ pcl::PointCloud<pcl::PointXYZI> registration::normalIcpRegistrationlocal(pcl::Po
 	increase = increase * pcl_plane_plane_icp->getFinalTransformation();
 	transformation_local = icp_init_local * pcl_plane_plane_icp->getFinalTransformation(); //上次结果(结果加预测)
 	transformation = transformation_local;
+	tools.timeUsed();
 	
-	std::cout << "2.1 T_scan_l_l+1 - Tmap_l_l+1 \n"  << pcl_plane_plane_icp->getFinalTransformation() << std::endl;
-	std::cout << "*****  第二次分数 : "  << pcl_plane_plane_icp->getFitnessScore()  << std::endl;
+	std::cout << "2.2 T_scan_l_l+1 - Tmap_l_l+1 \n"  << pcl_plane_plane_icp->getFinalTransformation() << std::endl;
+	std::cout << "2.3 第二次分数 : "  << pcl_plane_plane_icp->getFitnessScore()  << std::endl;
 	pcl::transformPointCloud(*source, tfed, transformation.matrix());
 	//变化量
 	return tfed;
+}
+
+void registration::SetNormalICP(int Correspondence) {
+	pcl::IterativeClosestPointWithNormals<pcl::PointXYZINormal, pcl::PointXYZINormal>::Ptr icp(
+			new pcl::IterativeClosestPointWithNormals<pcl::PointXYZINormal, pcl::PointXYZINormal>());
+	icp->setMaximumIterations(15);
+	icp->setMaxCorrespondenceDistance(Correspondence);
+	icp->setTransformationEpsilon(0.001);
+	icp->setEuclideanFitnessEpsilon(0.001);
+	this->pcl_plane_plane_icp = icp;
+}
+
+void registration::SetPlaneICP(int Correspondence) {
+	pcl::IterativeClosestPointWithNormals<pcl::PointXYZINormal, pcl::PointXYZINormal>::Ptr icp(
+			new pcl::IterativeClosestPointWithNormals<pcl::PointXYZINormal, pcl::PointXYZINormal>());
+	icp->setMaximumIterations(25);
+	icp->setMaxCorrespondenceDistance(Correspondence);
+	icp->setTransformationEpsilon(0.001);
+	icp->setEuclideanFitnessEpsilon(0.001);
+	this->pcl_plane_plane_icp = icp;
+}
+
+void registration::addNormalRadius(pcl::PointCloud<pcl::PointXYZI>::Ptr cloud,
+								   pcl::PointCloud<pcl::PointXYZINormal>::Ptr cloud_with_normals) {
+	pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_source_normals(
+			new pcl::PointCloud<pcl::PointXYZ>());
+	pcl::copyPointCloud(*cloud,*cloud_source_normals);
+	pcl::PointCloud<pcl::Normal>::Ptr normals(new pcl::PointCloud<pcl::Normal>);
+	pcl::search::KdTree<pcl::PointXYZ>::Ptr searchTree(new pcl::search::KdTree<pcl::PointXYZ>);
+	searchTree->setInputCloud(cloud_source_normals);
+	pcl::NormalEstimationOMP<pcl::PointXYZ, pcl::Normal> normalEstimator_pa;
+	pcl::NormalEstimation<pcl::PointXYZ, pcl::Normal> normalEstimator;
+	bool omp = true;
+	if(omp){
+		normalEstimator_pa.setInputCloud(cloud_source_normals);
+		normalEstimator_pa.setSearchMethod(searchTree);
+		normalEstimator_pa.setRadiusSearch(0.15);
+		normalEstimator_pa.compute(*normals);
+		pcl::concatenateFields(*cloud_source_normals, *normals, *cloud_with_normals);
+	}
 }

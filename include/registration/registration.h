@@ -12,6 +12,7 @@
 #include <pcl/registration/icp.h>
 #include <pcl/features/normal_3d.h>
 #include <pcl/filters/filter.h>
+#include <pcl/features/normal_3d_omp.h>
 #include "tools/util.h"
 /*typedef PointMatcher<float> PM;*/
 class registration {
@@ -27,10 +28,14 @@ public:
 	//pcl 配准部分
 	void addNormal(pcl::PointCloud<pcl::PointXYZI>::Ptr cloud,
 				   pcl::PointCloud<pcl::PointXYZINormal>::Ptr cloud_with_normals);
+	void addNormalRadius(pcl::PointCloud<pcl::PointXYZI>::Ptr cloud,
+				   pcl::PointCloud<pcl::PointXYZINormal>::Ptr cloud_with_normals);
 	//scan-scan 参数
 	void SetNormalICP();
+	void SetNormalICP(int Correspondence);
 	//scan-map参数
 	void SetPlaneICP();
+	void SetPlaneICP(int Correspondence);
 	pcl::PointCloud<pcl::PointXYZI> normalIcpRegistration(pcl::PointCloud<pcl::PointXYZI>::Ptr source,
 									 pcl::PointCloud<pcl::PointXYZI> target);
 	pcl::PointCloud<pcl::PointXYZI> normalIcpRegistrationlocal(pcl::PointCloud<pcl::PointXYZI>::Ptr source,
@@ -44,6 +49,8 @@ public:
 	//tools ReOrthogonalization 防止累计误差
 	Eigen::Isometry3d  ReOrthogonalization(Eigen::Isometry3d input);
 	pcl::IterativeClosestPointWithNormals<pcl::PointXYZINormal, pcl::PointXYZINormal>::Ptr pcl_plane_plane_icp;
+	//可视化normal
+	pcl::PointCloud<pcl::PointXYZINormal> local_map_with_normal;
 private:
 /*	PM::DataPoints *mapPointCloud;
 	PM::ICPSequence icp;*/

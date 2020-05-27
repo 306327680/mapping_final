@@ -48,11 +48,11 @@ void imgAddColor2Lidar::readExInt(std::string path) {
 	
 }
 
-PPointXYZIRGB imgAddColor2Lidar::alignImg2LiDAR(cv::Mat mat, VLPPointCloud cloudin) {
-	PPointXYZIRGB coloured_point_cloud;
+pcl::PointCloud<PointXYZRGBI>  imgAddColor2Lidar::alignImg2LiDAR(cv::Mat mat, pcl::PointCloud<pcl::PointXYZI> cloudin) {
+	pcl::PointCloud<PointXYZRGBI>  coloured_point_cloud;
 	cv::Mat projected_image1;
 	for (int i = 0; i < cloudin.size(); ++i) {
-		PointXYZIRGB temp_point;
+	 	PointXYZRGBI	  temp_point;
 		temp_point.x = cloudin[i].x;
 		temp_point.y = cloudin[i].y;
 		temp_point.z = cloudin[i].z;
@@ -77,9 +77,10 @@ PPointXYZIRGB imgAddColor2Lidar::alignImg2LiDAR(cv::Mat mat, VLPPointCloud cloud
 			1 <= image_v && image_v < mat.size().height-1 && mat.at<cv::Vec3b>(image_u,image_v)[0] >= 0)
 		{
 			cv::Vec3b colour= mat.at<cv::Vec3b>(cv::Point(image_u, image_v));
-			temp_point.r = colour[0];
+			temp_point.r = colour[2];
 			temp_point.g = colour[1];
-			temp_point.b = colour[2];
+			temp_point.b = colour[0];
+			temp_point.a = 1;
 			coloured_point_cloud.push_back(temp_point);
 /*			projected_image1(cv::Rect(image_u, image_v, 2, 2)).setTo(255);*/
 		}
@@ -159,7 +160,10 @@ imgAddColor2Lidar::pclalignImg2LiDAR(cv::Mat mat, pcl::PointCloud<pcl::PointXYZI
 			temp_point.r = colour[2];
 			temp_point.g = colour[1];
 			temp_point.b = colour[0];
-			coloured_point_cloud.push_back(temp_point);
+			if(colour[0]<200||colour[1]<200||colour[2]<200){
+				coloured_point_cloud.push_back(temp_point);
+			}
+	
 /*			projected_image1(cv::Rect(image_u, image_v, 2, 2)).setTo(255);*/
 		}
 	}

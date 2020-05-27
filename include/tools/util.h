@@ -153,18 +153,66 @@ POINT_CLOUD_REGISTER_POINT_STRUCT( PointRobo,
 typedef  PointRobo RoboPoint;
 typedef pcl::PointCloud<RoboPoint> RoboPointCLoud;
 //0.4 xyzirgb
-struct PointXYZIRGB {
-	PCL_ADD_POINT4D
-	PCL_ADD_RGB
-	float intensity;
-                      ///< laser ring number
-	EIGEN_MAKE_ALIGNED_OPERATOR_NEW // make sure our new allocators are aligned
+
+struct PointXYZRGBI {
+	PCL_ADD_POINT4D; // This adds the members x,y,z which can also be accessed using the point (which is float[4])
+	PCL_ADD_RGB;
+	PCL_ADD_INTENSITY;
+	EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 } EIGEN_ALIGN16;
 
-POINT_CLOUD_REGISTER_POINT_STRUCT( PointXYZIRGB,
-								   (float, x, x)(float, y, y)(float, z, z)(uint8_t,r,r)(uint8_t,g,g)(uint8_t,b,b)(uint8_t,a,a)
-										   (float, intensity, intensity))
-typedef pcl::PointCloud<PointXYZIRGB> PPointXYZIRGB;
+POINT_CLOUD_REGISTER_POINT_STRUCT( PointXYZRGBI,
+								   (float, x, x)(float, y, y)(float, z, z)
+										   (float, intensity, intensity) (std::uint32_t, rgba, rgba))
+ 
+/*namespace pcl
+{
+	struct EIGEN_ALIGN16 _PointXYZRGBI
+	{
+		PCL_ADD_POINT4D; // This adds the members x,y,z which can also be accessed using the point (which is float[4])
+		PCL_ADD_RGB;
+		PCL_ADD_INTENSITY;
+		EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+	};
+ 
+	struct EIGEN_ALIGN16 PointXYZRGBI : public _PointXYZRGBI
+	{
+		inline PointXYZRGBI (const _PointXYZRGBI &p)
+		{
+			x = p.x; y = p.y; z = p.z; data[3] = 1.0f;
+			rgba = p.rgba;
+			intensity = p.intensity;
+		}
+		
+		inline PointXYZRGBI ()
+		{
+			x = y = z = 0.0f;
+			data[3] = 1.0f;
+			r = g = b = 0;
+			a = 0;
+			intensity = 0.0f;
+		}
+		
+		inline PointXYZRGBI (uint8_t _r, uint8_t _g, uint8_t _b, float _intensity)
+		{
+			x = y = z = 0.0f;
+			data[3] = 1.0f;
+			r = _r;
+			g = _g;
+			b = _b;
+			a = 0;
+			intensity = _intensity;
+		}
+		//PCL_EXPORTS std::ostream& operator << (std::ostream& os, const PointXYZRGBI& p);
+		
+		friend std::ostream& operator << (std::ostream& os, const PointXYZRGBI& p);
+		EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+	};
+	
+}*/
+
+
+
 //0. 工具类
 class util {
 public:

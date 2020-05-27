@@ -179,8 +179,8 @@ void featureExtraction::calcFeature(pcl::PointCloud<PointXYZIBS>::Ptr &laserClou
 						cloudLabel[ind] = CORNER_SHARP;
 						cornerPointsSharp->push_back(laserCloud->points[ind]);
 						laserCloud->points[ind].smooth = 5;
-						cornerPointsLessSharp->push_back(laserCloud->points[ind]);
-						laserCloud->points[ind].smooth = 10;
+						/*cornerPointsLessSharp->push_back(laserCloud->points[ind]);
+						laserCloud->points[ind].smooth = 10;*/
 					} else if (largestPickedNum <= MAX_CORNER_LESS_SHARP) {
 						cloudLabel[ind] = CORNER_LESS_SHARP;
 						cornerPointsLessSharp->push_back(laserCloud->points[ind]);
@@ -230,7 +230,7 @@ void featureExtraction::calcFeature(pcl::PointCloud<PointXYZIBS>::Ptr &laserClou
 					cloudCurvature[ind] < SURFACE_CURVATURE_THRESHOLD) {
 					cloudLabel[ind] = SURFACE_FLAT;
 					surfPointsFlat->push_back(laserCloud->points[ind]);
-					laserCloud->points[ind].smooth = 3;
+					laserCloud->points[ind].smooth = 20;
 					smallestPickedNum++;
 					if (smallestPickedNum >= MAX_SURFACE_FLAT) {
 						break;
@@ -275,7 +275,7 @@ void featureExtraction::calcFeature(pcl::PointCloud<PointXYZIBS>::Ptr &laserClou
 				if (cloudLabel[k] == SURFACE_LESS_FLAT) {//收集全部的平面的点
 					//基本就是其他点了
 					surfPointsLessFlatScan->push_back(laserCloud->points[k]);
-					laserCloud->points[k].smooth = 20;
+					laserCloud->points[k].smooth = 15;
 				}
 			}
 		}

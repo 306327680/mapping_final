@@ -21,9 +21,10 @@ public:
 	imgAddColor2Lidar(){};
 	void setInternal(Eigen::Matrix3d intrinsics1,double k11,double k21, double k31,double p11,double p21);
 	void readExInt(std::string path);
-	PPointXYZIRGB alignImg2LiDAR(cv::Mat mat,VLPPointCloud cloudin);
+	pcl::PointCloud<PointXYZRGBI>  alignImg2LiDAR(cv::Mat mat,pcl::PointCloud<pcl::PointXYZI> cloudin);
 	pcl::PointCloud<pcl::PointXYZRGB> pclalignImg2LiDAR(cv::Mat mat,VLPPointCloud cloudin);
 	pcl::PointCloud<pcl::PointXYZRGB> pclalignImg2LiDAR(cv::Mat mat, pcl::PointCloud<pcl::PointXYZI> cloudin);
+	
 private:
 	Eigen::Matrix3d intrinsics = Eigen::Matrix3d::Zero();
 	Eigen::Matrix3d rotation = Eigen::Matrix3d::Identity();

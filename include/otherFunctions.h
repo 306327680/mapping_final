@@ -63,7 +63,7 @@
 #include "imgAddColor2Lidar/imgAddColor2Lidar.h"
 #include "loopClosure/loopClosure.h"
 #include "GPS_constraint_mapping/GPS_loop_mapping.h"
-
+#include <pcl/octree/octree_search.h>
 EIGEN_DEFINE_STL_VECTOR_SPECIALIZATION(Eigen::Matrix4d)
 EIGEN_DEFINE_STL_VECTOR_SPECIALIZATION(Eigen::Isometry3d)
 using namespace g2o;
@@ -95,93 +95,139 @@ public:
 	std::vector<Eigen::Isometry3d, Eigen::aligned_allocator<Eigen::Isometry3d>> trans_vector;
 //闭环测试
 	loopClosure lc;
-
+//去动态点云的部分
+	pcl::PointCloud<pcl::PointXYZI> DynamicLocalMap;
+	pcl::PointCloud<pcl::PointXYZI> DynamicGlobalMap;
+	pcl::PointCloud<pcl::PointXY> LocalMap_Yaw_pitch;
+	//oc tree
+	pcl::octree::OctreePointCloudSearch<pcl::PointXYZI> *octree;
+	pcl::PointCloud<pcl::PointXYZI>::Ptr octpcd;
+	float resolution;
 //0.设置起始结束的pcd
-	void setStartEnd() ;
+	void setStartEnd();
+
 //1. 设置输入模式: 1.g2o+pcd的传统模式(pcd+g2o路径) 2.point to plane ICP (需要提供pcd路径)
 	int status = 0;
+
 //功能1 用g2o pose 建图/**/ 就是用一一对应的g2o文件 进行拼图操作
 	int g2omapping();
+	
 	int g2oColorMapping();
+
 //2. 输入模式的函数
-	int getParam(int argc, char **argv) ;
+	int getParam(int argc, char **argv);
 
 // 3. 得到名称
-	bool GetFileNames(const std::string directory, const std::string suffix) ;
-	bool GetPNGFileNames(const std::string directory, const std::string suffix) ;
+	bool GetFileNames(const std::string directory, const std::string suffix);
+	
+	bool GetPNGFileNames(const std::string directory, const std::string suffix);
+
 //4. 排序
 	bool FindFileseq(int64_t seq);
+
 //5. 保存g2o
 	void saveFile(std::string outFilename, std::vector<VertexSE3 *> vertices,
-				  std::vector<EdgeSE3 *> edges) ;
+				  std::vector<EdgeSE3 *> edges);
+
 //6 .读取g2o文件
 	std::vector<Eigen::Isometry3d, Eigen::aligned_allocator<Eigen::Isometry3d>> getEigenPoseFromg2oFile(
-			std::string g2ofilename) ;
+			std::string g2ofilename);
+
 //7. 读trans和附近pcd拼成点云
 //7.1.trans vector 7.2.查找的位置 7.3.点云读取的路径
 	void genlocalmap(std::vector<Eigen::Isometry3d, Eigen::aligned_allocator<Eigen::Isometry3d>> trans_vector,
-					 std::string filepath, pcl::PointCloud<pcl::PointXYZI> &bigmap) ;
-	void genColormap(std::vector<Eigen::Isometry3d, Eigen::aligned_allocator<Eigen::Isometry3d>> trans_vector, std::string picParam);
+					 std::string filepath, pcl::PointCloud<pcl::PointXYZI> &bigmap);
+	
+	void genColormap(std::vector<Eigen::Isometry3d, Eigen::aligned_allocator<Eigen::Isometry3d>> trans_vector,
+					 std::string picParam);
 
 //8. 用来测试插值的 输入: 位姿vector
-	void testspline(std::vector<Eigen::Isometry3d, Eigen::aligned_allocator<Eigen::Isometry3d>> trans_vector) ;
+	void testspline(std::vector<Eigen::Isometry3d, Eigen::aligned_allocator<Eigen::Isometry3d>> trans_vector);
 
 //9. feature map loam 特针点的地图
 	void genfeaturemap(std::vector<Eigen::Isometry3d, Eigen::aligned_allocator<Eigen::Isometry3d>> trans_vector,
-					   std::string filepath, pcl::PointCloud<pcl::PointXYZI> &bigmap) ;
+					   std::string filepath, pcl::PointCloud<pcl::PointXYZI> &bigmap);
+
 //10.0 线性去畸变的接口
-	void simpleDistortion(mypcdCloud input, Eigen::Matrix4f increase, pcl::PointCloud<pcl::PointXYZI> &output) ;
+	void simpleDistortion(mypcdCloud input, Eigen::Matrix4f increase, pcl::PointCloud<pcl::PointXYZI> &output);
+
 //11.1 omp NDT 配准
 	pcl::PointCloud<pcl::PointXYZI>::Ptr align(pcl::Registration<pcl::PointXYZI, pcl::PointXYZI>::Ptr registration,
 											   const pcl::PointCloud<pcl::PointXYZI>::Ptr &target_cloud,
-											   const pcl::PointCloud<pcl::PointXYZI>::Ptr &source_cloud) ;
+											   const pcl::PointCloud<pcl::PointXYZI>::Ptr &source_cloud);
+
 //12.1.1 距离滤波
-	void pointCloudRangeFilter(pcl::PointCloud<pcl::PointXYZI> &input, float range) ;
+	void pointCloudRangeFilter(pcl::PointCloud<pcl::PointXYZI> &input, float range);
+
 //13. 转换一个点的坐标
 	void transformOnePoint(Eigen::Matrix4f t, pcl::PointXYZI &input);
+
 //14. tools 建立局部地图 //a. 挑选关键帧(有必要?) //b. 维持队列长度 //d. downsample 15 帧大概1.2 s
 	pcl::PointCloud<pcl::PointXYZI>
-	lidarLocalMap(std::vector<Eigen::Matrix4f> &poses, std::vector<pcl::PointCloud<pcl::PointXYZI>> &clouds,int buffer_size) ;
+	lidarLocalMap(std::vector<Eigen::Matrix4f> &poses, std::vector<pcl::PointCloud<pcl::PointXYZI>> &clouds,
+				  int buffer_size);
+
 //15. 对4个位姿的点进行连续去畸变 自己维护一下序列() input 4个位姿 从t-1 到t+2 输入 t时刻的点云//输出 continusTime 去过畸变的点云
-	pcl::PointCloud<pcl::PointXYZI> continusTimeDistrotion(std::vector<Eigen::Matrix4f> &poses, std::vector<mypcdCloud> &clouds) ;
+	pcl::PointCloud<pcl::PointXYZI>
+	continusTimeDistrotion(std::vector<Eigen::Matrix4f> &poses, std::vector<mypcdCloud> &clouds);
 
 //16 LiDAR 局部地图生成(){} 通过距离来
 	pcl::PointCloud<pcl::PointXYZI>
 	lidarLocalMapDistance(std::vector<Eigen::Matrix4f> &poses, std::vector<pcl::PointCloud<pcl::PointXYZI>> &clouds,
-				  double distiance, int buffer_size,bool & local_map_updated,	pcl::PointCloud<pcl::PointXYZI> last_local_map) ;
+						  double distiance, int buffer_size, bool &local_map_updated,
+						  pcl::PointCloud<pcl::PointXYZI> last_local_map);
+//17 动态物体去除的local map 输出当前帧的点云和位姿,输出去除动态物体的点云 同时维护一个没有动态物体的点云
+
+	void localMapOctInit(float resolution_1){
+		resolution = resolution_1;
+		octree = new pcl::octree::OctreePointCloudSearch<pcl::PointXYZI>(resolution_1);
+
+		//octree.reset(new pcl::octree::OctreePointCloudSearch<pcl::InterestPoint>(resolution_1)) ;
+		octpcd.reset(new pcl::PointCloud<pcl::PointXYZI>());
+		octree->setInputCloud (octpcd);
+	};
+	pcl::PointCloud<pcl::PointXYZI> localMapOct(pcl::PointCloud<pcl::PointXYZI> last_fine,pcl::PointCloud<pcl::PointXYZI> this_coarse);
+	
 	ros::Time fromPath2Time(std::string s);
+
 //6.2 建图前端 点面icp ****************
 	int point2planeICP();
+
 // 功能3 设置road curb 的mapping
 	void traversableMapping();
+
 // 功能4 使用encoder 和GPS LiDAR 去建图
 	void encoderMapping();
 
 //功能5.1 LiDAR + GNSS mapping 杆臂值 标定
 //程序准备设计的方案: 1. 读取一个bag 取其中的一段时间 eg 60s 600 帧进行 odom的计算//2. 读取gps 转成lla//3. 时间戳对齐//4. 设置两个优化变量 一个是两个传感器的外参 一个是旋转的角度,就是雷达初始时刻相对于正北的朝向;
 // /media/echo/DataDisc/9_rosbag/rsparel_64_ins 这个好像能work gps时间戳不太对 就用时间戳减1s
-	Eigen::Isometry3d  LiDARGNSScalibration (std::string lidar_g2o,std::string gps_pcd);
- 
-	void LiDARGNSSMapping(){}
+	Eigen::Isometry3d LiDARGNSScalibration(std::string lidar_g2o, std::string gps_pcd);
+	
+	void LiDARGNSSMapping() {}
+
 //功能6. NDT mapping
 	void NDTmapping();
+
 //功能7 读取hesaipcd
 	void readAndSaveHesai(std::string path) {
 		ReadBag a;
 		//a.readHesai(path);
 		//a.readVLP16("/media/echo/DataDisc/9_rosbag/8_imu_camera_rtk_vlp/2020-05-11-16-07-59.bag","/media/echo/DataDisc/9_rosbag/8_imu_camera_rtk_vlp/car_pcd");
 		//a.readTopRobosense("/media/echo/DataDisc/9_rosbag/9_huawei_jialuowuliu/2020-04-09-11-44-45.bag","/home/echo/2_huawei");
-
-		a.saveRTK2PCD("/media/echo/DataDisc/9_rosbag/8_imu_camera_rtk_vlp/2020-05-11-16-07-59.bag");//把rtk保存成 csv+pcd
-		//a.readcamera("/media/echo/DataDisc2/2020-04-18-20-41-45.bag","/home/echo/5_png/shinei");
+		
+		//a.saveRTK2PCD("/media/echo/DataDisc/9_rosbag/8_imu_camera_rtk_vlp/2020-05-11-16-07-59.bag");//把rtk保存成 csv+pcd
+		a.readcamera("/media/echo/DataDisc/9_rosbag/8_imu_camera_rtk_vlp/2020-05-11-16-07-59.bag","/media/echo/DataDisc/9_rosbag/8_imu_camera_rtk_vlp/car_pcd1");
+		a.readVLP16("/media/echo/DataDisc/9_rosbag/8_imu_camera_rtk_vlp/2020-05-11-16-07-59.bag","/media/echo/DataDisc/9_rosbag/8_imu_camera_rtk_vlp/car_pcd");
 /*		std::vector<std::pair<Eigen::Isometry3d,double>>  gps_pose ;
 		Eigen::Vector3d lla_origin;
  		a.gnssPCDExtrinsicParameters("/media/echo/DataDisc/9_rosbag/8_imu_camera_rtk_vlp/small_fov.bag",gps_pose,lla_origin);*/
-	
+		
 	}
+
 //功能8 用来测试模块好使不
-	void testFunction(){
-		//测时间戳
+	void testFunction() {
+		//1.测时间戳
 /*		ros::Time first_time;
 		first_time = fromPath2Time(file_names_[0]);
 		for(int i = 0;  i <file_names_ .size();i++){
@@ -189,7 +235,7 @@ public:
 			cur_time = fromPath2Time(file_names_[i]);
 			std::cout<<(cur_time-first_time).toSec()<<std::endl;
 		}*/
-		//测彩色点云
+		//2.测彩色点云
 /*		pcl::PCDWriter writer;
 		imgAddColor2Lidar a;
 		a.readExInt("/home/echo/fusion_ws/src/coloured_cloud/ex_params.txt");
@@ -201,26 +247,33 @@ public:
 		tosave  = a.pclalignImg2LiDAR(mat,cloudin);
 		pcl::PointXYZRGB a1;
 		writer.write("/home/echo/fusion_ws/result.pcd",tosave, true);*/
-//测闭环 1.加闭环边
-		//lc.addLoopEdge(780,7550,"/home/echo/test.g2o","/home/echo/test1.g2o","/media/echo/DataDisc/9_rosbag/8_imu_camera_rtk_vlp/car_pcd/");
-		//测闭环后的建图
-/*		trans_vector = getEigenPoseFromg2oFile("/media/echo/DataDisc/3_program/mapping/cmake-build-debug/gps_constrained.g2o");
-		start_id = 0;
-		end_id = 500;
-		pcl::PointCloud<pcl::PointXYZI> fxxk;
-		genlocalmap(trans_vector,"",fxxk);*/
-		//genColormap(trans_vector,"");
-	//测闭环gps约束
+		//3.测闭环gps约束
 		GPS_loop_mapping g;
-		g.GPSandPose("/home/echo/car_imu_lidar_rtk_cam/test1.g2o","/home/echo/car_imu_lidar_rtk_cam/gps.pcd",
-				LiDARGNSScalibration("/home/echo/car_imu_lidar_rtk_cam/test1.g2o","/home/echo/car_imu_lidar_rtk_cam/gps.pcd"));
- 	
+		g.GPSandPose("/home/echo/car_imu_lidar_rtk_cam/test1.g2o", "/home/echo/car_imu_lidar_rtk_cam/gps.pcd",
+					 LiDARGNSScalibration("/home/echo/car_imu_lidar_rtk_cam/test1.g2o",
+										  "/home/echo/car_imu_lidar_rtk_cam/gps.pcd"));
+
+
+		//4.测闭环 1.加闭环边
+		//lc.addLoopEdge(780,7550,"/home/echo/test.g2o","/home/echo/test1.g2o","/media/echo/DataDisc/9_rosbag/8_imu_camera_rtk_vlp/car_pcd/");
+		//5.测闭环后的建图
+		trans_vector = getEigenPoseFromg2oFile(
+				"/media/echo/DataDisc/3_program/mapping/cmake-build-debug/gps_constrained.g2o");
+		start_id = 0;
+		end_id = 8500;
+		pcl::PointCloud<pcl::PointXYZI> fxxk;
+		genlocalmap(trans_vector, "", fxxk);
+		//genColormap(trans_vector,""); //5.1 带颜色的pcd
+		
 	}
+
 //功能9 普通的16线建图
-	void rslidarmapping(){
+	void rslidarmapping() {
 	}
+
 //功能10. gpsbased mapping
-void gpsBasedOptimziation(std::string lidar_path,std::string gps_path,Eigen::Isometry3d lidar_to_gps,std::string save_path);
+	void gpsBasedOptimziation(std::string lidar_path, std::string gps_path, Eigen::Isometry3d lidar_to_gps,
+							  std::string save_path);
 
 private:
 };

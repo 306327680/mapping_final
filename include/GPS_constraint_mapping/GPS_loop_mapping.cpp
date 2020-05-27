@@ -5,7 +5,7 @@
 #include "GPS_loop_mapping.h"
 
 void
-GPS_loop_mapping::GPSandPose(std::string lidar_pose, std::string gps_constraint, Eigen::Isometry3d extrinsic_matrix) {
+GPS_loop_mapping::	GPSandPose(std::string lidar_pose, std::string gps_constraint, Eigen::Isometry3d extrinsic_matrix) {
 	ceres::examples::MapOfPoses poses;//这个项目中定义的map pose
 	ceres::examples::VectorOfConstraints constraints;//这个项目中定义的 约束向量
 	ceres::examples::ReadG2oFile(lidar_pose, &poses, &constraints);//读取g2o文件
@@ -109,23 +109,18 @@ void GPS_loop_mapping::RelationG2OGPS(std::string lidar_pose, std::string gps_co
 		std::string time = fields[15];
 		std::string status = fields[12];
 		float fconv_xy = std::atof(conv_xy.c_str());
-		if((status=="2"||status=="1")&&fconv_xy<3.0){	  //如果是rtk模式就加入candidate,之后可以加入其他的约束,例如cov 协方差等
+		if((status=="2"||status=="1")){
+		/*	if((status=="2"||status=="1")&&fconv_xy<3.0){	*/  //如果是rtk模式就加入candidate,之后可以加入其他的约束,例如cov 协方差等
 			pose_time.push_back(Eigen::Vector4d((double)std::atof(x.c_str()),(double)std::atof(y.c_str()),(double)std::atof(z.c_str()),(double)std::atof(time.c_str())));
-			std::cout<<"gps candidate : "<<pose_time.back().transpose()<<std::endl;//位置时间
 		}
 	}
-	//状态为2的gps
-	pcl::PointCloud<pcl::PointXYZ> tfed;
-	for (int i = 0; i < pose_time.size(); ++i) {
-		tfed.push_back(pcl::PointXYZ(pose_time[i](0),pose_time[i](1),pose_time[i](2)));
-	}
-	pcl::PCDWriter writer;
-	writer.write("select_gps.pcd",tfed);
+
 	//找到时间戳关联
 	int related_index = 0;
-	for (int i = 0; i < index_time.size()-5; ++i) {
-	 
-		if(fabs(index_time[i+1](1)-pose_time[related_index](3))<=0.07){
+/*	for (int i = 0; i < index_time.size()-5; ++i) {
+	 	float time_diff = (index_time[i](1)-pose_time[related_index](3));
+	 	std::cout<<time_diff<<std::endl;
+		if(fabs(time_diff)<=0.07){
 			std::cout<<"lidar: "<<index_time[i](1)<<" gps: "<<pose_time[related_index](3)<<" diff: "
 			<<fabs(index_time[i](1)-pose_time[related_index](3))<<std::endl;
 			one_relation.first = index_time[i](0);//放入点云id
@@ -134,7 +129,32 @@ void GPS_loop_mapping::RelationG2OGPS(std::string lidar_pose, std::string gps_co
 			relation.push_back(one_relation);
 			related_index++;
 		}
+	}*/
+	std::cout<<"gps: "<<pose_time.size()<<std::endl;
+	for (int i = 0; i < index_time.size(); ++i) {
+		for (int j = related_index; j < pose_time.size(); ++j) {
+			float time_diff = (index_time[i](1)-pose_time[j](3));
+			if(fabs(time_diff)<=0.05){
+				std::cout<<"lidar: "<<index_time[i](1)<<" gps: "<<pose_time[j](3)<<" diff: "
+						 <<fabs(index_time[i](1)-pose_time[j](3))<<std::endl;
+				one_relation.first = index_time[i](0);//放入点云id
+				one_relation.second = Eigen::Vector3d(pose_time[j](0),
+													  pose_time[j](1),pose_time[j](2));//放入gps点坐标
+				if(	one_relation.first <7700){//地库附近不加gps约束
+					relation.push_back(one_relation);
+				}
+				related_index = j;
+				continue;
+			}
+		}
 	}
+	//状态为2的gps
+	pcl::PointCloud<pcl::PointXYZ> tfed;
+	for (int i = 0; i < relation.size(); ++i) {
+		tfed.push_back(pcl::PointXYZ(relation[i].second(0),relation[i].second(1),relation[i].second(2)));
+	}
+	pcl::PCDWriter writer;
+	writer.write("select_gps.pcd",tfed);
 }
 //对应关系 带information
 void GPS_loop_mapping::RelationG2OGPS(std::string lidar_pose, std::string gps_constraint,
@@ -202,7 +222,8 @@ void GPS_loop_mapping::RelationG2OGPS(std::string lidar_pose, std::string gps_co
 					 <<fabs(index_time[i](1)-pose_time[related_index](3))<<std::endl;
 			one_relation.first = index_time[i](0);//放入点云id
 			one_relation.second = Eigen::Vector3d(pose_time[related_index](0),
-												  pose_time[related_index](1),pose_time[related_index](2));//放入gps点坐标
+												  pose_time[related_index](1),
+												  pose_time[related_index](2));//放入gps点坐标
 			relation.push_back(one_relation);
 			related_index++;
 		}
@@ -228,7 +249,9 @@ void GPS_loop_mapping::BuildOptimizationProblem(const ceres::examples::VectorOfC
 		ceres::examples::MapOfPoses::iterator pose_begin_iter = poses->find(constraint.id_begin);//当前的约束的from
 		ceres::examples::MapOfPoses::iterator pose_end_iter   = poses->find(constraint.id_end);//当前约束的to
 		//信息矩阵
-		const Eigen::Matrix<double, 6, 6> sqrt_information = constraint.information.llt().matrixL();
+		Eigen::Matrix<double, 6, 6> sqrt_information = constraint.information.llt().matrixL();
+//		sqrt_information = Eigen::Matrix<double, 6,6>::Identity();
+//		sqrt_information(4,4) = 0.98;
 		// 自定义的pose graph error项 把约束的测量放进去(闭环) 这里放入的是测量边
 		ceres::CostFunction* cost_function = ceres::examples::PoseGraph3dErrorTerm::Create(constraint.t_be, sqrt_information);
 		//后4个是要优化的量 需要调整的位姿,邮储结果通过这个传出来,这些值要被调整的 最后pose是被调整了
@@ -257,9 +280,9 @@ void GPS_loop_mapping::BuildGPSOptimizationProblem(const ceres::examples::Vector
 												   std::vector<std::pair<int, Eigen::Vector3d>> relation) {
 	std::cout<<"there are: "<<relation.size()<<" gps constraints"<<std::endl;
 	int index = 0;
-	int index_gps = 0;
 	
-	ceres::LossFunction* loss_function = new ceres::CauchyLoss(0.5);
+	ceres::LossFunction* loss_function = NULL;
+//	ceres::LossFunction* loss_function = new ceres::CauchyLoss(0.5);
 	ceres::LocalParameterization* quaternion_local_parameterization =new ceres::EigenQuaternionParameterization;//函数就是定义四元数的加
 	
 	
@@ -269,14 +292,14 @@ void GPS_loop_mapping::BuildGPSOptimizationProblem(const ceres::examples::Vector
 		//确定开始结束 pose_begin_iter->poses pose_end_iter->poses  每种容器类型都定义了自己的迭代器类型，
 		ceres::examples::MapOfPoses::iterator pose_begin_iter = poses->find(constraint.id_begin);//当前的约束的from
 		ceres::examples::MapOfPoses::iterator pose_end_iter   = poses->find(constraint.id_end);//当前约束的to
-		if(relation.size()>index_gps){
-			if(relation[index_gps].first==index){//当前的gps构成了约束
+		for (int i = 0; i < relation.size(); ++i) {
+			if(relation[i].first==index){//当前的gps构成了约束
 				const Eigen::Matrix<double, 6, 6> sqrt_information = Eigen::Matrix<double, 6, 6>::Identity();
-				ceres::CostFunction* cost_function = ceres::examples::PoseGraphGPSErrorTerm::Create(relation[index_gps].second, sqrt_information);
+				ceres::CostFunction* cost_function = ceres::examples::PoseGraphGPSErrorTerm::Create(relation[i].second, sqrt_information);
 				problem->AddResidualBlock(cost_function, loss_function,
 										  pose_begin_iter->second.p.data(),
 										  pose_begin_iter->second.q.coeffs().data());
-				index_gps++;
+				continue;
 			}
 		}
 		index++;

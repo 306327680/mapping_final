@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.8 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.6.3 FATAL_ERROR)
 project(pcd_compare)
 find_package(PCL REQUIRED)
 set( CMAKE_CXX_FLAGS "-std=c++11 -O2" )
@@ -138,7 +138,7 @@ target_link_libraries(spline ${PCL_LIBRARIES} sophus)
 #6. pose graph IO
 
 ADD_LIBRARY(poseIO SHARED include/g2oIO/PoseGraphIO.h include/g2oIO/PoseGraphIO.cpp)
-target_link_libraries(poseIO      g2o_core g2o_stuff g2o_types_slam3d ${CHOLMOD_LIBRARIES})
+target_link_libraries(poseIO g2o_core g2o_stuff g2o_types_slam3d ${CHOLMOD_LIBRARIES})
 #7. NDT omp
 add_library(ndt_omp
         include/ndt_omp/src/pclomp/voxel_grid_covariance_omp.cpp
@@ -164,7 +164,7 @@ add_executable(mapping main.cpp
         include/qt/mainwindow.h
         include/imgAddColor2Lidar/imgAddColor2Lidar.cpp
         include/imgAddColor2Lidar/imgAddColor2Lidar.h
-        include/CSV/CSVio.cpp include/CSV/CSVio.h include/otherFunctions.cpp include/VO/VisualOdom.cpp include/VO/VisualOdom.h include/loopClosure/loopClosure.cpp include/loopClosure/loopClosure.h include/GPS_constraint_mapping/GPS_loop_mapping.cpp include/GPS_constraint_mapping/GPS_loop_mapping.h)
+        include/CSV/CSVio.cpp include/CSV/CSVio.h include/otherFunctions.cpp include/VO/VisualOdom.cpp include/VO/VisualOdom.h include/loopClosure/loopClosure.cpp include/loopClosure/loopClosure.h include/GPS_constraint_mapping/GPS_loop_mapping.cpp include/GPS_constraint_mapping/GPS_loop_mapping.h include/DynamicRemoveMap/DynamicRemoveMap.cpp include/DynamicRemoveMap/DynamicRemoveMap.h)
 
 target_link_libraries(mapping ${PCL_LIBRARIES}
         ${tf_conversions_LIBRARIES}

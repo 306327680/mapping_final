@@ -208,7 +208,55 @@ int main_function::g2omapping() {
 		return 0;
 	}
 }
+pcl::PointCloud<pcl::PointXYZI> main_function::localMapOct(pcl::PointCloud<pcl::PointXYZI> last_fine,pcl::PointCloud<pcl::PointXYZI> this_coarse){
+	//输入: 1.当前tf过的点云,用于分割roi 2. 上次精细配准的点云,用于累加地图 返回localmap
+	util tools;
+	tools.timeCalcSet("$$ oct tree    ");
+	//上次的点云放进来
+	pcl::PointCloud<pcl::PointXYZI>::Ptr filteredCloud(new	pcl::PointCloud<pcl::PointXYZI>);
+	for (int k = 0; k < last_fine.size(); ++k) {
+		octree->addPointToCloud(last_fine[k],octpcd);
+	}
+	tools.timeUsed();
+	//DS scan
+	pcl::UniformSampling<pcl::PointXYZI> filter;
+	pcl::PointCloud<pcl::PointXYZI>::Ptr tfed_ptr(new pcl::PointCloud<pcl::PointXYZI>);
+	*tfed_ptr = this_coarse;
+	filter.setInputCloud(tfed_ptr);
+	filter.setRadiusSearch(1);
+	pcl::PointCloud<int> keypointIndices;
+	filter.compute(keypointIndices);
+	pcl::copyPointCloud(this_coarse, keypointIndices.points, *filteredCloud);
+	std::cout<<"$$ filter scan size: "<<filteredCloud->size()<<std::endl;
+	std::vector<int> pointIdxall;
+	//根据结果获得localmap
+	tools.timeCalcSet("$$ local map time a   ");//0.00561342
+	pcl::PointCloud<pcl::PointXYZI> local_map;
+	for (int l = 0; l < filteredCloud->size(); ++l) {
+		std::vector<int> pointIdxVec1;
 
+		octree->voxelSearch (filteredCloud->points[l], pointIdxVec1);
+/*		for (int j = 0; j < pointIdxVec1.size(); ++j) {
+			pointIdxall.push_back(pointIdxVec1[j]);
+		}*/
+		for (int j = 0; j < pointIdxVec1.size(); ++j) {
+			local_map.push_back(octpcd->points[pointIdxVec1[j]]);
+		}
+	}
+	tools.timeUsed();
+/*	tools.timeCalcSet("$$ local map time b   ");//0.0995338
+	std::cout<<"vector size: "<<pointIdxall.size()<<std::endl;
+	std::sort(pointIdxall.begin(), pointIdxall.end());
+	std::vector<int>::iterator new_end = unique(pointIdxall.begin(), pointIdxall.end());//"删除"相邻的重复元素
+	pointIdxall.erase(new_end, pointIdxall.end());//删除(真正的删除)重复的元素
+	tools.timeUsed();
+	tools.timeCalcSet("$$ local map time c  ");//0.0155058
+	for (int j = 0; j < pointIdxall.size(); ++j) {
+		local_map.push_back(octpcd->points[pointIdxall[j]]);
+	}
+	tools.timeUsed();*/
+	return local_map;
+}
 pcl::PointCloud<pcl::PointXYZI> main_function::lidarLocalMapDistance(std::vector<Eigen::Matrix4f> &poses,
 																	 std::vector<pcl::PointCloud<pcl::PointXYZI>> &clouds,
 																	 double distiance, int buffer_size,
@@ -238,24 +286,24 @@ pcl::PointCloud<pcl::PointXYZI> main_function::lidarLocalMapDistance(std::vector
 	}else{
 		distance_calc = 100;
 	}
-	std::cout<<"distance_calc: "<<distance_calc<<std::endl;
+ 
 	//满足运动距离
 	if(distance_calc>distiance){
 		local_map_updated = true;
-		//1 最新帧降采样
+		//1. 最新帧降采样
 		*map_temp_ptr = clouds.back();
 		sor.setInputCloud(map_temp_ptr);
 		//sor.setLeafSize(0.05f, 0.05f, 0.05f);//室内
-		sor.setLeafSize(0.3f, 0.3f, 0.1f); //外面
+		sor.setLeafSize(0.1f, 0.1f, 0.1f); //外面
 		sor.filter(clouds.back());
-		*map_temp_ptr = clouds.back();
+/*		*map_temp_ptr = clouds.back();
 		sor1.setInputCloud(map_temp_ptr);
 		sor1.setMeanK(50);
 		sor1.setStddevMulThresh(1.0);
-		sor1.filter(clouds.back());
+		sor1.filter(clouds.back());*/
 		
 		//2. note 15帧64线 0.02 大概225520个点 //10帧试试
-		if (poses.size() >= buffer_size) {
+		if (poses.size() >= buffer_size) { //后期点云比较多的情况
 			for (int i = poses.size() - buffer_size; i < poses.size(); i++) {
 				pcl::transformPointCloud(clouds[i], map_temp, poses[i]);
 				//下面的if 保证了 clouds 里面都是 降采样过的点云
@@ -277,15 +325,14 @@ pcl::PointCloud<pcl::PointXYZI> main_function::lidarLocalMapDistance(std::vector
 		//3. 地图转换到当前的最后一帧的位姿
 		pcl::transformPointCloud(*map_ptr, map_temp, poses.back().inverse());
 		*map_ptr = map_temp;
-		//4.降采样
+		//4.整体地图降采样
 		sor.setInputCloud(map_ptr);
 		sor.setLeafSize(0.25f, 0.25, 0.1f);
 		sor.filter(map_temp);
-		std::cout << " 局部地图大小: " << map_temp.size() << std::endl;
+		
 		return map_temp;
 	}else{
 		local_map_updated = false;
-		std::cout<<"false"<<std::endl;
 		//2. 这个只保留前面的点云和位姿
 		if (poses.size() >= buffer_size) {
 			for (int i = 0; i < buffer_size; i++) {
@@ -368,11 +415,15 @@ int main_function::point2planeICP() {
 	ros::Publisher test_frame;
 	ros::Publisher continue_frame;
 	ros::Publisher test_frame_linear;
+	ros::Publisher local_map_pub;
 	ros::Publisher path_publish;
+	ros::Publisher scan_tfed;
 	test_frame = node.advertise<sensor_msgs::PointCloud2>("/local_map", 5);
 	continue_frame = node.advertise<sensor_msgs::PointCloud2>("/continue_frame", 5);
 	test_frame_linear = node.advertise<sensor_msgs::PointCloud2>("/current_frame_linear", 5);
+	local_map_pub = node.advertise<sensor_msgs::PointCloud2>("/local_map_oct", 5);
 	path_publish = node.advertise<nav_msgs::Path>("/lidar_path", 5);
+	scan_tfed = node.advertise<sensor_msgs::PointCloud2>("/scan_tf", 5);
 	//todo end 这里可以去掉ros
 	//存tf的
 	std::vector<Eigen::Matrix4f> poses;
@@ -381,14 +432,22 @@ int main_function::point2planeICP() {
 	std::vector<Eigen::Matrix4f> icp_result;
 	Eigen::Matrix4f current_scan_pose = Eigen::Matrix4f::Identity();
 	//滤波相关
-	
 	pcl::PointCloud<int> keypointIndices;
 	pcl::UniformSampling<pcl::PointXYZI> filter_us;
 	//车速
 	float curr_speed = 0;
+	float last_speed = 0;
+	float acc = 0;//加速度
 	//continus-time distortion
 	std::vector<Eigen::Matrix4f>  poses_distortion;
 	std::vector<mypcdCloud> clouds_distortion_origin;
+	//kd tree 测试
+	pcl::KdTreeFLANN<pcl::PointXYZI> kdtree;
+	pcl::octree::OctreePointCloudSearch<pcl::PointXYZI> octree (1);
+	pcl::PointCloud<pcl::PointXYZI>::Ptr octpcd(new pcl::PointCloud<pcl::PointXYZI>);
+	octree.setInputCloud (octpcd);
+	pcl::PointCloud<pcl::PointXYZI> oct_last;
+	pcl::PointCloud<pcl::PointXYZI> oct_cur;
 //class
 	util tools,tools2;
 	registration icp;
@@ -412,7 +471,8 @@ int main_function::point2planeICP() {
 	bool local_map_updated = true; //todo 加入地图更新判断 1100-3000
 	std::vector<nav_msgs::Odometry> odoms;//当前结果转成odom 存储
 	nav_msgs::Odometry current_odom;
-	
+	//oct
+	localMapOctInit(1);
 	//开始迭代
 	if(color){
 		if(file_names_ .size() != PNG_file_names_ .size()){
@@ -475,28 +535,27 @@ int main_function::point2planeICP() {
 			pcl::copyPointCloud(xyzItimeRing,*cloud_hesai);
 			//0. 读取完毕
 			//1. 这里用pcl的 plane to plane icp
-			if(first_cloud){
-				//1.1 第一帧 不进行计算
-				std::cout<<"first cloud" <<std::endl;
+			if(first_cloud){                  //1.1 第一帧 不进行计算
 				pcl::copyPointCloud(*cloud_hesai,*cloud_local_map);
 				poses.push_back(Eigen::Matrix4f::Identity());
 				clouds.push_back(*cloud_local_map);
 				first_cloud = false;
 				g2osaver.insertPose(Eigen::Isometry3d::Identity());
+				oct_last = *cloud_local_map;
 			} else{
 				//todo 有个bug,就是第二次去畸变没有用完全的tf去畸变 没问题
 				//2.1 加个去畸变
 				simpleDistortion(xyzItimeRing,icp.increase.inverse(),*cloud_bef); //T_l-1_l
 				//2.1.1 设为普通icp********
 				icp.transformation = Eigen::Matrix4f::Identity();
-				//2.2 输入的也应该降采样
+				//2.2 输入的也应该降采样 todo 输入降采样
 				//(*cloud_bef,75 - 1.5*(curr_speed/10)); //根据车速减小范围
+				
 				//2.3 ICP
 				tools.timeCalcSet("第一次ICP用时     ");
-				icp.SetNormalICP(); //设定scan-scan icp参数
+				icp.SetNormalICP(); //设定odom icp参数0.5+acc*0.01
 				tfed = icp.normalIcpRegistration(cloud_bef,*cloud_local_map);
 				icp_result.push_back(icp.increase);//T_l_l+1
-				
 				//2.3.1 再次去畸变 再次减小范围
 				simpleDistortion(xyzItimeRing,icp.increase.inverse(),*cloud_bef);
 				//pointCloudRangeFilter(*cloud_bef,75 - 1.5*(curr_speed/10)); //根据车速减小范围
@@ -505,19 +564,28 @@ int main_function::point2planeICP() {
 				tools.timeCalcSet("局部地图用时    ");
 				//2.3.2.1 局部地图生成
 				//*cloud_local_map = lidarLocalMap(poses,clouds,50);  //生成局部地图****
-				*cloud_local_map = lidarLocalMapDistance(poses,clouds,0.5,25 ,local_map_updated,*cloud_local_map);  //生成局部地图****
+				*cloud_local_map = lidarLocalMapDistance(poses,clouds,0.5,150 ,local_map_updated,*cloud_local_map);  //生成局部地图****
+				/*//恢复位姿 todo voxel based local map
+				Eigen::Matrix4f current_posea = Eigen::Matrix4f::Identity();
+				for (int k = 0; k < icp_result.size(); ++k) {
+					current_posea *= icp_result[k];
+				}
+				pcl::transformPointCloud(*cloud_bef,oct_cur,current_posea);
+				*//**cloud_local_map  = *//*localMapOct(oct_last,oct_cur);
+				localMapOct(oct_last,oct_cur);
+				std::cout<<oct_last.size()<<" "<<oct_cur.size()<<std::endl;*/
 				tools.timeUsed();
 				
 				//2.3.2 ******再次icp           *********** &&&&这个当做 lidar mapping
 				tools.timeCalcSet("第二次ICP用时    ");
-				icp.SetPlaneICP();	//设定点面 icp参数
+				icp.SetPlaneICP();	//设定点面 mapping icp参数0.3+acc*0.01
 				tfed = icp.normalIcpRegistrationlocal(cloud_bef,*cloud_local_map);
 				icp_result.back() = icp_result.back()*icp.pcl_plane_plane_icp->getFinalTransformation(); //第一次结果*下一次去畸变icp结果
-				
 				//2.3.3 再次去畸变 再次减小范围
 				simpleDistortion(xyzItimeRing,icp.increase.inverse(),*cloud_bef);
 				//pointCloudRangeFilter(*cloud_bef,75 - 1.5*(curr_speed/10)); //根据车速减小范围
 				tools.timeUsed();
+				
 				//2.4 speed
 				curr_speed = sqrt(icp_result.back()(0,3)*icp_result.back()(0,3)+icp_result.back()(1,3)*icp_result.back()(1,3))/0.1;
 				// 2.5 点云投影
@@ -544,10 +612,14 @@ int main_function::point2planeICP() {
 				poses.push_back(current_pose.matrix());
 				g2osaver.insertPose(Eigen::Isometry3d(current_pose.matrix().cast<double>()));
 				clouds_distortion_origin.push_back(xyzItimeRing);
-				std::cout<<"*****上次点云ID: "<<i<<" ***** speed: "<<3.6*curr_speed<<" km/h ******** \n\n\n"<<std::endl;
+				std::cout<<"*****上次点云ID: "<<i<<" ***** speed: "<<3.6*curr_speed<<" km/h"<<" acc: "<<acc<<" m/s^2\n"<<std::endl;
 				//存一下'csvio
 				Eigen::Isometry3d se3_save;
 				csvio.LiDARsaveOnePose(Eigen::Isometry3d(current_pose.matrix().cast<double>()),cur_time);//转csv用的
+				
+				//保存速度加速度
+				acc = (curr_speed- last_speed)/0.1;// a = dv/dt
+				last_speed = curr_speed;
 				//运行最终的去畸变
 				if(1){ //存大点云
 					std::cout<<"全局坐标 \n"<<current_pose.matrix()<<std::endl;
@@ -562,8 +634,9 @@ int main_function::point2planeICP() {
 					pcl::transformPointCloud(tosave,tfed_color,current_pose);
 					*cloud_map_color += tfed_color;
 					*cloud_map += tfed;
+					oct_last = tfed;
 					//存的点云缩小点,每50帧存一下结果;
-					if(i%100==50){
+		/*			if(i%100==50){
 						pcl::PointCloud<int> keypointIndices;
 						filter_us.setInputCloud(cloud_map);
 						filter_us.setRadiusSearch(0.02f);
@@ -574,7 +647,7 @@ int main_function::point2planeICP() {
 						if(color){
 							writer.write("cloud_map_color.pcd",*cloud_map_color, true);
 						}
-					}
+					}*/
 					
 					/*			tools.timeCalcSet("连续时间去畸变用时:    ");
 								cloud_continus_time_T_world = continusTimeDistrotion(poses_distortion,clouds_distortion_origin);//这里放的是最新的一帧和位姿
@@ -595,7 +668,7 @@ int main_function::point2planeICP() {
 					to_pub_frame_linear.header.frame_id = "/map";
 					test_frame_linear.publish(to_pub_frame_linear);
 					
-					pcl::toPCLPointCloud2(*local_map_to_pub, pcl_frame);
+					pcl::toPCLPointCloud2(icp.local_map_with_normal, pcl_frame);
 					pcl_conversions::fromPCL(pcl_frame, to_pub_frame_linear);
 					to_pub_frame_linear.header.frame_id = "/map";
 					test_frame.publish(to_pub_frame_linear);
@@ -609,6 +682,29 @@ int main_function::point2planeICP() {
 					if(cloud_continus_time_T_world.size()>0){
 						writer.write(pcd_save.str(),cloud_continus_time_T_world, true);
 					}
+				}
+				//2.7 kd tree 测试
+				if(i>=3460){
+					//输入: 1.当前tf过的点云,用于分割roi 2. 上次精细配准的点云,用于累加地图 返回localmap
+ 
+					pcl::PointCloud<pcl::PointXYZI> local_map;
+					pcl::PointCloud<pcl::PointXYZI>::Ptr local_map_ptr(new pcl::PointCloud<pcl::PointXYZI> );
+					local_map  = localMapOct(tfed,tfed);
+					pcl::PointCloud<pcl::PointXYZINormal>::Ptr cloud_with_normals  (new pcl::PointCloud<pcl::PointXYZINormal>);
+					*local_map_ptr = local_map;
+					tools.timeCalcSet("局部地图 normal raidius 0.15:     ");
+					icp.addNormalRadius(local_map_ptr,cloud_with_normals);
+					tools.timeUsed();
+					std::cout<<"local_map size: "<<local_map.size()<<std::endl;
+					pcl::toPCLPointCloud2(*cloud_with_normals, pcl_frame);
+					pcl_conversions::fromPCL(pcl_frame, to_pub_frame_linear);
+					to_pub_frame_linear.header.frame_id = "/map";
+					local_map_pub.publish(to_pub_frame_linear);
+					
+					pcl::toPCLPointCloud2(tfed, pcl_frame);
+					pcl_conversions::fromPCL(pcl_frame, to_pub_frame_linear);
+					to_pub_frame_linear.header.frame_id = "/map";
+					scan_tfed.publish(to_pub_frame_linear);
 				}
 			}
 		}
@@ -1214,15 +1310,19 @@ void main_function::genlocalmap(std::vector<Eigen::Isometry3d, Eigen::aligned_al
 	pcl::PointCloud<PointTypeSm> surfPointsLessFlat;
 	Eigen::Isometry3d out3d = Eigen::Isometry3d::Identity();
 	pcl::PointCloud<PointTypeSm>::Ptr segmentedCloud(new pcl::PointCloud<PointTypeSm>);
+	pcl::PointCloud<PointTypeSm>::Ptr segmentedCloud_tf(new pcl::PointCloud<PointTypeSm>);
+	pcl::PointCloud<PointTypeSm>::Ptr segmentedCloud_map(new pcl::PointCloud<PointTypeSm>);
+	pcl::PointCloud<pcl::PointXYZI> cloud_save;
+	
 	cout << "start interation" << endl;
-	ofstream fout("log.txt");
+ 
 	pcl::PCDWriter writer;
 	float min_intensity;
 	float max_intensity;
 	util tools;
 	//1.遍历所有点
 	for (int i = 1; i < file_names_.size(); i++) {
-		end_id = file_names_.size();
+ 
 		if (i > start_id && i < end_id) {
 			//1.1设置起始和结束的点
 			std::vector<int> indices1;
@@ -1263,43 +1363,49 @@ void main_function::genlocalmap(std::vector<Eigen::Isometry3d, Eigen::aligned_al
 				pass.setFilterLimits(-10, -1.8);
 				pass.filter(*cloud_rot);
 			}
-			
-			//计算两帧的增量
 			*cloud_bef = *cloud_rot;*/
+			//计算两帧的增量
 			out3d = trans_vector[i].matrix();
 			out3d = trans_vector[i - 1].inverse().matrix() * out3d.matrix();
 			
-			fout << i << endl;
-			fout << "out3d.matrix()" << endl;
-			fout << out3d.matrix() << endl;
+	 
 			//去畸变
 			Feature.checkorder(cloud_bef, test);
 			Feature.adjustDistortion(test, pcout, out3d);
+ 			//loam 特征提取 可以注释掉
+			Feature.calculateSmoothness(pcout, segmentedCloud);
+			Feature.calcFeature(segmentedCloud);
  
-			/*Feature.calculateSmoothness(pcout, segmentedCloud);
-			Feature.calcFeature(segmentedCloud);*/
-			//tmp用来转换格式
+			//tmp用来转换格式 把去了畸变的放进去
 			tmp->clear();
 			tmp->resize(pcout->size());
 			for (int j = 0; j < pcout->size(); ++j) {
 				tmp->points[j].x = pcout->points[j].x;
 				tmp->points[j].y = pcout->points[j].y;
-				tmp->points[j].z = pcout->points[j].z;//14.40
+				tmp->points[j].z = pcout->points[j].z;
 				tmp->points[j].intensity = pcout->points[j].intensity;
 			}
 			//todo 改成 第一步提取index 先,之后记录index,最后滤除
 			//***这里是地面滤波器
-	/*		filter.point_cb(*tmp);
+/*			filter.point_cb(*tmp);
 			*tmp = *filter.g_ground_pc;*/
 			pcl::VoxelGrid<pcl::PointXYZI> sor;
 			/*   sor.setInputCloud(tmp);                   //设置需要过滤的点云给滤波对象
 			   sor.setLeafSize(0.1, 0.1, 0.1);               //设置滤波时创建的体素大小为2cm立方体，通过设置该值可以直接改变滤波结果，值越大结果越稀疏
 			   sor.filter(*cloud_aft);*/
 			//new
-			*cloud_bef = *tmp;
-			pcl::transformPointCloud(*cloud_bef, *cloud_aft, trans_vector[i].matrix());
+			pcl::transformPointCloud(*tmp, *cloud_aft, trans_vector[i].matrix());
+			pcl::transformPointCloud(*segmentedCloud, *segmentedCloud_tf, trans_vector[i].matrix());
+			for (int k = 0; k < segmentedCloud_tf->size(); ++k) {
+				pcl::PointXYZI p;
+				p.x = segmentedCloud_tf->points[k].x;
+				p.y = segmentedCloud_tf->points[k].y;
+				p.z = segmentedCloud_tf->points[k].z;
+				p.intensity = segmentedCloud_tf->points[k].smooth;
+				cloud_save.push_back(p);
+			}
 			*cloud_add += *cloud_aft;
-			
+	 
 /*			if (!tensorvoting) {
 				if (i % 100 == 50) {
 					sor.setInputCloud(cloud_add);                   //设置需要过滤的点云给滤波对象
@@ -1319,15 +1425,14 @@ void main_function::genlocalmap(std::vector<Eigen::Isometry3d, Eigen::aligned_al
 			int size_all = 0;
 			size_all = end_id - start_id;
 			percent = i * 100 / size_all;
-			std::cout << percent << "%" << std::endl;
+			std::cout <<"\b\b\b"<< percent << "%" << std::endl;
 			
 		}
 	}
-	fout.close();
 	cout << "end interation" << endl;
-	cout << "max intenstity: " << max_intensity << " min intensity: " << min_intensity << std::endl;
+ 
 	//转换回(0,0,0,0,0,0)
-	pcl::transformPointCloud(*cloud_add, *cloud_aft, trans_vector[0].inverse().matrix());
+	//pcl::transformPointCloud(*cloud_add, *cloud_aft, trans_vector[0].inverse().matrix());
 	// 全点云时候应当加
 /*	if (!tensorvoting) {
 		pcl::VoxelGrid<pcl::PointXYZI> sor;
@@ -1344,13 +1449,17 @@ void main_function::genlocalmap(std::vector<Eigen::Isometry3d, Eigen::aligned_al
 	//这里就是整
 /*	bigmap.clear();
 	for (int l = 0; l < cloud_add->size(); ++l) {
-		if (cloud_add->points[l].intensity > (float) 14.4860 && cloud_add->points[l].intensity < (float) 14.96) {
+		if (cloud_add->points[l].intensity > (float) 3.5 && cloud_add->points[l].intensity < (float) 30) {
+			if(cloud_add->points[l].intensity ==4){
+				cloud_add->points[l].intensity =0;
+			}
 			bigmap.push_back(cloud_add->points[l]);
 		}
 	}
 	*cloud_add = bigmap;*/
 	cout << "map saving" << endl;
-	writer.write<pcl::PointXYZI>("final_map.pcd", *cloud_aft, true);
+	writer.write<pcl::PointXYZI>("final_map.pcd", *cloud_add, true);
+	writer.write<pcl::PointXYZI>("loam_feature.pcd", cloud_save, true);
 	
 }
 
@@ -1363,20 +1472,24 @@ void main_function::genColormap(std::vector<Eigen::Isometry3d, Eigen::aligned_al
 	mypcdCloud xyzItimeRing;
 	pcl::PointCloud<pcl::PointXYZRGB> tfed_color;
 	pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_map_color(new 	pcl::PointCloud<pcl::PointXYZRGB>);
+	pcl::PointCloud<PointXYZRGBI> _tfed_color_i;
+	pcl::PointCloud<PointXYZRGBI>::Ptr cloud_i_map_color(new 	pcl::PointCloud<PointXYZRGBI>);
+	
 	Eigen::Isometry3d out3d = Eigen::Isometry3d::Identity();
 	pcl::PCDWriter writer;
 	pcl::PointCloud<pcl::PointXYZRGB> tosave;
+	pcl::PointCloud<PointXYZRGBI> tosave_i;
 	cv::Mat mat;
-	
+	PlaneGroundFilter filter;
 	imgAddColor2Lidar a;//投影点云
 	a.readExInt("/home/echo/fusion_ws/src/coloured_cloud/ex_params.txt");
 	//1.遍历所有点
-	for (int i = 0; i < file_names_.size(); i++) {
+	for (int i = 1; i < file_names_.size()-3; i++) {
 		int percent = 0;
 		int size_all = 0;
 		size_all = static_cast<int>(file_names_.size());
 		percent = i * 100 / size_all;
-		std::cout << percent << "%" <<"\b\b\b";
+		std::cout << percent << "%" <<std::endl;
 		
 		if (i >= start_id && i < end_id) {
 			//1.1设置起始和结束的点
@@ -1401,16 +1514,24 @@ void main_function::genColormap(std::vector<Eigen::Isometry3d, Eigen::aligned_al
 			Eigen::Matrix4f out3f;
 			out3f = out3d.matrix().cast<float>();
 			simpleDistortion(xyzItimeRing,out3f.inverse(),*cloud_bef);
+			//地面点
+			filter.point_cb(*cloud_bef);
+			*cloud_bef = *filter.g_ground_pc;
 			if(i-1>=0){
-				mat = cv::imread(PNG_file_names_[i-1]);
+				mat = cv::imread(PNG_file_names_[i]);
 				tosave  = a.pclalignImg2LiDAR(mat,*cloud_bef);
+				tosave_i = a.alignImg2LiDAR(mat,*cloud_bef);//_PointXYZRGBL 这个也行?
 			}
 			pcl::transformPointCloud(tosave,tfed_color,trans_vector[i].matrix());
+			pcl::transformPointCloud(tosave_i,_tfed_color_i,trans_vector[i].matrix());
 			*cloud_map_color += tfed_color;
+			*cloud_i_map_color += _tfed_color_i;
 		}
 	}
-	
-	writer.write("cloud_map_color.pcd",*cloud_map_color, true);
+	pcl::io::savePCDFileASCII("cloud_map_color.pcd",*cloud_map_color);
+	//writer.write("cloud_map_color.pcd",*cloud_map_color, true);
+	//pcl::io::savePCDFileASCII("s.pcd",*cloud_i_map_color);
+	writer.write("cloud_map_color_i.pcd",*cloud_i_map_color, true);
 }
 
 
