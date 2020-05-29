@@ -211,7 +211,7 @@ int main_function::g2omapping() {
 pcl::PointCloud<pcl::PointXYZI> main_function::localMapOct(pcl::PointCloud<pcl::PointXYZI> last_fine,pcl::PointCloud<pcl::PointXYZI> this_coarse){
 	//输入: 1.当前tf过的点云,用于分割roi 2. 上次精细配准的点云,用于累加地图 返回localmap
 	util tools;
-	tools.timeCalcSet("$$ oct tree    ");
+	tools.timeCalcSet("$$ cha tree    ");
 	//上次的点云放进来
 	pcl::PointCloud<pcl::PointXYZI>::Ptr filteredCloud(new	pcl::PointCloud<pcl::PointXYZI>);
 	for (int k = 0; k < last_fine.size(); ++k) {
@@ -564,6 +564,7 @@ int main_function::point2planeICP() {
 				tools.timeCalcSet("局部地图用时    ");
 				//2.3.2.1 局部地图生成
 				//*cloud_local_map = lidarLocalMap(poses,clouds,50);  //生成局部地图****
+				//todo 局部上色
 				*cloud_local_map = lidarLocalMapDistance(poses,clouds,0.5,150 ,local_map_updated,*cloud_local_map);  //生成局部地图****
 				/*//恢复位姿 todo voxel based local map
 				Eigen::Matrix4f current_posea = Eigen::Matrix4f::Identity();
@@ -686,8 +687,7 @@ int main_function::point2planeICP() {
 				//2.7 kd tree 测试
 				if(i>=3460){
 					//输入: 1.当前tf过的点云,用于分割roi 2. 上次精细配准的点云,用于累加地图 返回localmap
- 
-					pcl::PointCloud<pcl::PointXYZI> local_map;
+	/*				pcl::PointCloud<pcl::PointXYZI> local_map;
 					pcl::PointCloud<pcl::PointXYZI>::Ptr local_map_ptr(new pcl::PointCloud<pcl::PointXYZI> );
 					local_map  = localMapOct(tfed,tfed);
 					pcl::PointCloud<pcl::PointXYZINormal>::Ptr cloud_with_normals  (new pcl::PointCloud<pcl::PointXYZINormal>);
@@ -704,7 +704,7 @@ int main_function::point2planeICP() {
 					pcl::toPCLPointCloud2(tfed, pcl_frame);
 					pcl_conversions::fromPCL(pcl_frame, to_pub_frame_linear);
 					to_pub_frame_linear.header.frame_id = "/map";
-					scan_tfed.publish(to_pub_frame_linear);
+					scan_tfed.publish(to_pub_frame_linear);*/
 				}
 			}
 		}
@@ -1482,7 +1482,7 @@ void main_function::genColormap(std::vector<Eigen::Isometry3d, Eigen::aligned_al
 	cv::Mat mat;
 	PlaneGroundFilter filter;
 	imgAddColor2Lidar a;//投影点云
-	a.readExInt("/home/echo/fusion_ws/src/coloured_cloud/ex_params.txt");
+	a.readExInt("/home/echo/shandong_ceshichang/ex_params.txt");
 	//1.遍历所有点
 	for (int i = 1; i < file_names_.size()-3; i++) {
 		int percent = 0;
@@ -1515,8 +1515,8 @@ void main_function::genColormap(std::vector<Eigen::Isometry3d, Eigen::aligned_al
 			out3f = out3d.matrix().cast<float>();
 			simpleDistortion(xyzItimeRing,out3f.inverse(),*cloud_bef);
 			//地面点
-			filter.point_cb(*cloud_bef);
-			*cloud_bef = *filter.g_ground_pc;
+/*			filter.point_cb(*cloud_bef);
+			*cloud_bef = *filter.g_ground_pc;*/
 			if(i-1>=0){
 				mat = cv::imread(PNG_file_names_[i]);
 				tosave  = a.pclalignImg2LiDAR(mat,*cloud_bef);

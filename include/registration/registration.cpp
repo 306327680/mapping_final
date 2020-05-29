@@ -104,8 +104,8 @@ void registration::SetPlaneICP() {
 			new pcl::IterativeClosestPointWithNormals<pcl::PointXYZINormal, pcl::PointXYZINormal>());
 	icp->setMaximumIterations(30);
 	icp->setMaxCorrespondenceDistance(0.2);
-	icp->setTransformationEpsilon(0.0001);
-	icp->setEuclideanFitnessEpsilon(0.0001);
+	icp->setTransformationEpsilon(0.001);
+	icp->setEuclideanFitnessEpsilon(0.001);
 	this->pcl_plane_plane_icp = icp;
 	
 }

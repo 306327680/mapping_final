@@ -160,9 +160,9 @@ imgAddColor2Lidar::pclalignImg2LiDAR(cv::Mat mat, pcl::PointCloud<pcl::PointXYZI
 			temp_point.r = colour[2];
 			temp_point.g = colour[1];
 			temp_point.b = colour[0];
-			if(colour[0]<200||colour[1]<200||colour[2]<200){
+			/*if(colour[0]<250||colour[1]<250||colour[2]<250){*/
 				coloured_point_cloud.push_back(temp_point);
-			}
+		/*	}*/
 	
 /*			projected_image1(cv::Rect(image_u, image_v, 2, 2)).setTo(255);*/
 		}

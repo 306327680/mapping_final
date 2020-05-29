@@ -394,7 +394,7 @@ void ReadBag::readcamera(std::string path, std::string save_path) {
  
 	double timestamp;
 	//可以加挺多topic的?
-	topics.push_back(std::string("/stereo/right/image_color/compressed"));
+	topics.push_back(std::string("/stereo/left/image_color/compressed"));
 	rosbag::View view(bag, rosbag::TopicQuery(topics));
 	
 	BOOST_FOREACH(rosbag::MessageInstance const m, view)
@@ -472,8 +472,8 @@ void ReadBag::saveRTK2PCD(std::string path) {
 	pcl::PCDWriter writer;
 	std::cout<<"saving the data"<<std::endl;
 	ros::Time lidar_first; //第一帧雷达来的时间
-	lidar_first.sec = 1589184480;
-	lidar_first.nsec = 234091043;
+	lidar_first.sec = 1590310313;
+	lidar_first.nsec = 525642395;
 	csvio.NavSat2CSVLLA(gnss_tosave,"aa",lidar_first,gnss_tosave[0]);
 	writer.write("gps.pcd",*gps_route);
 }
