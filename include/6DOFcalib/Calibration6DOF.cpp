@@ -134,15 +134,15 @@ Calibration6DOF::CalibrateGNSSLiDARICP(std::vector<Eigen::Matrix4d> gps_poses, s
 	Eigen::Matrix3d cc = W.transpose()*W;
 	
 	Eigen::EigenSolver<Eigen::Matrix3d> es(cc);
-	std::cout<<"eigenvalue:\n"<<es.eigenvalues()<<"\n"<<std::endl;
-	std::cout<<"eigenvector:\n"<<es.eigenvectors()<<"\n"<<std::endl;
+/*	std::cout<<"eigenvalue:\n"<<es.eigenvalues()<<"\n"<<std::endl;
+	std::cout<<"eigenvector:\n"<<es.eigenvectors()<<"\n"<<std::endl;*/
 	// SVD on W
 	Eigen::JacobiSVD<Eigen::Matrix3d> svd(W, Eigen::ComputeFullU | Eigen::ComputeFullV);
 	Eigen::Matrix3d U = svd.matrixU();
 	Eigen::Matrix3d V = svd.matrixV();
-	std::cout << "W=\n" << W << std::endl;
+	/*std::cout << "W=\n" << W << std::endl;
 	std::cout << "U=\n" << U << std::endl;
-	std::cout << "V=\n" << V << std::endl;
+	std::cout << "V=\n" << V << std::endl;*/
 	
 	Eigen::Matrix3d R_ = U * (V.transpose());
 	if (R_.determinant() < 0) {

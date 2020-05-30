@@ -42,6 +42,7 @@
 #include <pcl/conversions.h>
 #include <pcl/features/normal_3d_omp.h>
 #include <pcl/keypoints/uniform_sampling.h>
+#include <6DOFcalib/Calibration6DOF.h>
 //todo 现在需要通过gps给定初值
 using namespace g2o;
 class loopClosure {
@@ -67,11 +68,15 @@ private:
 										Eigen::Isometry3d & icp_matrix);
 	void genlocalmap(std::vector<Eigen::Isometry3d, Eigen::aligned_allocator<Eigen::Isometry3d>> trans_vector,
 					 int num1,std::string filepath,pcl::PointCloud<pcl::PointXYZ>& bigmap);
-	//专用VLP 去畸变的local map
+	//2. 专用VLP 去畸变的local map
 	void genVLPlocalmap(std::vector<Eigen::Isometry3d, Eigen::aligned_allocator<Eigen::Isometry3d>> trans_vector,
 					 int num1,std::string filepath,pcl::PointCloud<pcl::PointXYZ>& bigmap);
 	void gps2pcd(std::string GPScsvPath);
 	void LiDAR2pcd(std::string LiDARcsvPath);
+	//3.通过GPS index得到当前的 lla坐标系下 pose 6dof
+	Eigen::Isometry3d GPSPose(int index);
+	//4.得到T_G_L * GPS 到 LiDAR的相机变换
+	Eigen::Isometry3d GPSLiDARExtrinsicParam(int GPSindex);
 	std::vector<Eigen::Vector2d> LiDAR_GPS_math();
 	void findLoopFromGPS(); //找到闭环条件
 	void GPS_align_TF_calc(); //通过gps给定初值 + icp匹配

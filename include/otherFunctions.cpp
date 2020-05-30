@@ -565,7 +565,7 @@ int main_function::point2planeICP() {
 				//2.3.2.1 局部地图生成
 				//*cloud_local_map = lidarLocalMap(poses,clouds,50);  //生成局部地图****
 				//todo 局部上色
-				*cloud_local_map = lidarLocalMapDistance(poses,clouds,0.5,150 ,local_map_updated,*cloud_local_map);  //生成局部地图****
+				*cloud_local_map = lidarLocalMapDistance(poses,clouds,0.6,150 ,local_map_updated,*cloud_local_map);  //生成局部地图****
 				/*//恢复位姿 todo voxel based local map
 				Eigen::Matrix4f current_posea = Eigen::Matrix4f::Identity();
 				for (int k = 0; k < icp_result.size(); ++k) {
@@ -636,6 +636,8 @@ int main_function::point2planeICP() {
 					*cloud_map_color += tfed_color;
 					*cloud_map += tfed;
 					oct_last = tfed;
+					pcd_save<<"tf_ed/"<<i<<".pcd";
+					writer.write(pcd_save.str(),tfed, true);
 					//存的点云缩小点,每50帧存一下结果;
 		/*			if(i%100==50){
 						pcl::PointCloud<int> keypointIndices;
@@ -867,7 +869,7 @@ void main_function::NDTmapping() {
 //todo GPS_loop_mapping中的find函数找到最近的
 Eigen::Isometry3d  main_function::LiDARGNSScalibration(std::string lidar_g2o, std::string gps_pcd) {
 	pcl::PCDWriter writer;
-	ReadBag rb;
+//	ReadBag rb;
 	Calibration6DOF calibrate; //用来标定外参的
 	std::vector<std::pair<Eigen::Isometry3d,double>>  gps_pose ;
 	Eigen::Vector3d lla_origin;

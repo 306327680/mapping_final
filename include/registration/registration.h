@@ -14,6 +14,7 @@
 #include <pcl/filters/filter.h>
 #include <pcl/features/normal_3d_omp.h>
 #include "tools/util.h"
+#include <pcl/surface/mls.h>
 /*typedef PointMatcher<float> PM;*/
 class registration {
 /*	typedef PM::DataPoints DP;

@@ -87,7 +87,7 @@ public:
 	std::string g2o_path = "/media/echo/DataDisc/3_program/mapping/cmake-build-debug/gps_constrained.g2o";
 	int past = 0;
 //存g2o路径
-	std::string save_g2o_path = "/home/echo/test.g2o";
+	std::string save_g2o_path = "/home/echo/LiDAR_Odom.g2o";
 //存点云的路径
 	std::string save_pcd_path = "/home/echo/map.pcd";
 	std::string save_color_pcd_path = "/home/echo/map_color.pcd";
