@@ -78,13 +78,13 @@ public:
 	std::vector<std::string> file_names_;
 	std::vector<std::string> PNG_file_names_;
 	std::string filename;
-	std::string filepath = "/media/echo/DataDisc/9_rosbag/8_imu_camera_rtk_vlp/car_pcd";
+	std::string filepath = "/media/echo/DataDisc2/shandong/pcd";
 	Eigen::Isometry3d curICP = Eigen::Isometry3d::Identity();
 	int cur_id = 0;
 	int start_id = 0;//设置开始结束的点
-	int end_id = 2;
+	int end_id = 1000000;
 //打开g2o文件路径
-	std::string g2o_path = "/media/echo/DataDisc/3_program/mapping/cmake-build-debug/gps_constrained.g2o";
+	std::string g2o_path = "/home/echo/auto_ok.g2o";
 	int past = 0;
 //存g2o路径
 	std::string save_g2o_path = "/home/echo/LiDAR_Odom.g2o";

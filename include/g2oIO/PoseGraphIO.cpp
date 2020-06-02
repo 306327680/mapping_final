@@ -46,7 +46,6 @@ void PoseGraphIO::saveGraph(std::string g2o_path) {
 			e->setInformation(_information);
 			optimizer.addEdge(e);
 		}
-		
 	}
 /*	optimizer.initializeOptimization();
 	optimizer.optimize(30);*/

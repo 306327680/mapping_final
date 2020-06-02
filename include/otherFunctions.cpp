@@ -1323,6 +1323,7 @@ void main_function::genlocalmap(std::vector<Eigen::Isometry3d, Eigen::aligned_al
 	float max_intensity;
 	util tools;
 	//1.遍历所有点
+	end_id = file_names_.size();
 	for (int i = 1; i < file_names_.size(); i++) {
  
 		if (i > start_id && i < end_id) {

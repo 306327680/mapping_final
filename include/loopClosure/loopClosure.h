@@ -43,6 +43,8 @@
 #include <pcl/features/normal_3d_omp.h>
 #include <pcl/keypoints/uniform_sampling.h>
 #include <6DOFcalib/Calibration6DOF.h>
+#include <ndt_omp/include/pclomp/ndt_omp.h>
+#include <pcl/surface/mls.h>
 //todo 现在需要通过gps给定初值
 using namespace g2o;
 class loopClosure {
@@ -52,6 +54,9 @@ public:
 	//1.点云里程计路径 2.优化后保存路径 3.雷达pcd路径 4.gps csv格式的数据 5.LiDAR csv格式数据
 	void autoMaticLoopClosure(std::string LiDAR_g2o_read,std::string Final_g2o_save,std::string LiDAR_pcd_path,std::string GPScsvPath,std::string LiDARcsv);
 private:
+	std::vector<VertexSE3*> vertices;
+	std::vector<EdgeSE3*> edges;
+	g2o::SparseOptimizer optimizer;
 	//函数
 	bool GetFileNames(const std::string directory,const std::string suffix);
 	bool FindFileseq(int64_t seq);
@@ -59,17 +64,25 @@ private:
 	void saveFile(std::string outFilename, std::vector<VertexSE3*> vertices,
 				  std::vector<EdgeSE3*> edges);
 	void SaveTrans(Eigen::Isometry3d curr); //定义存储ICP edge 的函数
+	void SaveLiDAREdge();
 	pcl::PointCloud<pcl::PointXYZ> GICP(const pcl::PointCloud<pcl::PointXYZ> & cloud_source,
 										const pcl::PointCloud<pcl::PointXYZ> & cloud_target,
 										Eigen::Isometry3d & icp_matrix);
+	pcl::PointCloud<pcl::PointXYZ> NDT(const pcl::PointCloud<pcl::PointXYZ> & cloud_source,
+										const pcl::PointCloud<pcl::PointXYZ> & cloud_target,
+										Eigen::Isometry3d & icp_matrix);
+	pcl::PointCloud<pcl::PointXYZ> NDT_OMP(const pcl::PointCloud<pcl::PointXYZ> & cloud_source,
+									   const pcl::PointCloud<pcl::PointXYZ> & cloud_target,
+									   Eigen::Isometry3d & icp_matrix);
 	//1. 带surface normal的
 	pcl::PointCloud<pcl::PointXYZ> NormalICP(const pcl::PointCloud<pcl::PointXYZ> & cloud_source,
 										const pcl::PointCloud<pcl::PointXYZ> & cloud_target,
-										Eigen::Isometry3d & icp_matrix);
+											 Eigen::Isometry3d init_pose,Eigen::Isometry3d & icp_matrix);
+	float ndt_score;
 	void genlocalmap(std::vector<Eigen::Isometry3d, Eigen::aligned_allocator<Eigen::Isometry3d>> trans_vector,
 					 int num1,std::string filepath,pcl::PointCloud<pcl::PointXYZ>& bigmap);
 	//2. 专用VLP 去畸变的local map
-	void genVLPlocalmap(std::vector<Eigen::Isometry3d, Eigen::aligned_allocator<Eigen::Isometry3d>> trans_vector,
+	void genVLPlocalmap(int length,std::vector<Eigen::Isometry3d, Eigen::aligned_allocator<Eigen::Isometry3d>> trans_vector,
 					 int num1,std::string filepath,pcl::PointCloud<pcl::PointXYZ>& bigmap);
 	void gps2pcd(std::string GPScsvPath);
 	void LiDAR2pcd(std::string LiDARcsvPath);
@@ -97,7 +110,7 @@ private:
 	int past = 0;
 
 	std::string g2o_path = "null";//打开g2o文件路径
-	std::string save_g2o_path = "/home/echo/test1.g2o";//存g2o路径
+	std::string save_g2o_path = "/home/echo/autoLoop.g2o";//存g2o路径
 	std::vector<Eigen::Isometry3d, Eigen::aligned_allocator<Eigen::Isometry3d>> trans_vector;
 	//autoMaticLoopClosure 用
 	pcl::PointCloud<pcl::PointXYZI> gps; //intensity 为时间
