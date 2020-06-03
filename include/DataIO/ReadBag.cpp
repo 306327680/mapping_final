@@ -268,6 +268,7 @@ void ReadBag::gnssPCDExtrinsicParameters(std::string path, std::vector<std::pair
 //转换vlp16 到建图的数据格式
 void ReadBag::readVLP16(std::string path,std::string save_path) {
 	std::cout<<"the bag path is: "<<path<<std::endl;
+	rosbag::Bag bag;
 	bag.open(path, rosbag::bagmode::Read);
 	std::vector<std::string> topics;
 	bool pcd_start = false;
@@ -289,6 +290,8 @@ void ReadBag::readVLP16(std::string path,std::string save_path) {
 			 
 					if(!pcd_start){
 						time_begin = vlp_pcd[0].time;
+						lidar_first = s->header.stamp;
+						pcd_start = true;
 					}
 					
 					for (int i = 0; i < vlp_pcd.size(); ++i) {
@@ -389,6 +392,7 @@ void ReadBag::readTopRobosense(std::string path, std::string save_path) {
 
 void ReadBag::readcamera(std::string path, std::string save_path) {
 	std::cout<<"the bag path is: "<<path<<std::endl;
+	rosbag::Bag bag;
 	bag.open(path, rosbag::bagmode::Read);
 	std::vector<std::string> topics;
  
@@ -439,6 +443,7 @@ void ReadBag::readCalibratedCamera(std::string path,std::string cali_path, std::
 
 void ReadBag::saveRTK2PCD(std::string path) {
 	std::cout<<"the bag path is: "<<path<<std::endl;
+	rosbag::Bag bag;
 	bag.open(path, rosbag::bagmode::Read);
 	std::vector<std::string> topics;
 	std::vector<sensor_msgs::NavSatFix> gnss_tosave;//测试转换csv用
@@ -471,9 +476,7 @@ void ReadBag::saveRTK2PCD(std::string path) {
 				}
 	pcl::PCDWriter writer;
 	std::cout<<"saving the data"<<std::endl;
-	ros::Time lidar_first; //第一帧雷达来的时间
-	lidar_first.sec = 1590310313;
-	lidar_first.nsec = 525642395;
+ //第一帧雷达来的时间
 	csvio.NavSat2CSVLLA(gnss_tosave,"aa",lidar_first,gnss_tosave[0]);
 	writer.write("gps.pcd",*gps_route);
 }

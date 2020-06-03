@@ -15,6 +15,7 @@
 #include <pcl/features/normal_3d_omp.h>
 #include "tools/util.h"
 #include <pcl/surface/mls.h>
+
 /*typedef PointMatcher<float> PM;*/
 class registration {
 /*	typedef PM::DataPoints DP;
@@ -41,7 +42,8 @@ public:
 									 pcl::PointCloud<pcl::PointXYZI> target);
 	pcl::PointCloud<pcl::PointXYZI> normalIcpRegistrationlocal(pcl::PointCloud<pcl::PointXYZI>::Ptr source,
 														  pcl::PointCloud<pcl::PointXYZI> target);
-	
+	pcl::PointCloud<pcl::PointXYZI>  IcpWithConvriance(pcl::PointCloud<pcl::PointXYZI>::Ptr source,
+															   pcl::PointCloud<pcl::PointXYZI> target, Eigen::MatrixXd &ICP_COV);
 	//PM::TransformationParameters  setScan(pcl::PointCloud<pcl::PointXYZI> pcin);
 	Eigen::Matrix4f transform_frame_to_frame = Eigen::Matrix4f::Identity();
 	Eigen::Matrix4f transformation = Eigen::Matrix4f::Identity(); //全局位姿

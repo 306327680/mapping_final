@@ -78,7 +78,7 @@ public:
 	std::vector<std::string> file_names_;
 	std::vector<std::string> PNG_file_names_;
 	std::string filename;
-	std::string filepath = "/media/echo/DataDisc2/shandong/pcd";
+	std::string filepath = "/media/echo/DataDisc2/shandong/pcd_inout";
 	Eigen::Isometry3d curICP = Eigen::Isometry3d::Identity();
 	int cur_id = 0;
 	int start_id = 0;//设置开始结束的点
@@ -216,8 +216,14 @@ public:
 		//a.readVLP16("/media/echo/DataDisc/9_rosbag/8_imu_camera_rtk_vlp/2020-05-11-16-07-59.bag","/media/echo/DataDisc/9_rosbag/8_imu_camera_rtk_vlp/car_pcd");
 		//a.readTopRobosense("/media/echo/DataDisc/9_rosbag/9_huawei_jialuowuliu/2020-04-09-11-44-45.bag","/home/echo/2_huawei");
 		
-		a.saveRTK2PCD("/media/echo/DataDisc2/shandong/2020-05-24-16-51-53.bag");//把rtk保存成 csv+pcd
-		
+
+		bool readBag = true;
+		if (readBag){
+			
+			//a.readcamera("/media/echo/DataDisc2/shandong/udist_outdoor_indoor.bag","/media/echo/DataDisc2/shandong/pic_inout");
+			a.readVLP16("/media/echo/DataDisc2/shandong/udist_outdoor_indoor.bag","/media/echo/DataDisc2/shandong/pcd_inout");
+			a.saveRTK2PCD("/media/echo/DataDisc2/shandong/udist_outdoor_indoor.bag");//把rtk保存成 csv+pcd
+		}
 		//a.readcamera("/media/echo/DataDisc2/shandong/2020-05-24-16-51-53.bag","/media/echo/DataDisc2/shandong/pic");
 		//a.readVLP16("/media/echo/DataDisc2/shandong/2020-05-24-16-51-53.bag","/media/echo/DataDisc2/shandong/pcd");
 /*		std::vector<std::pair<Eigen::Isometry3d,double>>  gps_pose ;
@@ -267,8 +273,10 @@ public:
 		genColormap(trans_vector,""); //5.1 带颜色的pcd
 		*/
 		//6. 自动闭环
-		lc.autoMaticLoopClosure("/home/echo/shandong_ceshichang/test.g2o","ss","/media/echo/DataDisc2/shandong/pcd",
-				"/home/echo/shandong_ceshichang/test.csv","/home/echo/shandong_ceshichang/LiDAR_pose.csv");
+//		lc.autoMaticLoopClosure("/home/echo/shandong_ceshichang/test.g2o","ss","/media/echo/DataDisc2/shandong/pcd",
+//				"/home/echo/shandong_ceshichang/test.csv","/home/echo/shandong_ceshichang/LiDAR_pose.csv");
+		lc.autoMaticLoopClosure("/home/echo/shandong_in__out/LiDAR_Odom.g2o","ss","/media/echo/DataDisc2/shandong/pcd_inout",
+								"/home/echo/shandong_in__out/gps.csv","/home/echo/shandong_in__out/LiDAR_pose.csv");
 		
 	}
 

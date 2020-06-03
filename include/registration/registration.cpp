@@ -285,3 +285,4 @@ void registration::addNormalRadius(pcl::PointCloud<pcl::PointXYZI>::Ptr cloud,
 		pcl::concatenateFields(*cloud_source_normals, *normals, *cloud_with_normals);
 	}
 }
+

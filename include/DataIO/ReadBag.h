@@ -85,6 +85,8 @@ private:
 	ros::Time bag_strat_time;
 	//转换csv
 	CSVio csvio;
+	//LiDAR 第一帧时间
+	ros::Time lidar_first;
 };
 
 

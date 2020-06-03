@@ -30,7 +30,7 @@ void CSVio::NavSat2CSV(std::vector<sensor_msgs::NavSatFix> gnss_pos, std::string
 //2.转换到lla坐标下
 void CSVio::NavSat2CSVLLA(std::vector<sensor_msgs::NavSatFix> gnss_pos, std::string save_path, ros::Time start_time,sensor_msgs::NavSatFix LLA) {
 	std::ofstream outFile;
-	outFile.open("test.csv", std::ios::out);
+	outFile.open("gps.csv", std::ios::out);
 	outFile<< std::setprecision(10)<<"x,y,z,conv0,conv1,conv2,conv3,conv4,conv5,conv6,conv7,conv8,status,service,seq,stamp,"
 	<<LLA.longitude<<","<<LLA.latitude<<","<<LLA.altitude<<"\n";
 	gt.lla_origin_ = gt.GpsMsg2Eigen(LLA);//设定起点
