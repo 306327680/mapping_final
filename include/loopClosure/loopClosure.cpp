@@ -101,14 +101,11 @@ void loopClosure::SaveLiDAREdge(){
 }
 void loopClosure::SaveTrans(Eigen::Isometry3d curr) {
 	Eigen::Matrix<double, 6, 6> information = Eigen::Matrix<double, 6, 6>::Identity();
-
 	VertexSE3 *cur = new VertexSE3;
 	VertexSE3 *prev = new VertexSE3;;
 	cur->setId(past);
 	Eigen::Isometry3d t_v = Eigen::Isometry3d::Identity();
 	cur->setEstimate(t_v);
-	cur->setFixed(true);
-	vertices.push_back(cur);
 	prev->setId(cur_id);
 	prev->setEstimate(curr);
 	//vertices.push_back(prev);
@@ -118,7 +115,6 @@ void loopClosure::SaveTrans(Eigen::Isometry3d curr) {
 	e->setMeasurement(curr); //debug
 	e->setInformation(information);
 	edges.push_back(e);
-	
 }
 
 std::vector<Eigen::Isometry3d, Eigen::aligned_allocator<Eigen::Isometry3d>>
@@ -175,9 +171,9 @@ pcl::PointCloud<pcl::PointXYZ> loopClosure::NDT_OMP(const pcl::PointCloud<pcl::P
 												Eigen::Isometry3d &icp_matrix) {
 	pcl::PointCloud<pcl::PointXYZ> result;
 	pclomp::NormalDistributionsTransform<pcl::PointXYZ, pcl::PointXYZ> ndt;
-	ndt.setTransformationEpsilon(0.0001);
-	ndt.setMaximumIterations(50);
-	ndt.setMaxCorrespondenceDistance(100);
+	ndt.setTransformationEpsilon(0.000801);
+	ndt.setMaximumIterations(100);
+	ndt.setMaxCorrespondenceDistance(50);
 	ndt.setInputSource(pcl::PointCloud<pcl::PointXYZ>::Ptr(new pcl::PointCloud<pcl::PointXYZ>(cloud_source)));
 	ndt.setInputTarget(pcl::PointCloud<pcl::PointXYZ>::Ptr(new pcl::PointCloud<pcl::PointXYZ>(cloud_target)));
 	ndt.align(result);
@@ -194,9 +190,9 @@ pcl::PointCloud<pcl::PointXYZ> loopClosure::GICP(const pcl::PointCloud<pcl::Poin
 												 Eigen::Isometry3d &icp_matrix) {
 	pcl::PointCloud<pcl::PointXYZ> result;
 	pcl::GeneralizedIterativeClosestPoint<pcl::PointXYZ, pcl::PointXYZ> gicp; //创建ICP对象，用于ICP配准
-	gicp.setTransformationEpsilon(0.000001);
+	gicp.setTransformationEpsilon(0.00001);
 	gicp.setMaximumIterations(5000);
-	gicp.setMaxCorrespondenceDistance(100);
+	gicp.setMaxCorrespondenceDistance(20);
 	gicp.setInputSource(pcl::PointCloud<pcl::PointXYZ>::Ptr(new pcl::PointCloud<pcl::PointXYZ>(cloud_source)));
 	gicp.setInputTarget(pcl::PointCloud<pcl::PointXYZ>::Ptr(new pcl::PointCloud<pcl::PointXYZ>(cloud_target)));
 	gicp.align(result);
@@ -416,25 +412,30 @@ loopClosure::autoMaticLoopClosure(std::string LiDAR_g2o_read, std::string Final_
 
 	//1.得到雷达里程计
 	trans_vector = getEigenPoseFromg2oFile(LiDAR_g2o_read);
-	//1.1 构建lidar odom的factor
-	SaveLiDAREdge();
 	//2.得到点云路径 之后可以用 FindFileseq(num1);
 	filepath = LiDAR_pcd_path;
-	//3.读取GPS 时间位置 gps 被赋值
+    //2.1 构建lidar odom的factor
+	SaveLiDAREdge();
+/*	//3.读取GPS 时间位置 gps 被赋值
 	gps2pcd(GPScsvPath);
 	//4.读取LiDAR 时间
 	LiDAR2pcd(LiDARcsv);
 	//5.找到correspondece
 	LiDARmatchIndex = LiDAR_GPS_math();
-	//6.进行gps的 闭环 选取 表示方式?
+	//6.进行gps的 闭环 选取
 	findLoopFromGPS();
 	//7. gps 的匹配初值给定 算当前的lidar-gps 和loop-closure初始值 + 进行匹配
 	GPS_align_TF_calc();
 	//8. add result to pose graph
-	saveFile(save_g2o_path,vertices,edges);
-	//9. optimize
-	//10. Add loop by optimize result /find hidden loop
-	
+	saveFile(save_g2o_path,vertices,edges);*/
+	//9. optimize 先进行一次factor graph优化
+	GPSLoopClosureCalc("/home/echo/autoLoop.g2o");
+	//10. 通过当前的odom 找到 correspondence
+	findLoopFromOdom();
+	//11. Add loop by optimize result /find hidden loop
+	Odom_align_TF_calc();
+	//12. save final graph
+	saveFile("/home/echo/shandong_in__out/autoOdomLoop.g2o",vertices,edges);
 }
 
 void loopClosure::gps2pcd(std::string GPScsvPath) {
@@ -457,7 +458,7 @@ void loopClosure::gps2pcd(std::string GPScsvPath) {
 		std::string time = fields[15];
 		std::string status = fields[12];
 		float fconv_xy = std::atof(conv_xy.c_str());
-		if(((status=="2"||status=="0")&&fconv_xy<4.5)){
+		if(((status=="2"||status=="0")&&fconv_xy<20)){
 			/*	if((status=="2"||status=="1")&&fconv_xy<3.0){	*/  //如果是rtk模式就加入candidate,之后可以加入其他的约束,例如cov 协方差等
 			pcl::PointXYZI temp;
 			temp.x = std::atof(x.c_str());
@@ -524,13 +525,14 @@ void loopClosure::findLoopFromGPS() {
 	}
 	//2. 找到最近点 先找500 个最近点
 	pcl::KdTreeFLANN<pcl::PointXYZI> kdtree;
-	std::vector<int> pointIdxNKNSearch(5000);
-	std::vector<float> pointNKNSquaredDistance(5000);
+	std::vector<int> pointIdxNKNSearch(50000);
+	std::vector<float> pointNKNSquaredDistance(50000);
 	kdtree.setInputCloud (gps_distance);
 	//3. 遍历 所有的 gps位置 找到最近40m的
 	double last_distance = 0; //上次的运动距离,用来保证密度够小
 	float search_radius = 60;
 	float distance_threshold = 5; //闭环点间隔距离 1米产生一个闭环
+	float moving_distance = 35; //防止前后几个pcd闭环 运动距离大于这个认为闭环
 	for (int j = 0; j < gps_distance->size(); ++j) {
 		if(fabs(last_distance-gps_distance->points[j].intensity) > distance_threshold){//距离上次闭环点距离大于2
 			if ( kdtree.radiusSearch (gps_distance->points[j], search_radius, pointIdxNKNSearch, pointNKNSquaredDistance) > 0 )
@@ -538,10 +540,10 @@ void loopClosure::findLoopFromGPS() {
 				//对于一个gps点来说
 				int near_index = -1;
 				float near_distance = search_radius;
-				//遍历所有距离小于40的 candidate
+				//遍历所有距离小于 search_radius 的 candidate
 				for (int i = 0; i < pointIdxNKNSearch.size(); ++i) {
 					//运动距离大于100m
-					if(fabs(gps_distance->points[j].intensity - gps_distance->points[pointIdxNKNSearch[i]].intensity)>50){
+					if(fabs(gps_distance->points[j].intensity - gps_distance->points[pointIdxNKNSearch[i]].intensity)>moving_distance){
 						//找到最近的闭环点
 						if(near_distance > pointNKNSquaredDistance[i]){
 							near_distance = pointNKNSquaredDistance[i];
@@ -558,7 +560,7 @@ void loopClosure::findLoopFromGPS() {
 		}
 	}
 	//4.可视化
-	pcl::PointCloud<pcl::PointXYZI> select;
+
 	for (int k = 0; k < GPS_Loop_from_to.size(); ++k) {
 		pcl::PointXYZI temp;
 		temp = gps_distance->points[GPS_Loop_from_to[k](0)];
@@ -570,6 +572,100 @@ void loopClosure::findLoopFromGPS() {
 	}
 	pcl::PCDWriter writer;
 	writer.write("select_loop_gps.pcd",select);
+	std::cout<<"1. gps loop closure candidate: "<<select.size()<<std::endl;
+}
+
+void loopClosure::findLoopFromOdom(){
+	//1.计算运动里程
+	pcl::PointCloud<pcl::PointXYZI>::Ptr gps_distance (new pcl::PointCloud<pcl::PointXYZI>);
+	*gps_distance = optimized_lidar_odom_pcd; // 1. 计算odom运动距离
+	float total_distance = 0;
+	gps_distance->points[0].intensity = 0;
+	//intensity 放置的是运动距离
+	for (int i = 1; i < optimized_lidar_odom_pcd.size(); ++i) {
+		float dx = optimized_lidar_odom_pcd[i].x - optimized_lidar_odom_pcd[i-1].x;
+		float dy = optimized_lidar_odom_pcd[i].y - optimized_lidar_odom_pcd[i-1].y;
+		float dz = optimized_lidar_odom_pcd[i].z - optimized_lidar_odom_pcd[i-1].z;
+		if(sqrt(dx*dx+dy*dy+dz*dz) > 0.005){//滤波防止 不动也积累位移
+			total_distance += sqrt(dx*dx+dy*dy+dz*dz);
+		}
+		gps_distance->points[i].intensity = total_distance;
+	}
+	//2. 找到最近点 先找500 个最近点
+	pcl::KdTreeFLANN<pcl::PointXYZI> kdtree;
+
+	kdtree.setInputCloud (gps_distance);
+	//3. 遍历 所有的 gps位置 找到最近40m的
+	double last_distance = 0; //上次的运动距离,用来保证密度够小
+	float search_radius = 40;//直径?
+	float distance_threshold = 15; //闭环点间隔距离 1米产生一个闭环
+	float moving_distance = search_radius*1.1; //1.1倍半径内认为不产生闭环
+	for (int j = 0; j < gps_distance->size(); ++j) {
+		std::vector<int> pointIdxNKNSearch(50000);
+		std::vector<float> pointNKNSquaredDistance(50000);
+		if(fabs(last_distance-gps_distance->points[j].intensity) > distance_threshold){//距离上次闭环点距离大于2
+			if ( kdtree.radiusSearch (gps_distance->points[j], search_radius, pointIdxNKNSearch, pointNKNSquaredDistance) > 0 )
+			{
+				//对于一个gps点来说
+				std::vector<int> near_index;
+				int nearest_index = -1;
+				float near_distance = search_radius*search_radius;
+				//1. 遍历所有距离小于 search_radius 的 candidate
+				for (int i = 0; i < pointIdxNKNSearch.size(); ++i) {
+					//运动距离大于moving_distancem
+					if(fabs(gps_distance->points[j].intensity - gps_distance->points[pointIdxNKNSearch[i]].intensity) > moving_distance){
+						//找到最近的闭环点 //todo 距离大于一定找一个范围
+						if(near_distance > pointNKNSquaredDistance[i]){
+							near_distance = pointNKNSquaredDistance[i];
+							nearest_index = pointIdxNKNSearch[i];
+						}
+					}
+				}
+				if(nearest_index != -1){
+					near_index.push_back(nearest_index);//所有点中最近的点
+				}
+		
+				//2. candidate2 比上次最近的运动距离远 776candidate没有就成338了
+				nearest_index = -1;
+				near_distance = search_radius*search_radius;
+				for (int i = 0; i < pointIdxNKNSearch.size(); ++i) {
+					//
+					if((fabs(gps_distance->points[nearest_index].intensity - gps_distance->points[pointIdxNKNSearch[i]].intensity)> moving_distance)&&
+					(fabs(gps_distance->points[j].intensity - gps_distance->points[pointIdxNKNSearch[i]].intensity) > moving_distance)){
+						if(near_distance > pointNKNSquaredDistance[i]){
+							near_distance = pointNKNSquaredDistance[i];
+							nearest_index = pointIdxNKNSearch[i];
+						}
+					}
+				}
+				if(nearest_index != -1){
+					near_index.push_back(nearest_index);//所有点中第二近的
+				}
+				//产生了闭环点 更新上次距离
+				if(near_index.size() != 0){
+					//放入闭环点的index
+					for (int i = 0; i < near_index.size(); ++i) {
+						Odom_Loop_from_to.push_back(Eigen::Vector2d(j,near_index[i]));
+					}
+					last_distance = gps_distance->points[j].intensity;
+				}
+			}
+		}
+	}
+	//4.可视化
+	for (int k = 0; k < Odom_Loop_from_to.size(); ++k) {
+		pcl::PointXYZI temp;
+		temp = gps_distance->points[Odom_Loop_from_to[k](0)];
+		temp.intensity = k;
+		select.push_back(temp);
+		temp = gps_distance->points[Odom_Loop_from_to[k](1)];
+		temp.intensity = k;
+		select.push_back(temp);
+	}
+	pcl::PCDWriter writer;
+	writer.write("select_loop_gps.pcd",select);
+	writer.write("gps_distance.pcd",*gps_distance);
+	std::cout<<"0. gps loop closure candidate: "<<select.size()<<std::endl;
 }
 //todo gps 给定初值 然后 normal icp
 //1. local map 精度不高
@@ -590,6 +686,7 @@ void loopClosure::GPS_align_TF_calc() {
 	ros::Publisher raw_target;
 	ros::Publisher raw_source;
 	ros::Publisher final_source;
+	ros::Publisher select_gps;
 	pcl::PCLPointCloud2 pcl_frame;
 	test_frame = node.advertise<sensor_msgs::PointCloud2>("/local_map", 5);
 	test_frame1 = node.advertise<sensor_msgs::PointCloud2>("/local_map_1", 5);
@@ -599,7 +696,8 @@ void loopClosure::GPS_align_TF_calc() {
 	raw_target = node.advertise<sensor_msgs::PointCloud2>("/raw_target", 5);
 	final_source = node.advertise<sensor_msgs::PointCloud2>("/final_source", 5);
 	raw_source = node.advertise<sensor_msgs::PointCloud2>("/raw_source", 5);
- 
+	raw_source = node.advertise<sensor_msgs::PointCloud2>("/raw_source", 5);
+	select_gps = node.advertise<sensor_msgs::PointCloud2>("/gps_candidate", 5);
 	Eigen::Isometry3d Tg_source,Tg_tar,Tg_Gsource,Tg_Gtarget;
 	sensor_msgs::PointCloud2 to_pub_frame_linear;
 	pcl::PointCloud<pcl::PointXYZ>::Ptr P_cur_g(new pcl::PointCloud<pcl::PointXYZ>);
@@ -626,9 +724,9 @@ void loopClosure::GPS_align_TF_calc() {
 		file_path1=filepath+pcd_name1;
 		file_path2=filepath+pcd_name2;
 		//3. 读取local map past 现在是local系下面的
-		genVLPlocalmap(100,trans_vector,past,filepath,*LocalMap_past_ptr);
+		genVLPlocalmap(50,trans_vector,past,filepath,*LocalMap_past_ptr);
 		//4. 读取local map cur
-		genVLPlocalmap(100,trans_vector,cur_id,filepath,*LocalMap_cur_ptr);
+		genVLPlocalmap(50,trans_vector,cur_id,filepath,*LocalMap_cur_ptr);
 		//5. 转到gps坐标系
 		Eigen::Isometry3d init_pose = trans_vector[cur_id].inverse()*Tg_tar*Tg_source.inverse()*trans_vector[past];
 		pcl::transformPointCloud(*LocalMap_past_ptr, *P_cur_g, init_pose.matrix());
@@ -638,13 +736,15 @@ void loopClosure::GPS_align_TF_calc() {
 		pcl::PointCloud<pcl::PointXYZ>::Ptr Final_cloud(new pcl::PointCloud<pcl::PointXYZ>);
 		Eigen::Isometry3d gicp_result;
 		//6.3 进行icp配准
-//		*Final_cloud = NormalICP(*P_cur_g,*P_tar_g,Eigen::Isometry3d::Identity(),gicp_result);
 		util t;
+	/*	t.timeCalcSet("icp: ");
+		*Final_cloud = NormalICP(*P_cur_g,*P_tar_g,Eigen::Isometry3d::Identity(),gicp_result);
+		t.timeUsed();*/
 		t.timeCalcSet("omp: ");
 		*Final_cloud = NDT_OMP(*P_cur_g,*P_tar_g,gicp_result);
 		t.timeUsed();
 		//7. 发布tf过的点云
-		//gps的
+		//0.gps的
 		pcl::PointCloud<pcl::PointXYZI> gps_T;
 		pcl::transformPointCloud(gps, gps_T, trans_vector[cur_id].inverse()*Tg_tar.matrix());
 		pcl::toPCLPointCloud2(gps_T, pcl_frame);
@@ -682,11 +782,24 @@ void loopClosure::GPS_align_TF_calc() {
 		pcl_conversions::fromPCL(pcl_frame, to_pub_frame_linear);
 		to_pub_frame_linear.header.frame_id = "/map";
 		raw_source.publish(to_pub_frame_linear);
+		//gps candidate
+		pcl::transformPointCloud(select, gps_T, trans_vector[cur_id].inverse()*Tg_tar.matrix());
+		pcl::toPCLPointCloud2(gps_T, pcl_frame);
+		pcl_conversions::fromPCL(pcl_frame, to_pub_frame_linear);
+		to_pub_frame_linear.header.frame_id = "/map";
+		select_gps.publish(to_pub_frame_linear);
 	 	//7. 配准完成,恢复闭环边
-	 	if(ndt_score<0.1){
+	 	if(ndt_score<0.3){
 			curICP = gicp_result*init_pose;
 			SaveTrans(curICP);
-			std::cout<<"add a edge!!!!!!"<<"  curr align score: "<<ndt_score<<std::endl;
+			std::cout<<"1.add a edge!!!!!!"<<"  curr align score: "<<ndt_score<<std::endl;
+			geometry_msgs::PoseStamped temp;
+	/*		temp.pose.position.x = curICP.translation()(0,0);
+			temp.pose.position.y = curICP.translation()(0,1);
+			temp.pose.position.z = curICP.translation()(0,2);
+			loopClosurePath.poses.push_back(temp);*/
+	 	} else{
+			std::cout<<"2. not add a edge!!!!!!"<<"  curr align score: "<<ndt_score<<std::endl;
 	 	}
 	}
 }
@@ -715,15 +828,15 @@ void loopClosure::genVLPlocalmap(int length, std::vector<Eigen::Isometry3d, Eige
 		//pcl::transformPointCloud(*cloud_bef, *cloud_aft, trans_vector[num1].matrix());
 		pcl::copyPointCloud(*cloud_bef,bigmap); //转化为xyz格式
 	}else{
-		for(int i = num1; i>=lower_bound && num1-i<range;i--){
+		for(int i = num1; i>=lower_bound && num1-i < range; i--){
 			std::vector<int> indices1;
 			//读点云
 			pcl::io::loadPCDFile<VLPPoint>(file_names_[i],*cloud_bef);
 			//加个去畸变
 			Eigen::Isometry3d transform;
-			transform = trans_vector[i].inverse().matrix() * trans_vector[i+1].matrix();
+			transform = trans_vector[i].matrix().inverse() * trans_vector[i+1].matrix();
 			VLPPointCloud pointOut;
-			simpleDistortion(cloud_bef,transform.inverse(),pointOut);
+			simpleDistortion(cloud_bef,Eigen::Isometry3d (transform.matrix().inverse()),pointOut);
 			pcl::transformPointCloud(pointOut, *cloud_aft, trans_vector[i].matrix());
 			*cloud_add += *cloud_aft;
 		}
@@ -751,7 +864,6 @@ void loopClosure::genVLPlocalmap(int length, std::vector<Eigen::Isometry3d, Eige
 		uniFilter.setInputCloud(xyz_map);
 		uniFilter.compute(keypointIndices);
 		pcl::copyPointCloud(*cloud_add, keypointIndices.points, *xyz_map_filter);*/
-		
 		pcl::VoxelGrid<pcl::PointXYZ> sor;
 		sor.setInputCloud(xyz_map);
 		sor.setLeafSize(0.1,0.1,0.1);
@@ -1088,4 +1200,201 @@ Eigen::Isometry3d loopClosure::GPSLiDARExtrinsicParam(int GPSindex) {
 	calibrate.CalibrateGNSSLiDARICP(gps_poses,LiDAR_poses,T_lidar2INS, arm);//用icp算法确定外参
 /*	std::cout<<T_lidar2INS.matrix()<<std::endl;*/
 	return T_lidar2INS;
+}
+
+void loopClosure::GPSLoopClosureCalc(std::string g2o_file_path) {
+	ifstream fin(g2o_file_path);
+	// 设定g2o
+	typedef g2o::BlockSolver<g2o::BlockSolverTraits<6, 6>> BlockSolverType;
+	typedef g2o::LinearSolverEigen<BlockSolverType::PoseMatrixType> LinearSolverType;
+	
+	auto solver = new g2o::OptimizationAlgorithmGaussNewton(g2o::make_unique<BlockSolverType>
+	        (g2o::make_unique<LinearSolverType>()));
+	g2o::SparseOptimizer optimizer;            // 图模型
+	optimizer.setAlgorithm(solver);            // 设置求解器
+	optimizer.setVerbose(true);         // 打开调试输出
+	int vertexCnt = 0, edgeCnt = 0;            // 顶点和边的数量
+	while (!fin.eof()) {
+		std::string name;
+		fin >> name;
+		if (name == "VERTEX_SE3:QUAT") {
+			// SE3 顶点
+			g2o::VertexSE3 *v = new g2o::VertexSE3();
+			int index = 0;
+			fin >> index;
+			v->setId(index);
+			v->read(fin);
+			optimizer.addVertex(v);
+			vertexCnt++;
+			if (index == 0)
+				v->setFixed(true);
+		} else if (name == "EDGE_SE3:QUAT") {
+			// SE3-SE3 边
+			g2o::EdgeSE3 *e = new g2o::EdgeSE3();
+			int idx1, idx2;     // 关联的两个顶点
+			fin >> idx1 >> idx2;
+			e->setId(edgeCnt++);
+			e->setVertex(0, optimizer.vertices()[idx1]);
+			e->setVertex(1, optimizer.vertices()[idx2]);
+			e->read(fin);
+			optimizer.addEdge(e);
+		}
+		if (!fin.good()) break;
+	}
+	
+	cout << "read total " << vertexCnt << " vertices, " << edgeCnt << " edges." << endl;
+	cout << "optimizing ..." << endl;
+	optimizer.computeInitialGuess();
+	optimizer.initializeOptimization();
+	optimizer.optimize(30);
+	
+	std::vector<double> tmp1;
+	for (int j = 0; j < optimizer.vertices().size(); ++j) {
+		optimizer.vertex(j)->getEstimateData(tmp1);
+		Eigen::Matrix4d temp1 = Eigen::Matrix4d::Identity();
+		Eigen::Isometry3d temp2 = Eigen::Isometry3d::Identity();
+		Eigen::Quaterniond temp3 = Eigen::Quaterniond::Identity();
+		temp3.x() = tmp1[3];
+		temp3.y() = tmp1[4];
+		temp3.z() = tmp1[5];
+		temp3.w() = tmp1[6];
+		temp2.pretranslate(Eigen::Vector3d (tmp1[0],tmp1[1],tmp1[2]));
+		temp2.rotate(temp3);
+		optimized_lidar_odom.push_back(temp2);
+		pcl::PointXYZI onePoint;
+		onePoint.x = tmp1[0];
+		onePoint.y = tmp1[1];
+		onePoint.z = tmp1[2];
+		onePoint.intensity = j;
+		optimized_lidar_odom_pcd.push_back(onePoint);
+	}
+	pcl::PCDWriter writer;
+ 	writer.write("optimized_lidar_odom_pcd.pcd",optimized_lidar_odom_pcd);
+ 	std::cout<<"lidar odom optimized , saved as: optimized_lidar_odom_pcd.pcd"<<std::endl;
+}
+
+void loopClosure::Odom_align_TF_calc() {
+	std::string pcd_name1,pcd_name2,file_path1,file_path2;
+	GetFileNames(filepath,"pcd");//file_names_
+	pcl::PointCloud<pcl::PointXYZ>::Ptr LocalMap_past_ptr(new pcl::PointCloud<pcl::PointXYZ>);
+	pcl::PointCloud<pcl::PointXYZ>::Ptr LocalMap_cur_ptr(new pcl::PointCloud<pcl::PointXYZ>);
+ 
+	ros::NodeHandle node;
+	ros::NodeHandle privateNode("~");
+	ros::Publisher test_frame;
+	ros::Publisher test_frame1;
+	ros::Publisher test_frame2;
+	ros::Publisher gps_pub;
+	ros::Publisher aligened_source;
+	ros::Publisher raw_target;
+	ros::Publisher raw_source;
+	ros::Publisher final_source;
+	ros::Publisher select_gps;
+	pcl::PCLPointCloud2 pcl_frame;
+	test_frame = node.advertise<sensor_msgs::PointCloud2>("/local_map", 5);
+	test_frame1 = node.advertise<sensor_msgs::PointCloud2>("/local_map_1", 5);
+	test_frame2 = node.advertise<sensor_msgs::PointCloud2>("/local_map_origin", 5);
+	gps_pub = node.advertise<sensor_msgs::PointCloud2>("/gps", 5);
+	aligened_source = node.advertise<sensor_msgs::PointCloud2>("/aligened_source", 5);
+	raw_target = node.advertise<sensor_msgs::PointCloud2>("/raw_target", 5);
+	final_source = node.advertise<sensor_msgs::PointCloud2>("/final_source", 5);
+	raw_source = node.advertise<sensor_msgs::PointCloud2>("/raw_source", 5);
+	raw_source = node.advertise<sensor_msgs::PointCloud2>("/raw_source", 5);
+	select_gps = node.advertise<sensor_msgs::PointCloud2>("/gps_candidate", 5);
+ 
+	sensor_msgs::PointCloud2 to_pub_frame_linear;
+	pcl::PointCloud<pcl::PointXYZ>::Ptr P_cur_g(new pcl::PointCloud<pcl::PointXYZ>);
+	pcl::PointCloud<pcl::PointXYZ>::Ptr P_cur_g_tmp(new pcl::PointCloud<pcl::PointXYZ>);
+	pcl::PointCloud<pcl::PointXYZ>::Ptr P_tar_g(new pcl::PointCloud<pcl::PointXYZ>);
+	pcl::PointCloud<pcl::PointXYZ>::Ptr P_O_tf(new pcl::PointCloud<pcl::PointXYZ>);
+	if(file_names_.size() !=optimized_lidar_odom.size()){
+		std::cerr<<"文件数目和位姿数目不同!!!!"<<std::endl;
+	}
+	//遍历闭环的GPS点
+	for (int i = 0; i < Odom_Loop_from_to.size(); ++i) {
+		past   = Odom_Loop_from_to[i](0);
+		cur_id = Odom_Loop_from_to[i](1);
+		std::cout<<" loop candidate: "<<past<<" "<<cur_id<<std::endl;
+		std::cout<<" file_names_ size(): "<<file_names_.size()<<std::endl;
+		std::cout<<" optimized_lidar_odom size(): "<<optimized_lidar_odom.size()<<std::endl;
+		//1.在这里找到 序列
+		FindFileseq(past);
+		pcd_name1 = filename;
+		FindFileseq(cur_id);
+		pcd_name2 = filename;
+		//2.获取LiDAR pcd路径
+		file_path1=filepath+pcd_name1;
+		file_path2=filepath+pcd_name2;
+		//3. 读取local map past 现在是local系下面的
+		genVLPlocalmap(100,optimized_lidar_odom,past,filepath,*LocalMap_past_ptr);
+		//4. 读取local map cur
+		genVLPlocalmap(100,optimized_lidar_odom,cur_id,filepath,*LocalMap_cur_ptr);
+		//5. 转到gps坐标系
+		Eigen::Isometry3d init_pose = optimized_lidar_odom[cur_id].inverse()*optimized_lidar_odom[past];
+		pcl::transformPointCloud(*LocalMap_past_ptr, *P_cur_g, init_pose.matrix());
+		pcl::transformPointCloud(*LocalMap_cur_ptr, *P_tar_g, Eigen::Isometry3d::Identity().matrix());
+		//6.对local map 进行配准
+		//6.2 初始位姿 目前用的是认为两针之间odom够准
+		pcl::PointCloud<pcl::PointXYZ>::Ptr Final_cloud(new pcl::PointCloud<pcl::PointXYZ>);
+		Eigen::Isometry3d gicp_result;
+		//6.3 进行icp配准
+		util t;
+		t.timeCalcSet("omp: ");
+		*Final_cloud = NDT_OMP(*P_cur_g,*P_tar_g,gicp_result);
+		t.timeUsed();
+		//7. 发布tf过的点云
+		//0.gps的
+		pcl::PointCloud<pcl::PointXYZI> gps_T;
+		pcl::transformPointCloud(gps, gps_T, optimized_lidar_odom[cur_id].inverse().matrix());
+		pcl::toPCLPointCloud2(gps_T, pcl_frame);
+		pcl_conversions::fromPCL(pcl_frame, to_pub_frame_linear);
+		to_pub_frame_linear.header.frame_id = "/map";
+		gps_pub.publish(to_pub_frame_linear);
+		//1. Tar系下的tar
+		pcl::toPCLPointCloud2(*P_tar_g, pcl_frame);
+		pcl_conversions::fromPCL(pcl_frame, to_pub_frame_linear);
+		to_pub_frame_linear.header.frame_id = "/map";
+		test_frame1.publish(to_pub_frame_linear);//local_map_1
+		//2. Tar系下的cur
+		pcl::toPCLPointCloud2(*P_cur_g, pcl_frame);
+		pcl_conversions::fromPCL(pcl_frame, to_pub_frame_linear);
+		to_pub_frame_linear.header.frame_id = "/map";
+		test_frame.publish(to_pub_frame_linear);//local_map
+		//G系下的result
+		pcl::toPCLPointCloud2(*Final_cloud, pcl_frame);
+		pcl_conversions::fromPCL(pcl_frame, to_pub_frame_linear);
+		to_pub_frame_linear.header.frame_id = "/map";
+		aligened_source.publish(to_pub_frame_linear);
+		//odom坐标系下的 target
+		pcl::toPCLPointCloud2(*LocalMap_cur_ptr, pcl_frame);
+		pcl_conversions::fromPCL(pcl_frame, to_pub_frame_linear);
+		to_pub_frame_linear.header.frame_id = "/map";
+		raw_target.publish(to_pub_frame_linear);
+		//LiDAR begin 下的 aligned
+		pcl::transformPointCloud(*LocalMap_past_ptr, *P_O_tf, (gicp_result).matrix());
+		pcl::toPCLPointCloud2(*P_O_tf, pcl_frame);
+		pcl_conversions::fromPCL(pcl_frame, to_pub_frame_linear);
+		to_pub_frame_linear.header.frame_id = "/map";
+		final_source.publish(to_pub_frame_linear);
+		//LIDAR0 下的 raw_source
+		pcl::toPCLPointCloud2(*LocalMap_past_ptr, pcl_frame);
+		pcl_conversions::fromPCL(pcl_frame, to_pub_frame_linear);
+		to_pub_frame_linear.header.frame_id = "/map";
+		raw_source.publish(to_pub_frame_linear);
+		//gps candidate
+		pcl::transformPointCloud(select, gps_T, optimized_lidar_odom[cur_id].inverse().matrix());
+		pcl::toPCLPointCloud2(gps_T, pcl_frame);
+		pcl_conversions::fromPCL(pcl_frame, to_pub_frame_linear);
+		to_pub_frame_linear.header.frame_id = "/map";
+		select_gps.publish(to_pub_frame_linear);
+		//7. 配准完成,恢复闭环边
+		if(ndt_score<13){
+			curICP = gicp_result*init_pose;
+			SaveTrans(curICP);
+			std::cout<<"1.add a edge!!!!!!"<<"  curr align score: "<<ndt_score<<std::endl;
+			geometry_msgs::PoseStamped temp;
+		} else{
+			std::cout<<"2. not add a edge!!!!!!"<<"  curr align score: "<<ndt_score<<std::endl;
+		}
+	}
 }

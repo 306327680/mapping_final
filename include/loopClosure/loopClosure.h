@@ -45,6 +45,10 @@
 #include <6DOFcalib/Calibration6DOF.h>
 #include <ndt_omp/include/pclomp/ndt_omp.h>
 #include <pcl/surface/mls.h>
+#include <nav_msgs/Path.h>
+#include <nav_msgs/Odometry.h>
+#include <g2o/types/slam3d/types_slam3d.h>
+#include <g2o/solvers/eigen/linear_solver_eigen.h>
 //todo 现在需要通过gps给定初值
 using namespace g2o;
 class loopClosure {
@@ -53,6 +57,8 @@ public:
 	void addLoopEdge(int num1, int num2, std::string g2o_read,std::string g2o_save,std::string pcd_path);
 	//1.点云里程计路径 2.优化后保存路径 3.雷达pcd路径 4.gps csv格式的数据 5.LiDAR csv格式数据
 	void autoMaticLoopClosure(std::string LiDAR_g2o_read,std::string Final_g2o_save,std::string LiDAR_pcd_path,std::string GPScsvPath,std::string LiDARcsv);
+	//6. 通过gps约束初次优化factor
+	void GPSLoopClosureCalc(std::string g2o_file_path);
 private:
 	std::vector<VertexSE3*> vertices;
 	std::vector<EdgeSE3*> edges;
@@ -90,9 +96,18 @@ private:
 	Eigen::Isometry3d GPSPose(int index);
 	//4.得到T_G_L * GPS 到 LiDAR的相机变换
 	Eigen::Isometry3d GPSLiDARExtrinsicParam(int GPSindex);
+	//5.找到correspondece
 	std::vector<Eigen::Vector2d> LiDAR_GPS_math();
-	void findLoopFromGPS(); //找到闭环条件
-	void GPS_align_TF_calc(); //通过gps给定初值 + icp匹配
+
+	//7. 再次进行加边的操作
+	//8. 找到闭环条件
+	void findLoopFromGPS();
+	//9. 通过gps给定初值 + icp匹配
+	void GPS_align_TF_calc();
+	//10. 自身的odom去增加闭环
+	void Odom_align_TF_calc();
+	//11. 自身odom找到闭环
+	void findLoopFromOdom();
 	int FromGPSgetLiDARindex(int gpsIndex);//从雷达得到gps index
 	void simpleDistortion(VLPPointCloud::Ptr pointIn, Eigen::Isometry3d transform, VLPPointCloud &pointOut);//
 	void trinterp(Eigen::Matrix4d &T0, Eigen::Matrix4d &T1, double r, Eigen::Matrix4d &T);
@@ -116,7 +131,12 @@ private:
 	pcl::PointCloud<pcl::PointXYZI> gps; //intensity 为时间
 	std::vector<Eigen::Vector2d> LiDAR_index_time;//
 	std::vector<Eigen::Vector2d> GPS_Loop_from_to;//LiDAR_GPS_math()用
+	std::vector<Eigen::Vector2d> Odom_Loop_from_to;//LiDAR_GPS_math()用
 	std::vector<Eigen::Vector2d> LiDARmatchIndex; //1.lidar 和 2.gps 对应关系
+	nav_msgs::Path loopClosurePath;
+	pcl::PointCloud<pcl::PointXYZI> select;
+	std::vector<Eigen::Isometry3d, Eigen::aligned_allocator<Eigen::Isometry3d>> optimized_lidar_odom;
+	pcl::PointCloud<pcl::PointXYZI> optimized_lidar_odom_pcd;
 };
 
 

@@ -1324,6 +1324,7 @@ void main_function::genlocalmap(std::vector<Eigen::Isometry3d, Eigen::aligned_al
 	util tools;
 	//1.遍历所有点
 	end_id = file_names_.size();
+	std::cout<<"end ID: "<<end_id<<std::endl;
 	for (int i = 1; i < file_names_.size(); i++) {
  
 		if (i > start_id && i < end_id) {
@@ -1376,8 +1377,8 @@ void main_function::genlocalmap(std::vector<Eigen::Isometry3d, Eigen::aligned_al
 			Feature.checkorder(cloud_bef, test);
 			Feature.adjustDistortion(test, pcout, out3d);
  			//loam 特征提取 可以注释掉
-			Feature.calculateSmoothness(pcout, segmentedCloud);
-			Feature.calcFeature(segmentedCloud);
+	/*		Feature.calculateSmoothness(pcout, segmentedCloud);
+			Feature.calcFeature(segmentedCloud);*/
  
 			//tmp用来转换格式 把去了畸变的放进去
 			tmp->clear();
@@ -1393,12 +1394,13 @@ void main_function::genlocalmap(std::vector<Eigen::Isometry3d, Eigen::aligned_al
 /*			filter.point_cb(*tmp);
 			*tmp = *filter.g_ground_pc;*/
 			pcl::VoxelGrid<pcl::PointXYZI> sor;
-			/*   sor.setInputCloud(tmp);                   //设置需要过滤的点云给滤波对象
-			   sor.setLeafSize(0.1, 0.1, 0.1);               //设置滤波时创建的体素大小为2cm立方体，通过设置该值可以直接改变滤波结果，值越大结果越稀疏
-			   sor.filter(*cloud_aft);*/
+			sor.setInputCloud(tmp);                   //设置需要过滤的点云给滤波对象
+			sor.setLeafSize(0.2, 0.2, 0.2);               //设置滤波时创建的体素大小为2cm立方体，通过设置该值可以直接改变滤波结果，值越大结果越稀疏
+			sor.filter(*cloud_aft);
 			//new
-			pcl::transformPointCloud(*tmp, *cloud_aft, trans_vector[i].matrix());
-			pcl::transformPointCloud(*segmentedCloud, *segmentedCloud_tf, trans_vector[i].matrix());
+			pcl::transformPointCloud(*cloud_aft, *tmp, trans_vector[i].matrix());
+			//loam feature的
+			/*pcl::transformPointCloud(*segmentedCloud, *segmentedCloud_tf, trans_vector[i].matrix());
 			for (int k = 0; k < segmentedCloud_tf->size(); ++k) {
 				pcl::PointXYZI p;
 				p.x = segmentedCloud_tf->points[k].x;
@@ -1406,8 +1408,8 @@ void main_function::genlocalmap(std::vector<Eigen::Isometry3d, Eigen::aligned_al
 				p.z = segmentedCloud_tf->points[k].z;
 				p.intensity = segmentedCloud_tf->points[k].smooth;
 				cloud_save.push_back(p);
-			}
-			*cloud_add += *cloud_aft;
+			}*/
+			*cloud_add += *tmp;
 	 
 /*			if (!tensorvoting) {
 				if (i % 100 == 50) {
@@ -1428,7 +1430,7 @@ void main_function::genlocalmap(std::vector<Eigen::Isometry3d, Eigen::aligned_al
 			int size_all = 0;
 			size_all = end_id - start_id;
 			percent = i * 100 / size_all;
-			std::cout <<"\b\b\b"<< percent << "%" << std::endl;
+			std::cout <<i<<" "<< percent << "%" << std::endl;
 			
 		}
 	}
@@ -1462,7 +1464,7 @@ void main_function::genlocalmap(std::vector<Eigen::Isometry3d, Eigen::aligned_al
 	*cloud_add = bigmap;*/
 	cout << "map saving" << endl;
 	writer.write<pcl::PointXYZI>("final_map.pcd", *cloud_add, true);
-	writer.write<pcl::PointXYZI>("loam_feature.pcd", cloud_save, true);
+	//writer.write<pcl::PointXYZI>("loam_feature.pcd", cloud_save, true);
 	
 }
 

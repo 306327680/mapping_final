@@ -84,7 +84,7 @@ public:
 	int start_id = 0;//设置开始结束的点
 	int end_id = 1000000;
 //打开g2o文件路径
-	std::string g2o_path = "/home/echo/auto_ok.g2o";
+	std::string g2o_path = "/home/echo/shandong_in__out/result.g2o";
 	int past = 0;
 //存g2o路径
 	std::string save_g2o_path = "/home/echo/LiDAR_Odom.g2o";
@@ -275,9 +275,10 @@ public:
 		//6. 自动闭环
 //		lc.autoMaticLoopClosure("/home/echo/shandong_ceshichang/test.g2o","ss","/media/echo/DataDisc2/shandong/pcd",
 //				"/home/echo/shandong_ceshichang/test.csv","/home/echo/shandong_ceshichang/LiDAR_pose.csv");
+		//lc.GPSLoopClosureCalc("/home/echo/autoLoop.g2o");
 		lc.autoMaticLoopClosure("/home/echo/shandong_in__out/LiDAR_Odom.g2o","ss","/media/echo/DataDisc2/shandong/pcd_inout",
 								"/home/echo/shandong_in__out/gps.csv","/home/echo/shandong_in__out/LiDAR_pose.csv");
-		
+
 	}
 
 //功能9 普通的16线建图
