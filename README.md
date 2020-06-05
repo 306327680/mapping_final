@@ -55,11 +55,14 @@ https://github.com/ZhenghaoFei/visual_odom.git
 #### 8.registration
 这个地方就放普通的icp接口,或者ndt之类的
 #### 9.GPS_constraint_mapping
-这里用gps构建约束,并且自动读取接近的点云位置,然后自动添加闭环的约束.
+这里用gps构建约束,并且自动读取接近的点云位置,然后自动添加闭环的约束. ceres构建factor
 #### 10. 6DOfcalib
 这里是用来放 6DOF - 3DOF 或者 6DOF-6DOF 基于优化的外参标定的库/eg: IMU-LiDAR/LiDAR-Camera/Camera-IMU
-#### imgAddColir2Lidar
+#### 11. imgAddColir2Lidar
 这里是将图像投影到点云的相关函数
+#### 12.lidarCameraAdjust
+Lidar和相机的外参校准,精细调整
+#### 13.
 
 
 

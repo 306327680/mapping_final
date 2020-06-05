@@ -119,7 +119,7 @@ add_library(ground_seg
         include/registration/registration.cpp
         include/registration/registration.h
         include/GPS/gpsTools.cpp include/GPS/gpsTools.h
-)
+        include/lidarCameraAdjust/lidarCameraAdjust.cpp include/lidarCameraAdjust/lidarCameraAdjust.h)
 target_link_libraries(ground_seg
         ${roscpp_LIBRARIES} ${std_msgs_LIBRARIES}
         ${rosbag_LIBRARIES} ${nav_msgs_LIBRARIES}

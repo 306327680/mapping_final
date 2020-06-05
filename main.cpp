@@ -17,13 +17,13 @@ int main(int argc,char** argv){
 	//得到所有的pcd名字
 	m.GetFileNames(m.filepath,"pcd");
 	//读取png 彩色图
-	m.GetPNGFileNames("/media/echo/DataDisc2/shandong/pic","png");
+//	m.GetPNGFileNames("/media/echo/DataDisc2/shandong/pic","png");
 	//qt
 	
 /*	QApplication a(argc, argv);
 	MainWindow w;
-*//*	w.main_functions.getParam(argc,argv);
-	w.main_functions.GetFileNames(w.main_functions.filepath,"pcd");*//*
+	w.main_functions.getParam(argc,argv);
+	w.main_functions.GetFileNames(w.main_functions.filepath,"pcd");
 	w.show();
 	return a.exec();*/
 	//

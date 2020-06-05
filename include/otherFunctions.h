@@ -254,31 +254,35 @@ public:
 		tosave  = a.pclalignImg2LiDAR(mat,cloudin);
 		pcl::PointXYZRGB a1;
 		writer.write("/home/echo/fusion_ws/result.pcd",tosave, true);*/
-		//3.测闭环gps约束
-/*		GPS_loop_mapping g;
-		g.GPSandPose("/home/echo/shandong_ceshichang/test.g2o", "/home/echo/shandong_ceshichang/gps.pcd",
-					 LiDARGNSScalibration("/home/echo/shandong_ceshichang/test.g2o",
-										  "/home/echo/shandong_ceshichang/gps.pcd"));
+		//3.测闭环gps约束 gps factor + lidar + loop closure
+/*
+		GPS_loop_mapping g;
+		g.GPSandPose("/home/echo/shandong_in__out/result.g2o", "/home/echo/shandong_in__out /gps.pcd",
+					 LiDARGNSScalibration("/home/echo/shandong_in__out/result.g2o","/home/echo/shandong_in__out/gps.pcd"));
+*/
 
+/*
+		//4.测闭环 1.加闭环边 2930 20402
+		lc.addLoopEdge(780,7550,"/home/echo/test.g2o","/home/echo/test1.g2o","/media/echo/DataDisc/9_rosbag/8_imu_camera_rtk_vlp/car_pcd/");*/
 
-		//4.测闭环 1.加闭环边
-		//lc.addLoopEdge(780,7550,"/home/echo/test.g2o","/home/echo/test1.g2o","/media/echo/DataDisc/9_rosbag/8_imu_camera_rtk_vlp/car_pcd/");
 		//5.测闭环后的建图
 		//trans_vector = getEigenPoseFromg2oFile("/media/echo/DataDisc/3_program/mapping/cmake-build-debug/gps_constrained.g2o");
-		trans_vector = getEigenPoseFromg2oFile("/home/echo/shandong_ceshichang/test.g2o");
+		GetPNGFileNames("/media/echo/DataDisc2/shandong/pic_inout","png");
+		trans_vector = getEigenPoseFromg2oFile("/home/echo/shandong_in__out/result.g2o");
 		start_id = 0;
 		end_id = 8500;
 		pcl::PointCloud<pcl::PointXYZI> fxxk;
 		//genlocalmap(trans_vector, "", fxxk);
 		genColormap(trans_vector,""); //5.1 带颜色的pcd
-		*/
-		//6. 自动闭环
+		//6.1 gps自动闭环
 //		lc.autoMaticLoopClosure("/home/echo/shandong_ceshichang/test.g2o","ss","/media/echo/DataDisc2/shandong/pcd",
 //				"/home/echo/shandong_ceshichang/test.csv","/home/echo/shandong_ceshichang/LiDAR_pose.csv");
 		//lc.GPSLoopClosureCalc("/home/echo/autoLoop.g2o");
-		lc.autoMaticLoopClosure("/home/echo/shandong_in__out/LiDAR_Odom.g2o","ss","/media/echo/DataDisc2/shandong/pcd_inout",
-								"/home/echo/shandong_in__out/gps.csv","/home/echo/shandong_in__out/LiDAR_pose.csv");
-
+		//6.1 gps 闭环后的自动闭环
+		/*lc.autoMaticLoopClosure("/home/echo/shandong_in__out/LiDAR_Odom.g2o","ss","/media/echo/DataDisc2/shandong/pcd_inout",
+								"/home/echo/shandong_in__out/gps.csv","/home/echo/shandong_in__out/LiDAR_pose.csv");*/
+		//4.手动闭环 1.加闭环边20623,13617   3163 13731
+		//lc.addLoopEdge(3230,13731,"/home/echo/shandong_in__out/result.g2o","/home/echo/shandong_in__out/oneedge.g2o","/media/echo/DataDisc2/shandong/pcd_inout/");
 	}
 
 //功能9 普通的16线建图

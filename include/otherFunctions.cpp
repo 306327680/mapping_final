@@ -1472,7 +1472,7 @@ void main_function::genColormap(std::vector<Eigen::Isometry3d, Eigen::aligned_al
 	Eigen::Isometry3d pcd_rotate = Eigen::Isometry3d::Identity();
 	pcl::PointCloud<pcl::PointXYZI>::Ptr cloud_add(new pcl::PointCloud<pcl::PointXYZI>);
 	pcl::PointCloud<pcl::PointXYZI>::Ptr cloud_bef(new pcl::PointCloud<pcl::PointXYZI>);
-	
+	pcl::PointCloud<pcl::PointXYZ> localmap;
 	VLPPointCloud xyzirVLP;
 	mypcdCloud xyzItimeRing;
 	pcl::PointCloud<pcl::PointXYZRGB> tfed_color;
@@ -1483,22 +1483,25 @@ void main_function::genColormap(std::vector<Eigen::Isometry3d, Eigen::aligned_al
 	Eigen::Isometry3d out3d = Eigen::Isometry3d::Identity();
 	pcl::PCDWriter writer;
 	pcl::PointCloud<pcl::PointXYZRGB> tosave;
+	pcl::PointCloud<pcl::PointXYZRGB>::Ptr tosave_ptr(new 	pcl::PointCloud<pcl::PointXYZRGB>);
 	pcl::PointCloud<PointXYZRGBI> tosave_i;
 	cv::Mat mat;
 	PlaneGroundFilter filter;
 	imgAddColor2Lidar a;//投影点云
-	a.readExInt("/home/echo/shandong_ceshichang/ex_params.txt");
+	a.readExInt("/home/echo/shandong_in__out/exparam.txt");
 	//1.遍历所有点
+	end_id = file_names_.size();
+	start_id = 350;
 	for (int i = 1; i < file_names_.size()-3; i++) {
 		int percent = 0;
 		int size_all = 0;
 		size_all = static_cast<int>(file_names_.size());
 		percent = i * 100 / size_all;
-		std::cout << percent << "%" <<std::endl;
+	
 		
 		if (i >= start_id && i < end_id) {
 			//1.1设置起始和结束的点
-			std::vector<int> indices1;
+	/*		std::vector<int> indices1;
 			//读点云
 			pcl::io::loadPCDFile<VLPPoint>(file_names_[i], xyzirVLP);
 			xyzItimeRing.clear();
@@ -1518,25 +1521,40 @@ void main_function::genColormap(std::vector<Eigen::Isometry3d, Eigen::aligned_al
 			//去畸变
 			Eigen::Matrix4f out3f;
 			out3f = out3d.matrix().cast<float>();
-			simpleDistortion(xyzItimeRing,out3f.inverse(),*cloud_bef);
+			simpleDistortion(xyzItimeRing,out3f.inverse(),*cloud_bef);*/
+			loopClosure lc;
+			
+			lc.genVLPlocalmap(100,trans_vector,i,filepath,*cloud_bef);
+			
 			//地面点
 /*			filter.point_cb(*cloud_bef);
 			*cloud_bef = *filter.g_ground_pc;*/
 			if(i-1>=0){
 				mat = cv::imread(PNG_file_names_[i]);
 				tosave  = a.pclalignImg2LiDAR(mat,*cloud_bef);
-				tosave_i = a.alignImg2LiDAR(mat,*cloud_bef);//_PointXYZRGBL 这个也行?
+				//tosave_i = a.alignImg2LiDAR(mat,*cloud_bef);//_PointXYZRGBL 这个也行?
+				cv::Mat mat_save;
+				mat_save = a.pcd2img(mat,*cloud_bef);
+				std::stringstream ss;
+				ss<<"/home/echo/img_intensity/"<<i<<".png";
+				cv::imwrite(ss.str(),mat_save);
 			}
+/*			*tosave_ptr = tosave;
+			pcl::VoxelGrid<pcl::PointXYZRGB> sor;
+			sor.setInputCloud(tosave_ptr);                   //设置需要过滤的点云给滤波对象
+			sor.setLeafSize(0.2, 0.2, 0.2);               //设置滤波时创建的体素大小为2cm立方体，通过设置该值可以直接改变滤波结果，值越大结果越稀疏
+			sor.filter(tosave);*/
 			pcl::transformPointCloud(tosave,tfed_color,trans_vector[i].matrix());
-			pcl::transformPointCloud(tosave_i,_tfed_color_i,trans_vector[i].matrix());
-			*cloud_map_color += tfed_color;
-			*cloud_i_map_color += _tfed_color_i;
+			//pcl::transformPointCloud(tosave_i,_tfed_color_i,trans_vector[i].matrix());
+			//*cloud_map_color += tfed_color;
+			//*cloud_i_map_color += _tfed_color_i;
+			std::cout << percent << "%" <<std::endl;
 		}
 	}
-	pcl::io::savePCDFileASCII("cloud_map_color.pcd",*cloud_map_color);
+	//pcl::io::savePCDFileASCII("cloud_map_color.pcd",*cloud_map_color);
 	//writer.write("cloud_map_color.pcd",*cloud_map_color, true);
 	//pcl::io::savePCDFileASCII("s.pcd",*cloud_i_map_color);
-	writer.write("cloud_map_color_i.pcd",*cloud_i_map_color, true);
+	//writer.write("cloud_map_color_i.pcd",*cloud_i_map_color, true);
 }
 
 

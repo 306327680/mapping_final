@@ -44,6 +44,7 @@
 #include <pcl/keypoints/uniform_sampling.h>
 #include <6DOFcalib/Calibration6DOF.h>
 #include <ndt_omp/include/pclomp/ndt_omp.h>
+#include "ndt_omp/include/pclomp/gicp_omp.h"
 #include <pcl/surface/mls.h>
 #include <nav_msgs/Path.h>
 #include <nav_msgs/Odometry.h>
@@ -59,6 +60,12 @@ public:
 	void autoMaticLoopClosure(std::string LiDAR_g2o_read,std::string Final_g2o_save,std::string LiDAR_pcd_path,std::string GPScsvPath,std::string LiDARcsv);
 	//6. 通过gps约束初次优化factor
 	void GPSLoopClosureCalc(std::string g2o_file_path);
+	//2. 专用VLP 去畸变的local map
+	
+	void genVLPlocalmap(int length,std::vector<Eigen::Isometry3d, Eigen::aligned_allocator<Eigen::Isometry3d>> trans_vector,
+						int num1,std::string filepath,pcl::PointCloud<pcl::PointXYZ>& bigmap);
+	void genVLPlocalmap(int length,std::vector<Eigen::Isometry3d, Eigen::aligned_allocator<Eigen::Isometry3d>> trans_vector,
+						int num1,std::string filepath,pcl::PointCloud<pcl::PointXYZI>& bigmap);
 private:
 	std::vector<VertexSE3*> vertices;
 	std::vector<EdgeSE3*> edges;
@@ -71,6 +78,9 @@ private:
 				  std::vector<EdgeSE3*> edges);
 	void SaveTrans(Eigen::Isometry3d curr); //定义存储ICP edge 的函数
 	void SaveLiDAREdge();
+	pcl::PointCloud<pcl::PointXYZ> GICP_OMP(const pcl::PointCloud<pcl::PointXYZ> & cloud_source,
+										const pcl::PointCloud<pcl::PointXYZ> & cloud_target,
+										Eigen::Isometry3d & icp_matrix);
 	pcl::PointCloud<pcl::PointXYZ> GICP(const pcl::PointCloud<pcl::PointXYZ> & cloud_source,
 										const pcl::PointCloud<pcl::PointXYZ> & cloud_target,
 										Eigen::Isometry3d & icp_matrix);
@@ -87,9 +97,7 @@ private:
 	float ndt_score;
 	void genlocalmap(std::vector<Eigen::Isometry3d, Eigen::aligned_allocator<Eigen::Isometry3d>> trans_vector,
 					 int num1,std::string filepath,pcl::PointCloud<pcl::PointXYZ>& bigmap);
-	//2. 专用VLP 去畸变的local map
-	void genVLPlocalmap(int length,std::vector<Eigen::Isometry3d, Eigen::aligned_allocator<Eigen::Isometry3d>> trans_vector,
-					 int num1,std::string filepath,pcl::PointCloud<pcl::PointXYZ>& bigmap);
+
 	void gps2pcd(std::string GPScsvPath);
 	void LiDAR2pcd(std::string LiDARcsvPath);
 	//3.通过GPS index得到当前的 lla坐标系下 pose 6dof
