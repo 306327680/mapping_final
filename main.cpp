@@ -30,7 +30,31 @@ int main(int argc,char** argv){
 	
 	switch(m.status)
 	{
-		//1. g2o+pcd拼图
+		//0. VLP+IMU+RTK 存成相应的文件
+		case 0:
+			m.readAndSaveHesai("/media/echo/DataDisc/9_rosbag/zed_pandar64_ins/Hesai_back_afternoon_2.bag");
+			break;
+			//-1 建立lidar odom
+		case -1:
+			m.setStartEnd();
+			m.point2planeICP();//普通点面icp
+			cout << "point to plane ICP finish!" << endl;
+			break;
+			//-2 自动闭环
+		case -2:
+			m.lc.autoMaticLoopClosure("/home/echo/shandong_ceshichang/test.g2o","ss","/media/echo/DataDisc2/shandong/pcd",
+ 				"/home/echo/shandong_ceshichang/test.csv","/home/echo/shandong_ceshichang/LiDAR_pose.csv");
+			cout << "point to plane ICP finish!" << endl;
+			break;
+			//-3 生成彩色地图
+		case -3:
+			m.GetPNGFileNames("/media/echo/DataDisc2/shandong/pic_inout","png");
+			m.trans_vector = m.getEigenPoseFromg2oFile("/home/echo/shandong_in__out/result.g2o");
+			m.start_id = 0;
+			m.end_id = 8500;
+			m.genColormap(m.trans_vector,""); //5.1 带颜色的pcd
+			break;
+			
 		case 1 :
 			m.g2omapping();
 			cout << "g2o mapping start！" << endl;
@@ -61,14 +85,14 @@ int main(int argc,char** argv){
 			break;
 		case 7://7. 从bag中读何塞rawdata
 			cout << "read pcd:" << endl;
-			m.readAndSaveHesai("/media/echo/DataDisc/9_rosbag/zed_pandar64_ins/Hesai_back_afternoon_2.bag");
+			
 			cout << "read pcd finish:" << endl;
 			break;
 		case 8://8. 测试新写的函数
 			m.testFunction();
 			break;
 		case 9:
-			m.rslidarmapping();
+			m.IMUPreintergration();
 			break;
 		case 10:
 			//10. 格式转化,用于不同的雷达型号 保留ring 和timestamp等信息

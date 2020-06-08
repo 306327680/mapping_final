@@ -221,8 +221,9 @@ public:
 		if (readBag){
 			
 			//a.readcamera("/media/echo/DataDisc2/shandong/udist_outdoor_indoor.bag","/media/echo/DataDisc2/shandong/pic_inout");
-			a.readVLP16("/media/echo/DataDisc2/shandong/udist_outdoor_indoor.bag","/media/echo/DataDisc2/shandong/pcd_inout");
-			a.saveRTK2PCD("/media/echo/DataDisc2/shandong/udist_outdoor_indoor.bag");//把rtk保存成 csv+pcd
+			a.readVLP16("/media/echo/DataDisc2/shandong/udist_outdoor_indoor.bag","/media/echo/DataDisc2/shandong/pcd_inout_abstime");
+			//a.saveRTK2PCD("/media/echo/DataDisc2/shandong/udist_outdoor_indoor.bag");//把rtk保存成 csv+pcd
+			a.readImu("/media/echo/DataDisc2/shandong/udist_outdoor_indoor.bag","/home/echo/shandong_in__out/imu/imu.csv");
 		}
 		//a.readcamera("/media/echo/DataDisc2/shandong/2020-05-24-16-51-53.bag","/media/echo/DataDisc2/shandong/pic");
 		//a.readVLP16("/media/echo/DataDisc2/shandong/2020-05-24-16-51-53.bag","/media/echo/DataDisc2/shandong/pcd");
@@ -261,33 +262,34 @@ public:
 					 LiDARGNSScalibration("/home/echo/shandong_in__out/result.g2o","/home/echo/shandong_in__out/gps.pcd"));
 */
 
-/*
 		//4.测闭环 1.加闭环边 2930 20402
-		lc.addLoopEdge(780,7550,"/home/echo/test.g2o","/home/echo/test1.g2o","/media/echo/DataDisc/9_rosbag/8_imu_camera_rtk_vlp/car_pcd/");*/
+		//lc.addLoopEdge(780,7550,"/home/echo/test.g2o","/home/echo/test1.g2o","/media/echo/DataDisc/9_rosbag/8_imu_camera_rtk_vlp/car_pcd/");
 
 		//5.测闭环后的建图
 		//trans_vector = getEigenPoseFromg2oFile("/media/echo/DataDisc/3_program/mapping/cmake-build-debug/gps_constrained.g2o");
-		GetPNGFileNames("/media/echo/DataDisc2/shandong/pic_inout","png");
+/*		GetPNGFileNames("/media/echo/DataDisc2/shandong/pic_inout","png");
 		trans_vector = getEigenPoseFromg2oFile("/home/echo/shandong_in__out/result.g2o");
 		start_id = 0;
 		end_id = 8500;
 		pcl::PointCloud<pcl::PointXYZI> fxxk;
 		//genlocalmap(trans_vector, "", fxxk);
-		genColormap(trans_vector,""); //5.1 带颜色的pcd
+		genColormap(trans_vector,""); //5.1 带颜色的pcd*/
 		//6.1 gps自动闭环
 //		lc.autoMaticLoopClosure("/home/echo/shandong_ceshichang/test.g2o","ss","/media/echo/DataDisc2/shandong/pcd",
 //				"/home/echo/shandong_ceshichang/test.csv","/home/echo/shandong_ceshichang/LiDAR_pose.csv");
 		//lc.GPSLoopClosureCalc("/home/echo/autoLoop.g2o");
 		//6.1 gps 闭环后的自动闭环
-		/*lc.autoMaticLoopClosure("/home/echo/shandong_in__out/LiDAR_Odom.g2o","ss","/media/echo/DataDisc2/shandong/pcd_inout",
-								"/home/echo/shandong_in__out/gps.csv","/home/echo/shandong_in__out/LiDAR_pose.csv");*/
+		lc.autoMaticLoopClosure("/home/echo/shandong_in__out/LiDAR_Odom.g2o","ss","/media/echo/DataDisc2/shandong/pcd_inout",
+								"/home/echo/shandong_in__out/gps.csv","/home/echo/shandong_in__out/LiDAR_pose.csv");
 		//4.手动闭环 1.加闭环边20623,13617   3163 13731
 		//lc.addLoopEdge(3230,13731,"/home/echo/shandong_in__out/result.g2o","/home/echo/shandong_in__out/oneedge.g2o","/media/echo/DataDisc2/shandong/pcd_inout/");
+		
 	}
 
-//功能9 普通的16线建图
-	void rslidarmapping() {
-	}
+	//功能9. 预计分
+	void IMUPreintergration();
+	//11. imu LiDAR 外参标定
+	void IMU_LiDAR_ExParam();
 
 //功能10. gpsbased mapping
 	void gpsBasedOptimziation(std::string lidar_path, std::string gps_path, Eigen::Isometry3d lidar_to_gps,
