@@ -85,7 +85,7 @@ int main(int argc,char** argv){
 			break;
 		case 7://7. 从bag中读何塞rawdata
 			cout << "read pcd:" << endl;
-			
+			m.readAndSaveHesai("/media/echo/DataDisc/9_rosbag/zed_pandar64_ins/Hesai_back_afternoon_2.bag");
 			cout << "read pcd finish:" << endl;
 			break;
 		case 8://8. 测试新写的函数

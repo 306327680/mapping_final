@@ -116,3 +116,56 @@ void CSVio::LiDARsaveAll(std::string path) {
 		outFile << (time_seq[i]-time_seq[0]).toSec() << '\n';
 	}
 }
+
+void CSVio::IMU2CSV(std::vector<sensor_msgs::Imu> IMUs, std::string save_path, ros::Time start_time) {
+	std::ofstream outFile;
+	outFile.open(save_path, std::ios::out);
+	outFile<<"acc_x,acc_y,acc_z,gyro_x,gyro_y,gyro_z,time,\n";
+	for (int i = 0; i < IMUs.size(); ++i) {
+		outFile << IMUs[i].linear_acceleration.x << ',';
+		outFile << IMUs[i].linear_acceleration.y << ',';
+		outFile << IMUs[i].linear_acceleration.z << ',';
+		outFile << IMUs[i].angular_velocity.x << ',';
+		outFile << IMUs[i].angular_velocity.y<< ',';
+		outFile << IMUs[i].angular_velocity.z<< ',';
+		outFile << (IMUs[i].header.stamp-start_time).toSec() << '\n';
+	}
+}
+
+void CSVio::ReadImuCSV(std::string read_path,std::vector<Eigen::VectorXd> &result) {
+	std::ifstream gin(read_path);
+	std::string line;
+	 
+	bool first = true;
+	while (getline(gin, line))   //整行读取，换行符“\n”区分，遇到文件尾标志eof终止读取
+	{
+		if(first){
+			first = false;
+		}else{
+			std::istringstream sin(line); //将整行字符串line读入到字符串流istringstream中
+			std::vector<std::string> fields; //声明一个字符串向量
+			std::string field;
+			while (getline(sin, field, ',')) //将字符串流sin中的字符读入到field字符串中，以逗号为分隔符
+			{
+				fields.push_back(field); 			//将刚刚读取的字符串添加到向量fields中
+			}
+			Eigen::VectorXd temp;
+			temp.resize(7);
+			float ax = std::atof(fields[0].c_str());
+			float ay = std::atof(fields[1].c_str());
+			float az = std::atof(fields[2].c_str());
+			float wx = std::atof(fields[3].c_str());
+			float wy = std::atof(fields[4].c_str());
+			float wz = std::atof(fields[5].c_str());
+			float t  = std::atof(fields[6].c_str());
+			temp[0] = ax;
+			temp[1] = ay;
+			temp[2] = az;
+			temp[3] = wx;
+			temp[4] = wy;
+			temp[5] = wz;
+			temp[6] = t;
+			result.push_back(temp);
+		}
+	}
+}

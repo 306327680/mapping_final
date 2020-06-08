@@ -28,6 +28,10 @@ public:
 	void LiDARsaveOnePose(Eigen::Isometry3d pose,ros::Time cur_time);
 	//4.1 Lidar 全存进去
 	void LiDARsaveAll(std::string path);
+	//5. imu2csv
+	void IMU2CSV(std::vector<sensor_msgs::Imu> IMUs,std::string save_path,ros::Time start_time);
+	//5.1 read imu to eigen
+	void ReadImuCSV(std::string read_path,std::vector<Eigen::VectorXd> &result);
 private:
 	gpsTools gt;
 	std::vector<Eigen::Isometry3d, Eigen::aligned_allocator<Eigen::Isometry3d>> trans_vector;

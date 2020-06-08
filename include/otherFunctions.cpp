@@ -1286,7 +1286,39 @@ void main_function::gpsBasedOptimziation(std::string lidar_path,std::string gps_
 }
 
 void main_function::IMUPreintergration() {
-
+	std::vector<Eigen::VectorXd> IMUdata;
+	Eigen::Quaterniond q;
+	Eigen::Quaterniond imu_angle_speed;
+	ros::Publisher imu_pub;
+	ros::NodeHandle node;
+	ros::NodeHandle privateNode("~");
+	imu_pub = node.advertise<sensor_msgs::Imu>("/imu_intergrate", 5);
+	sensor_msgs::Imu topub;
+	topub.header.frame_id = "map";
+	q.setIdentity();
+	CSVio csvio;
+	csvio.ReadImuCSV("/home/echo/shandong_in__out/imu/imu.csv",	IMUdata );
+	ros::Rate r(125);
+	for (int i = 0; i < IMUdata.size(); ++i) {
+	
+		topub.linear_acceleration.x = IMUdata[i][0];
+		topub.linear_acceleration.y = IMUdata[i][1];
+		topub.linear_acceleration.z = IMUdata[i][2];
+		topub.angular_velocity.x = IMUdata[i][3];
+		topub.angular_velocity.y = IMUdata[i][4];
+		topub.angular_velocity.z = IMUdata[i][5];
+		imu_angle_speed.w() = 1;
+		imu_angle_speed.x() = IMUdata[i][3]*0.5*0.008;
+		imu_angle_speed.y() = IMUdata[i][4]*0.5*0.008;
+		imu_angle_speed.z() = IMUdata[i][5]*0.5*0.008;
+		q = q*imu_angle_speed;
+		topub.orientation.x = q.x();
+		topub.orientation.y = q.y();
+		topub.orientation.z = q.z();
+		topub.orientation.w = q.w();
+		imu_pub.publish(topub);
+		r.sleep();
+	}
 }
 
 void main_function::genlocalmap(std::vector<Eigen::Isometry3d, Eigen::aligned_allocator<Eigen::Isometry3d>> trans_vector,

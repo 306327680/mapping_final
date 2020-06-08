@@ -128,7 +128,36 @@ pcl::PointCloud<pcl::PointXYZRGB> imgAddColor2Lidar::pclalignImg2LiDAR(cv::Mat m
 }
 
 pcl::PointCloud<pcl::PointXYZRGB>
-imgAddColor2Lidar::pclalignImg2LiDAR(cv::Mat mat, pcl::PointCloud<pcl::PointXYZI> cloudin) {
+imgAddColor2Lidar::pclalignImg2LiDAR(cv::Mat mat, pcl::PointCloud<pcl::PointXYZI> cloudin){
+	//去畸变
+	cv::Mat image = mat;
+	cv::Mat frame;
+	cv::Mat imageCalibration;
+	cv::Mat cameraMatrix = cv::Mat::eye(3, 3, CV_64F);
+	cameraMatrix.at<double>(0, 0) = intrinsics(0, 0);
+	cameraMatrix.at<double>(0, 1) = intrinsics(0, 1);
+	cameraMatrix.at<double>(0, 2) = intrinsics(0, 2);
+	cameraMatrix.at<double>(1, 1) = intrinsics(1, 1);
+	cameraMatrix.at<double>(1, 2) = intrinsics(1, 2);
+
+	cv::Mat distCoeffs = cv::Mat::zeros(5, 1, CV_64F);
+	distCoeffs.at<double>(0, 0) = k1;
+	distCoeffs.at<double>(1, 0) = k2;
+	distCoeffs.at<double>(2, 0) = k3;
+	distCoeffs.at<double>(3, 0) = p1;
+	distCoeffs.at<double>(4, 0) = p2;
+
+	cv::Mat view, rview, map1, map2;
+	cv::Size imageSize;
+	imageSize = image.size();
+	initUndistortRectifyMap(cameraMatrix, distCoeffs, cv::Mat(),
+							getOptimalNewCameraMatrix(cameraMatrix, distCoeffs, imageSize, 1, imageSize, 0),
+							imageSize, CV_16SC2, map1, map2);
+
+	remap(image, imageCalibration, map1, map2, cv::INTER_LINEAR);
+	
+ 	mat = imageCalibration;
+	//正经程序
 	pcl::PointCloud<pcl::PointXYZRGB> coloured_point_cloud;
 	cv::Mat projected_image1;
 	for (int i = 0; i < cloudin.size(); ++i) {
@@ -168,4 +197,84 @@ imgAddColor2Lidar::pclalignImg2LiDAR(cv::Mat mat, pcl::PointCloud<pcl::PointXYZI
 		}
 	}
 	return coloured_point_cloud;
+}
+
+cv::Mat imgAddColor2Lidar::pcd2img(cv::Mat mat, pcl::PointCloud<pcl::PointXYZI> cloudin) {
+	pcl::PointCloud<PointXYZRGBI>  coloured_point_cloud;
+/*	cv::Mat image = mat;
+	cv::Mat frame;
+	cv::Mat imageCalibration;
+	cv::Mat cameraMatrix = cv::Mat::eye(3, 3, CV_64F);
+	cameraMatrix.at<double>(0, 0) = intrinsics(0, 0);
+	cameraMatrix.at<double>(0, 1) = intrinsics(0, 1);
+	cameraMatrix.at<double>(0, 2) = intrinsics(0, 2);
+	cameraMatrix.at<double>(1, 1) = intrinsics(1, 1);
+	cameraMatrix.at<double>(1, 2) = intrinsics(1, 2);
+	
+	cv::Mat distCoeffs = cv::Mat::zeros(5, 1, CV_64F);
+	distCoeffs.at<double>(0, 0) = k1;
+	distCoeffs.at<double>(1, 0) = k2;
+	distCoeffs.at<double>(2, 0) = k3;
+	distCoeffs.at<double>(3, 0) = p1;
+	distCoeffs.at<double>(4, 0) = p2;
+	
+	cv::Mat view, rview, map1, map2;
+	cv::Size imageSize;
+	imageSize = image.size();
+	initUndistortRectifyMap(cameraMatrix, distCoeffs, cv::Mat(),
+							getOptimalNewCameraMatrix(cameraMatrix, distCoeffs, imageSize, 1, imageSize, 0),
+							imageSize, CV_16SC2, map1, map2);
+	
+	remap(image, imageCalibration, map1, map2, cv::INTER_LINEAR);
+	mat = imageCalibration;*/
+	//之前的
+	cv::Mat projected_image1 =  mat;
+	for (int i = 0; i < cloudin.size(); ++i) {
+		PointXYZRGBI	  temp_point;
+		temp_point.x = cloudin[i].x;
+		temp_point.y = cloudin[i].y;
+		temp_point.z = cloudin[i].z;
+		temp_point.intensity = cloudin[i].intensity;
+		
+		point_3d << cloudin[i].x, cloudin[i].y, cloudin[i].z;
+		point_3d_3 = rotation * point_3d + translation;//外参平移现在的点
+		
+		point_t3d = point_3d_3 / point_3d_3[2];//z轴归一化
+		
+		float r_2 = point_t3d[0] * point_t3d[0] + point_t3d[1] * point_t3d[1];
+		float x_ori = point_t3d[0];
+		float y_ori = point_t3d[1];
+		//这里用去畸变 这里公式问题??
+		point_t3d[0] = x_ori*(1 + k1*r_2 + k2*pow(r_2, 2) + k3*pow(r_2, 3)) + 2*p1*x_ori*y_ori + p2*(r_2 + 2*pow(x_ori,2));
+		point_t3d[1] = y_ori*(1 + k1*r_2 + k2*pow(r_2, 2) + k3*pow(r_2, 3)) + 2*p2*x_ori*y_ori + p1*(r_2 + 2*pow(y_ori,2));
+		//内参投影
+		int image_u = (int)(intrinsics(0,0)*point_t3d[0] + intrinsics(0,2));
+		int image_v = (int)(intrinsics(1,1)*point_t3d[1] + intrinsics(1,2));
+		
+		if (1 <= image_u && image_u < mat.size().width-1 &&
+			1 <= image_v && image_v < mat.size().height-1 && mat.at<cv::Vec3b>(image_u,image_v)[0] >= 0)
+		{
+			cv::Vec3b colour= mat.at<cv::Vec3b>(cv::Point(image_u, image_v));
+			temp_point.r = colour[2];
+			temp_point.g = colour[1];
+			temp_point.b = colour[0];
+			temp_point.a = 1;
+			coloured_point_cloud.push_back(temp_point);
+			int intensity=0;
+			if(temp_point.intensity > 50){
+				intensity = 255;
+			} else{
+				intensity = int((temp_point.intensity/50)*255);
+			}
+			if(temp_point.x>0){
+				projected_image1(cv::Rect(image_u, image_v, 1, 1)).setTo(
+						cv::Vec3b( abs(255 - intensity), abs(127 - intensity), abs(0 - intensity)));
+			}
+		
+/*			projected_image1.at<cv::Vec3b>(image_u,image_v)[0] = abs(255 - intensity); //blue
+			projected_image1.at<cv::Vec3b>(image_u,image_v)[1] = abs(127 - intensity); //green
+			projected_image1.at<cv::Vec3b>(image_u,image_v)[2] = abs(0   - intensity); //red*/
+		}
+	}
+	return projected_image1;
 }

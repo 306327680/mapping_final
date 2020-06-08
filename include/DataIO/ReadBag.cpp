@@ -272,7 +272,7 @@ void ReadBag::readVLP16(std::string path,std::string save_path) {
 	bag.open(path, rosbag::bagmode::Read);
 	std::vector<std::string> topics;
 	bool pcd_start = false;
-	double time_begin;
+	double time_last = 0;
 	double timestamp;
 	//可以加挺多topic的?
 	topics.push_back(std::string("/velodyne_points"));
@@ -289,7 +289,6 @@ void ReadBag::readVLP16(std::string path,std::string save_path) {
 					pcl::fromROSMsg(*s,vlp_pcd);
 			 
 					if(!pcd_start){
-						time_begin = vlp_pcd[0].time;
 						lidar_first = s->header.stamp;
 						pcd_start = true;
 					}
@@ -301,10 +300,11 @@ void ReadBag::readVLP16(std::string path,std::string save_path) {
 						temp.y = vlp_pcd[i].y;
 						temp.z = vlp_pcd[i].z;
 						temp.intensity = vlp_pcd[i].intensity;
-						temp.time = vlp_pcd[i].time - time_begin;
+						temp.time = vlp_pcd[i].time + time_last;
 						temp.ring = vlp_pcd[i].ring;
 						vlp_pcdtosave.push_back(temp);
 					}
+					time_last += vlp_pcd[vlp_pcd.size()-1].time - vlp_pcd[0].time;
 					vlp_pcdtosave.width = vlp_pcdtosave.size();
  					//
  					int nsec_c[9];
@@ -373,7 +373,6 @@ void ReadBag::readTopRobosense(std::string path, std::string save_path) {
 						if(!__isnan(temp.x)){
 							robo_pcdtosave.push_back(temp);
 						}
-	
 					}
 					robo_pcdtosave.width = robo_pcdtosave.size();
 					RoboPointCLoud robo_pcdtosave_temp;
@@ -479,4 +478,26 @@ void ReadBag::saveRTK2PCD(std::string path) {
  //第一帧雷达来的时间
 	csvio.NavSat2CSVLLA(gnss_tosave,"aa",lidar_first,gnss_tosave[0]);
 	writer.write("gps.pcd",*gps_route);
+}
+
+void ReadBag::readImu(std::string path, std::string save_path) {
+	std::cout<<"the bag path is: "<<path<<std::endl;
+	rosbag::Bag bag;
+	bag.open(path, rosbag::bagmode::Read);
+	std::vector<std::string> topics;
+	
+	//可以加挺多topic的?
+	topics.push_back(std::string("/imu/data"));
+	rosbag::View view(bag, rosbag::TopicQuery(topics));
+	std::vector<sensor_msgs::Imu> IMUs;
+ 
+	BOOST_FOREACH(rosbag::MessageInstance const m, view)
+				{
+					sensor_msgs::Imu::ConstPtr s = m.instantiate<sensor_msgs::Imu>();
+					IMUs.push_back(*s);
+				}
+	if (lidar_first.isZero()){
+		lidar_first = IMUs[0].header.stamp;
+	}
+	csvio.IMU2CSV(IMUs,save_path,lidar_first);
 }
