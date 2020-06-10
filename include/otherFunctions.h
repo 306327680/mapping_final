@@ -103,6 +103,9 @@ public:
 	pcl::octree::OctreePointCloudSearch<pcl::PointXYZI> *octree;
 	pcl::PointCloud<pcl::PointXYZI>::Ptr octpcd;
 	float resolution;
+ //imu相关
+	std::vector<Eigen::VectorXd> IMUdata;
+	Eigen::Vector3d gravity;
 //0.设置起始结束的pcd
 	void setStartEnd();
 
@@ -189,9 +192,14 @@ public:
 	pcl::PointCloud<pcl::PointXYZI> localMapOct(pcl::PointCloud<pcl::PointXYZI> last_fine,pcl::PointCloud<pcl::PointXYZI> this_coarse);
 	
 	ros::Time fromPath2Time(std::string s);
-
+//18 IMU index寻找
+	int  last_imu_index = 0 ;
+	int IMUCorreIndex(double time);
+	//19. imu估计8个pqv
+	void IMUPQVEstimation(int index,Eigen::Isometry3d current_pose, Eigen::Isometry3d LastPose,std::vector<Eigen::Isometry3d> &pq,std::vector<Eigen::Vector3d> &v,double first_scan_time);
 //6.2 建图前端 点面icp ****************
 	int point2planeICP();
+	int IMUBasedpoint2planeICP();
 	int point2planeICPWOLO(); //没有粗配准
 // 功能3 设置road curb 的mapping
 	void traversableMapping();
@@ -219,11 +227,11 @@ public:
 
 		bool readBag = true;
 		if (readBag){
-			
-			//a.readcamera("/media/echo/DataDisc2/shandong/udist_outdoor_indoor.bag","/media/echo/DataDisc2/shandong/pic_inout");
-			a.readVLP16("/media/echo/DataDisc2/shandong/udist_outdoor_indoor.bag","/media/echo/DataDisc2/shandong/pcd_inout_abstime");
-			//a.saveRTK2PCD("/media/echo/DataDisc2/shandong/udist_outdoor_indoor.bag");//把rtk保存成 csv+pcd
-			a.readImu("/media/echo/DataDisc2/shandong/udist_outdoor_indoor.bag","/home/echo/shandong_in__out/imu/imu.csv");
+			a.readVLP16WoTime("/media/echo/DataDisc2/jjh/jjiao_vehicle_sensor_travel_2_filter.bag","/media/echo/DataDisc2/jjh/pcd");
+		/*	a.readVLP16("/media/echo/DataDisc2/shandong/udist_outdoor_indoor.bag","/media/echo/DataDisc2/shandong/pcd_inout_abstime");
+			a.readcamera("/media/echo/DataDisc2/shandong/udist_outdoor_indoor.bag","/media/echo/DataDisc2/shandong/pic_inout");
+			a.saveRTK2PCD("/media/echo/DataDisc2/shandong/udist_outdoor_indoor.bag");//把rtk保存成 csv+pcd
+			a.readImu("/media/echo/DataDisc2/shandong/udist_outdoor_indoor.bag","/home/echo/shandong_in__out/imu/imu.csv");*/
 		}
 		//a.readcamera("/media/echo/DataDisc2/shandong/2020-05-24-16-51-53.bag","/media/echo/DataDisc2/shandong/pic");
 		//a.readVLP16("/media/echo/DataDisc2/shandong/2020-05-24-16-51-53.bag","/media/echo/DataDisc2/shandong/pcd");
@@ -288,6 +296,8 @@ public:
 
 	//功能9. 预计分
 	void IMUPreintergration();
+	//功能10 带imu的mapping
+	void IMUMapping();
 	//11. imu LiDAR 外参标定
 	void IMU_LiDAR_ExParam();
 

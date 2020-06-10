@@ -54,6 +54,7 @@ public:
 	//3. 这里转换雷达等的数据
 	void readHesai(std::string path);
 	void readVLP16(std::string path,std::string save_path);
+	void readVLP16WoTime(std::string path,std::string save_path);
 	void readTopRobosense(std::string path,std::string save_path);
 	//4. 读取图片
 	void readcamera(std::string path,std::string save_path);

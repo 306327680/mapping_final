@@ -119,6 +119,7 @@ void CSVio::LiDARsaveAll(std::string path) {
 
 void CSVio::IMU2CSV(std::vector<sensor_msgs::Imu> IMUs, std::string save_path, ros::Time start_time) {
 	std::ofstream outFile;
+	outFile.precision(9);
 	outFile.open(save_path, std::ios::out);
 	outFile<<"acc_x,acc_y,acc_z,gyro_x,gyro_y,gyro_z,time,\n";
 	for (int i = 0; i < IMUs.size(); ++i) {

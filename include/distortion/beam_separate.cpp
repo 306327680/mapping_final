@@ -669,7 +669,7 @@ void featureExtraction::adjustDistortion(pcl::PointCloud<PointTypeBeam>::Ptr poi
 		Individual_bef->resize(1);
 		Individual_bef->points[0] = pointIn->points[i];
 		Individual->points[0] = pointIn->points[i];
-		trinterp(input, transInput,pointIn->points[i].pctime,out);
+		trinterp(input, transInput, pointIn->points[i].pctime, out);
 		transpc.matrix() = out.matrix();
 		Eigen::Matrix4d convert;
 		convert = transpc.matrix();

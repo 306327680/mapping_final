@@ -149,9 +149,9 @@ pcl::PointCloud<pcl::PointXYZI> registration::normalIcpRegistration(pcl::PointCl
 	//上面那个也不对
 	//increase = transformation * increase * pcl_plane_plane_icp->getFinalTransformation();
 	increase = increase * pcl_plane_plane_icp->getFinalTransformation();
-	std::cout << "1.T_l-1_l - T_l_l+1 : \n" <<   pcl_plane_plane_icp->getFinalTransformation() << std::endl;
+/*	std::cout << "1.T_l-1_l - T_l_l+1 : \n" <<   pcl_plane_plane_icp->getFinalTransformation() << std::endl;
 	std::cout << "2.T_l_l1 :\n" << increase << std::endl;
-	std::cout << "3.第一次分数 : " << pcl_plane_plane_icp->getFitnessScore() << std::endl;
+	std::cout << "3.第一次分数 : " << pcl_plane_plane_icp->getFitnessScore() << std::endl;*/
 	pcl::transformPointCloud(*source, tfed, transformation.matrix());
 	//变化量
 	return tfed;
@@ -239,8 +239,8 @@ pcl::PointCloud<pcl::PointXYZI> registration::normalIcpRegistrationlocal(pcl::Po
 	transformation = transformation_local;
 	tools.timeUsed();
 	
-	std::cout << "2.2 T_scan_l_l+1 - Tmap_l_l+1 \n"  << pcl_plane_plane_icp->getFinalTransformation() << std::endl;
-	std::cout << "2.3 第二次分数 : "  << pcl_plane_plane_icp->getFitnessScore()  << std::endl;
+/*	std::cout << "2.2 T_scan_l_l+1 - Tmap_l_l+1 \n"  << pcl_plane_plane_icp->getFinalTransformation() << std::endl;
+	std::cout << "2.3 第二次分数 : "  << pcl_plane_plane_icp->getFitnessScore()  << std::endl;*/
 	pcl::transformPointCloud(*source, tfed, transformation.matrix());
 	//变化量
 	return tfed;

@@ -91,8 +91,9 @@ int main(int argc,char** argv){
 		case 8://8. 测试新写的函数
 			m.testFunction();
 			break;
+			//imu建图
 		case 9:
-			m.IMUPreintergration();
+			m.IMUMapping();
 			break;
 		case 10:
 			//10. 格式转化,用于不同的雷达型号 保留ring 和timestamp等信息
