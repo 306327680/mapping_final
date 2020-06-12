@@ -136,7 +136,7 @@ void CSVio::IMU2CSV(std::vector<sensor_msgs::Imu> IMUs, std::string save_path, r
 void CSVio::ReadImuCSV(std::string read_path,std::vector<Eigen::VectorXd> &result) {
 	std::ifstream gin(read_path);
 	std::string line;
-	 
+	std::vector<Eigen::VectorXd> result_tmp;
 	bool first = true;
 	while (getline(gin, line))   //整行读取，换行符“\n”区分，遇到文件尾标志eof终止读取
 	{
@@ -166,7 +166,8 @@ void CSVio::ReadImuCSV(std::string read_path,std::vector<Eigen::VectorXd> &resul
 			temp[4] = wy;
 			temp[5] = wz;
 			temp[6] = t;
-			result.push_back(temp);
+			result_tmp.push_back(temp);
 		}
 	}
+	result = result_tmp;
 }

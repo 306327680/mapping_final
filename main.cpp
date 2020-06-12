@@ -15,7 +15,7 @@ int main(int argc,char** argv){
 	//获得参数
 	m.getParam(argc,argv);
 	//得到所有的pcd名字
-	m.GetFileNames(m.filepath,"pcd");
+	//m.GetFileNames("/home/echo/6_test_pcd/pcd_inout_abstime","pcd");
 	//读取png 彩色图
 //	m.GetPNGFileNames("/media/echo/DataDisc2/shandong/pic","png");
 	//qt

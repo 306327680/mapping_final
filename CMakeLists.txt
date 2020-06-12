@@ -8,6 +8,12 @@ find_package( yaml-cpp REQUIRED )
 #找到各种sb库
 include_directories(${YAML_CPP_SOURCE_DIR}/src)
 include_directories(${YAML_CPP_SOURCE_DIR}/test)
+#matplotlib
+##python
+find_package(Python2 COMPONENTS Development NumPy)
+include_directories(${PYTHON_INCLUDE_DIRS}) #使用这方式可以替代下面这行
+
+include_directories(include/matplotlib-cpp)
 #测试point to plane icp
 find_package(libpointmatcher CONFIG)
 FIND_PACKAGE( CSparse )

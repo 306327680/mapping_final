@@ -64,9 +64,11 @@
 #include "loopClosure/loopClosure.h"
 #include "GPS_constraint_mapping/GPS_loop_mapping.h"
 #include <pcl/octree/octree_search.h>
+#include "matplotlib-cpp/matplotlibcpp.h"
 EIGEN_DEFINE_STL_VECTOR_SPECIALIZATION(Eigen::Matrix4d)
 EIGEN_DEFINE_STL_VECTOR_SPECIALIZATION(Eigen::Isometry3d)
 using namespace g2o;
+namespace plt = matplotlibcpp;
 class main_function {
 public:
 	main_function(){};
@@ -105,7 +107,7 @@ public:
 	float resolution;
  //imu相关
 	std::vector<Eigen::VectorXd> IMUdata;
-	Eigen::Vector3d gravity;
+	Eigen::Vector3d gravity,gravity_w,bias_gyro;
 //0.设置起始结束的pcd
 	void setStartEnd();
 
@@ -122,7 +124,7 @@ public:
 
 // 3. 得到名称
 	bool GetFileNames(const std::string directory, const std::string suffix);
-	
+	bool GetIntFileNames(const std::string directory, const std::string suffix);
 	bool GetPNGFileNames(const std::string directory, const std::string suffix);
 
 //4. 排序
@@ -153,7 +155,7 @@ public:
 
 //10.0 线性去畸变的接口
 	void simpleDistortion(mypcdCloud input, Eigen::Matrix4f increase, pcl::PointCloud<pcl::PointXYZI> &output);
-
+	void simpleDistortion(VLPPointCloud input, Eigen::Matrix4d increase, pcl::PointCloud<pcl::PointXYZI> &output);
 //11.1 omp NDT 配准
 	pcl::PointCloud<pcl::PointXYZI>::Ptr align(pcl::Registration<pcl::PointXYZI, pcl::PointXYZI>::Ptr registration,
 											   const pcl::PointCloud<pcl::PointXYZI>::Ptr &target_cloud,
@@ -197,6 +199,14 @@ public:
 	int IMUCorreIndex(double time);
 	//19. imu估计8个pqv
 	void IMUPQVEstimation(int index,Eigen::Isometry3d current_pose, Eigen::Isometry3d LastPose,std::vector<Eigen::Isometry3d> &pq,std::vector<Eigen::Vector3d> &v,double first_scan_time);
+	//20 获得重力初值
+	Eigen::Isometry3d GetRollPitch(int length);
+	//21 imu积分
+	void IMUIntergrate(Eigen::Isometry3d& PQ,Eigen::Vector3d& V,int ImuIndex);
+	//22 imu去畸变 需要当前开始点的 P Q V, 开始点的imu index 返回去畸变的点云 其中PQ 是上次 icp 的结果, 去畸变后应当及时 T到最后一个点的位置
+	pcl::PointCloud<pcl::PointXYZI> IMUDistortion(VLPPointCloud point_in,Eigen::Isometry3d PQ,Eigen::Vector3d V,int ImuIndex);
+	//23 通过两帧变换的到速度
+	Eigen::Vector3d GetVelocityOfbody(Eigen::Isometry3d last,Eigen::Isometry3d cur ,int ImuIndex);
 //6.2 建图前端 点面icp ****************
 	int point2planeICP();
 	int IMUBasedpoint2planeICP();
@@ -227,9 +237,9 @@ public:
 
 		bool readBag = true;
 		if (readBag){
-			a.readVLP16WoTime("/media/echo/DataDisc2/jjh/jjiao_vehicle_sensor_travel_2_filter.bag","/media/echo/DataDisc2/jjh/pcd");
-		/*	a.readVLP16("/media/echo/DataDisc2/shandong/udist_outdoor_indoor.bag","/media/echo/DataDisc2/shandong/pcd_inout_abstime");
-			a.readcamera("/media/echo/DataDisc2/shandong/udist_outdoor_indoor.bag","/media/echo/DataDisc2/shandong/pic_inout");
+//			a.readVLP16WoTime("/media/echo/DataDisc2/jjh/jjiao_vehicle_sensor_travel_2_filter.bag","/media/echo/DataDisc2/jjh/pcd");
+			a.readVLP16("/media/echo/DataDisc2/shandong/udist_outdoor_indoor.bag","/media/echo/DataDisc2/shandong/pcd_inout_abstime");
+/*			a.readcamera("/media/echo/DataDisc2/shandong/udist_outdoor_indoor.bag","/media/echo/DataDisc2/shandong/pic_inout");
 			a.saveRTK2PCD("/media/echo/DataDisc2/shandong/udist_outdoor_indoor.bag");//把rtk保存成 csv+pcd
 			a.readImu("/media/echo/DataDisc2/shandong/udist_outdoor_indoor.bag","/home/echo/shandong_in__out/imu/imu.csv");*/
 		}

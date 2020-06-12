@@ -272,8 +272,8 @@ void ReadBag::readVLP16(std::string path,std::string save_path) {
 	bag.open(path, rosbag::bagmode::Read);
 	std::vector<std::string> topics;
 	bool pcd_start = false;
-	double time_last = 0;
-	double timestamp;
+	float time_last = 0;
+	float timestamp;
 	//可以加挺多topic的?
 	topics.push_back(std::string("/velodyne_points"));
 	rosbag::View view(bag, rosbag::TopicQuery(topics));
@@ -304,26 +304,12 @@ void ReadBag::readVLP16(std::string path,std::string save_path) {
 						temp.ring = vlp_pcd[i].ring;
 						vlp_pcdtosave.push_back(temp);
 					}
+
 					time_last += vlp_pcd[vlp_pcd.size()-1].time - vlp_pcd[0].time;
+					std::cout<<time_last<<std::endl;
 					vlp_pcdtosave.width = vlp_pcdtosave.size();
- 					//
- 					int nsec_c[9];
-				 
- 					nsec_c[8] = s->header.stamp.nsec%10;
-					nsec_c[7] = (s->header.stamp.nsec/10)%10;
-					nsec_c[6] = (s->header.stamp.nsec/100)%10;
-					nsec_c[5] = (s->header.stamp.nsec/1000)%10;
-					nsec_c[4] = (s->header.stamp.nsec/10000)%10;
-					nsec_c[3] = (s->header.stamp.nsec/100000)%10;
-					nsec_c[2] = (s->header.stamp.nsec/1000000)%10;
-					nsec_c[1] = (s->header.stamp.nsec/10000000)%10;
-					nsec_c[0] = (s->header.stamp.nsec/100000000)%10;
 					
-					std::cout<<nsec_c[0]<<nsec_c[1]<<nsec_c[2]<<nsec_c[3]<<nsec_c[4]<<nsec_c[5]
-					<<nsec_c[6]<<nsec_c[7]<<nsec_c[8]<<" "<<s->header.stamp.nsec<<std::endl;
-					timestamp = s->header.stamp.sec;
-					pcd_save<<save_path.c_str()<<"/"<<timestamp<<"."<<nsec_c[0]<<nsec_c[1]<<nsec_c[2]<<nsec_c[3]
-					<<nsec_c[4]<<nsec_c[5]<<nsec_c[6]<<nsec_c[7]<<nsec_c[8]<<".pcd";
+					pcd_save<<save_path.c_str()<<"/"<<inter_times<<".pcd";
 					std::cout<<pcd_save.str()<<" size: "<<vlp_pcd.size()<<" times: "<<inter_times<<std::endl;
 					writer.write(pcd_save.str(),vlp_pcdtosave,true);
 					vlp_pcdtosave.clear();
