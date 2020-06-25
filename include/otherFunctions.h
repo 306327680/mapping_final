@@ -65,6 +65,7 @@
 #include "GPS_constraint_mapping/GPS_loop_mapping.h"
 #include <pcl/octree/octree_search.h>
 #include "matplotlib-cpp/matplotlibcpp.h"
+#include <sophus/se3.h>
 EIGEN_DEFINE_STL_VECTOR_SPECIALIZATION(Eigen::Matrix4d)
 EIGEN_DEFINE_STL_VECTOR_SPECIALIZATION(Eigen::Isometry3d)
 using namespace g2o;
@@ -206,7 +207,9 @@ public:
 	//22 imu去畸变 需要当前开始点的 P Q V, 开始点的imu index 返回去畸变的点云 其中PQ 是上次 icp 的结果, 去畸变后应当及时 T到最后一个点的位置
 	pcl::PointCloud<pcl::PointXYZI> IMUDistortion(VLPPointCloud point_in,Eigen::Isometry3d PQ,Eigen::Vector3d V,int ImuIndex);
 	//23 通过两帧变换的到速度
-	Eigen::Vector3d GetVelocityOfbody(Eigen::Isometry3d last,Eigen::Isometry3d cur ,int ImuIndex);
+	Eigen::Vector3d GetVelocityOfbody(Eigen::Isometry3d last,Eigen::Isometry3d cur ,int ImuIndex,	Eigen::Isometry3d &middle);
+	//24. local map intensity variance
+	pcl::PointCloud<pcl::PointXYZI>  localMapVariance(pcl::PointCloud<pcl::PointXYZI> bigmap);
 //6.2 建图前端 点面icp ****************
 	int point2planeICP();
 	int IMUBasedpoint2planeICP();
@@ -238,10 +241,10 @@ public:
 		bool readBag = true;
 		if (readBag){
 //			a.readVLP16WoTime("/media/echo/DataDisc2/jjh/jjiao_vehicle_sensor_travel_2_filter.bag","/media/echo/DataDisc2/jjh/pcd");
-			a.readVLP16("/media/echo/DataDisc2/shandong/udist_outdoor_indoor.bag","/media/echo/DataDisc2/shandong/pcd_inout_abstime");
-/*			a.readcamera("/media/echo/DataDisc2/shandong/udist_outdoor_indoor.bag","/media/echo/DataDisc2/shandong/pic_inout");
-			a.saveRTK2PCD("/media/echo/DataDisc2/shandong/udist_outdoor_indoor.bag");//把rtk保存成 csv+pcd
-			a.readImu("/media/echo/DataDisc2/shandong/udist_outdoor_indoor.bag","/home/echo/shandong_in__out/imu/imu.csv");*/
+			//a.readVLP16("/media/echo/DataDisc/9_rosbag/12_imu_lidar_stereo/lidar_imu_stereo.bag","/home/echo/5_png/out3loop/pcd");
+			a.readcamera("/media/echo/DataDisc/9_rosbag/12_imu_lidar_stereo/lidar_imu_stereo.bag","/home/echo/5_png/out3loop/left_png");
+//			a.saveRTK2PCD("/media/echo/DataDisc2/shandong/udist_outdoor_indoor.bag");//把rtk保存成 csv+pcd
+			//a.readImu("/media/echo/DataDisc/9_rosbag/12_imu_lidar_stereo/lidar_imu_stereo.bag","/home/echo/5_png/out3loop/imu/imu.csv");
 		}
 		//a.readcamera("/media/echo/DataDisc2/shandong/2020-05-24-16-51-53.bag","/media/echo/DataDisc2/shandong/pic");
 		//a.readVLP16("/media/echo/DataDisc2/shandong/2020-05-24-16-51-53.bag","/media/echo/DataDisc2/shandong/pcd");
@@ -314,7 +317,7 @@ public:
 //功能10. gpsbased mapping
 	void gpsBasedOptimziation(std::string lidar_path, std::string gps_path, Eigen::Isometry3d lidar_to_gps,
 							  std::string save_path);
-
+	void cameraDistortion(std::string input_path, std::string output_path,std::string dist_file);
 private:
 };
 

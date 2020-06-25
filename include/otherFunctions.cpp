@@ -436,6 +436,8 @@ int main_function::point2planeICP() {
 	pcl::PointCloud<pcl::PointXYZINormal>::Ptr result(new pcl::PointCloud<pcl::PointXYZINormal>);
 	pcl::PointCloud<pcl::PointXYZINormal>::Ptr filter1(new pcl::PointCloud<pcl::PointXYZINormal>);
 	pcl::PointCloud<pcl::PointXYZINormal>::Ptr raw(new pcl::PointCloud<pcl::PointXYZINormal>);
+	pcl::PointCloud<pcl::PointXYZI> local_intensity_variance_map;
+	pcl::PointCloud<pcl::PointXYZI> local_map_for_variance;
 	bool bperal_edge = false;
 	//ros debug
 	//todo 这里可以去掉ros
@@ -455,7 +457,7 @@ int main_function::point2planeICP() {
 	test_frame_linear = node.advertise<sensor_msgs::PointCloud2>("/current_frame_linear", 5);
 	local_map_pub = node.advertise<sensor_msgs::PointCloud2>("/local_map_oct", 5);
 	path_publish = node.advertise<nav_msgs::Path>("/lidar_path", 5);
-	scan_tfed = node.advertise<sensor_msgs::PointCloud2>("/scan_tf", 5);
+	scan_tfed = node.advertise<sensor_msgs::PointCloud2>("/local_variance_map", 5);
 	//todo end 这里可以去掉ros
 	//存tf的
 	std::vector<Eigen::Matrix4f> poses;
@@ -499,7 +501,7 @@ int main_function::point2planeICP() {
 	std::cout<<start_id<<" "<<end_id<<std::endl;
 	
 	bool VLP = true;
-	std::string LiDAR_type = "robo";
+	std::string LiDAR_type = "VLP";
 	bool local_map_updated = true; //todo 加入地图更新判断 1100-3000
 	std::vector<nav_msgs::Odometry> odoms;//当前结果转成odom 存储
 	nav_msgs::Odometry current_odom;
@@ -669,7 +671,7 @@ int main_function::point2planeICP() {
 					*cloud_map += tfed;
 					oct_last = tfed;
 					pcd_save<<"tf_ed/"<<i<<".pcd";
-					writer.write(pcd_save.str(),tfed, true);
+//					writer.write(pcd_save.str(),tfed, true);
 					//存的点云缩小点,每50帧存一下结果;
 		/*			if(i%100==50){
 						pcl::PointCloud<int> keypointIndices;
@@ -708,6 +710,13 @@ int main_function::point2planeICP() {
 					to_pub_frame_linear.header.frame_id = "/map";
 					test_frame.publish(to_pub_frame_linear);
 					tools2.timeUsed();
+					
+				/*	local_map_for_variance = tfed;
+					local_intensity_variance_map = localMapVariance(local_map_for_variance);
+					pcl::toPCLPointCloud2(local_intensity_variance_map, pcl_frame);
+					pcl_conversions::fromPCL(pcl_frame, to_pub_frame_linear);
+					to_pub_frame_linear.header.frame_id = "/map";
+					scan_tfed.publish(to_pub_frame_linear);*/
 					
 					//	todo 这里可以去掉ros
 				}else{//存每一帧 防止内存爆炸
@@ -1316,6 +1325,7 @@ void main_function::saveFile(std::string outFilename, std::vector<VertexSE3 *> v
 }
 
 void main_function::setStartEnd() {
+ 
 	std::cout << "设置起始pcd" << std::endl;
 	cin >> start_id;
 	std::cout << "start: " << start_id << std::endl;
@@ -1669,8 +1679,9 @@ int main_function::IMUBasedpoint2planeICP() {
  	//2. 读取到的点云
 	VLPPointCloud xyzirVLP;
 	//3. 重力matrix 取第一秒
-	Eigen::Isometry3d T_w_L0;
-	T_w_L0 = GetRollPitch(1200);//6.9 19
+	//todo ba 和 g 分割
+	Eigen::Isometry3d T_w_L0;		 //1000  g: 9.81804 x,y,z:  -0.48208 0.0345763   9.80613 bias_gyro: -0.000193941  -0.00014255  3.32149e-06
+	T_w_L0 = GetRollPitch(500);//500  g: 9.81822 x,y,z: -0.482934 0.0355165   9.80627 bias_gyro:  -0.00020279 -0.000112503  1.36801e-05
  	std::cout<<T_w_L0.matrix()<<std::endl;
 	//4.第一个点的时间
 	float first_point_time = 0;
@@ -1687,10 +1698,13 @@ int main_function::IMUBasedpoint2planeICP() {
 	//7.去畸变的点云
 	pcl::PointCloud<pcl::PointXYZI> imu_distorted_pointcloud;
 	start_id = 0;
-	end_id = 600;
+	end_id = 1000;
 	std::vector<double> x,xl , v_lx,v_ly,v_lz,p_lx,p_ly,p_lz,v_x,v_y,v_z,r_x,r_y,r_z,p_x,p_y,p_z,r_lz,r_ly,r_lx;
 	pcl::io::loadPCDFile<VLPPoint>(file_names_[0], xyzirVLP);
 	int start_index = IMUCorreIndex(xyzirVLP[xyzirVLP.size()-1].time);
+	//雷达_imu位置
+	pcl::PointCloud<pcl::PointXYZI> imu_path,lidar_path;
+	
 	
 	for(int i = 1;  i <file_names_ .size();i++){
 		if (i>=start_id && i<=end_id) {//0.0控制开始结束
@@ -1708,13 +1722,14 @@ int main_function::IMUBasedpoint2planeICP() {
 				last_scan_end = trans_vector[i]*T_w_L0;
 				//1.2.2 获得平均速度 上帧的
 				std::cout<<i<<std::endl;
-				Eigen::Vector3d this_begin_speed = GetVelocityOfbody(last_scan_begin,last_scan_end,IMUCorreIndex(xyzirVLP[0].time));
-				imu_distorted_pointcloud = IMUDistortion(xyzirVLP,Eigen::Isometry3d::Identity(),this_begin_speed,IMUCorreIndex(xyzirVLP[0].time));
+				Eigen::Isometry3d T_middle;
+				Eigen::Vector3d this_begin_speed = GetVelocityOfbody(last_scan_begin,last_scan_end,IMUCorreIndex(xyzirVLP[0].time),T_middle);
+				imu_distorted_pointcloud = IMUDistortion(xyzirVLP,T_middle,this_begin_speed,IMUCorreIndex(xyzirVLP[0].time));
 				//1.2.2 存下结果
-				pcl::PCDWriter writer;
+	/*			pcl::PCDWriter writer;
 				std::stringstream pcd_save;
 				pcd_save<<"/home/echo/6_test_pcd/imu_distort/"<<i<<".pcd";
-				writer.write(pcd_save.str(),imu_distorted_pointcloud, false);
+				writer.write(pcd_save.str(),imu_distorted_pointcloud, false);*/
 				//pcl::transformPointCloud(*cloud_aft, *tmp, trans_vector[i].matrix());
 				//结束时候index
 				last_scan_begin = last_scan_end;
@@ -1723,20 +1738,27 @@ int main_function::IMUBasedpoint2planeICP() {
 				v_lx.push_back(this_begin_speed(0));
 				v_ly.push_back(this_begin_speed(1));
 				v_lz.push_back(this_begin_speed(2));
-				p_lx.push_back(last_scan_end.translation()(0));
-				p_ly.push_back(last_scan_end.translation()(1));
-				p_lz.push_back(last_scan_end.translation()(2));
-				Eigen::Quaterniond eulerAngle(last_scan_end.rotation());
+				p_lx.push_back(T_middle.translation()(0));
+				p_ly.push_back(T_middle.translation()(1));
+				p_lz.push_back(T_middle.translation()(2));
+				Eigen::Quaterniond eulerAngle(T_middle.rotation());
 				r_lx.push_back(eulerAngle.x());
 				r_ly.push_back(eulerAngle.y());
 				r_lz.push_back(eulerAngle.z());
+				//t用xyz表示
+				pcl::PointXYZI temp_g;
+				temp_g.x = T_middle.translation()(0);
+				temp_g.y = T_middle.translation()(1);
+				temp_g.z = T_middle.translation()(2);
+				temp_g.intensity = (i-1.0)/10.0;
+				imu_path.push_back(temp_g);
 			}
 		}
 	}
 	std::cout<<bias_gyro<<std::endl;
 	std::cout<<"start: "<<start_index<<std::endl;
 	for (int k = start_index; k < IMUdata.size(); ++k) {
-		if(k<7500){
+		if(k<12500){
 			IMUIntergrate(T_w_L0,Vw,k);
 			x.push_back(k/125.0);
 			v_x.push_back(Vw(0));
@@ -1749,60 +1771,74 @@ int main_function::IMUBasedpoint2planeICP() {
 			r_x.push_back(eulerAngle.x());
 			r_y.push_back(eulerAngle.y());
 			r_z.push_back(eulerAngle.z());
+			pcl::PointXYZI temp_g;
+			temp_g.x = T_w_L0.translation()(0);
+			temp_g.y = T_w_L0.translation()(1);
+			temp_g.z = T_w_L0.translation()(2);
+			temp_g.intensity = k/125.0;
+			lidar_path.push_back(temp_g);
 		}
 	}
+	pcl::PCDWriter writer;
+	writer.write("lidar_path.pcd",lidar_path);
+	writer.write("imu_path.pcd",imu_path);
 	
+	//***********plot result
 	plt::figure_size(10000, 4000);
-	plt::title("IMU lidar q Estimate");
+	plt::title("IMU LiDAR rotation Estimate");
 	plt::plot(x, r_x);
 	plt::plot(x, r_y);
 	plt::plot(x, r_z);
-	plt::plot(xl, r_lx,".");
-	plt::plot(xl, r_ly,".");
-	plt::plot(xl, r_lz,".");
-	plt::named_plot("r_x", x, r_x);
-	plt::named_plot("r_y", x, r_y);
-	plt::named_plot("r_z", x, r_z);
-	plt::named_plot("r_lx", xl, r_lx);
-	plt::named_plot("r_ly", xl, r_ly);
-	plt::named_plot("r_lz", xl, r_lz);
+	plt::plot(xl, r_lx,"o");
+	plt::plot(xl, r_ly,"o");
+	plt::plot(xl, r_lz,"o");
+	plt::named_plot("r_x_imu", x, r_x);
+	plt::named_plot("r_y_imu", x, r_y);
+	plt::named_plot("r_z_imu", x, r_z);
+	plt::named_plot("r_x_LiDAR", xl, r_lx);
+	plt::named_plot("r_y_LiDAR", xl, r_ly);
+	plt::named_plot("r_z_LiDAR", xl, r_lz);
 	plt::legend();
+ 
+	plt::grid(true);
 	plt::save("./q.png");
 	plt::close();
 	
 	plt::figure_size(10000, 4000);
-	plt::title("IMU Lidar v Estimate");
+	plt::title("IMU LiDAR velocity Estimate");
 	plt::plot(x, v_x);
 	plt::plot(x, v_y);
 	plt::plot(x, v_z);
-	plt::plot(xl, v_lx,".");
-	plt::plot(xl, v_ly,".");
-	plt::plot(xl, v_lz,".");
-	plt::named_plot("v_x", x, v_x);
-	plt::named_plot("v_y", x, v_y);
-	plt::named_plot("v_z", x, v_z);
-	plt::named_plot("v_lx", xl, v_lx);
-	plt::named_plot("v_ly", xl, v_ly);
-	plt::named_plot("v_lz", xl, v_lz);
+	plt::plot(xl, v_lx,"o");
+	plt::plot(xl, v_ly,"o");
+	plt::plot(xl, v_lz,"o");
+	plt::named_plot("v_x_imu", x, v_x);
+	plt::named_plot("v_y_imu", x, v_y);
+	plt::named_plot("v_z_imu", x, v_z);
+	plt::named_plot("v_x_LiDAR", xl, v_lx);
+	plt::named_plot("v_y_LiDAR", xl, v_ly);
+	plt::named_plot("v_z_LiDAR", xl, v_lz);
 	plt::legend();
+	plt::grid(true);
 	plt::save("./v_imu_lidar.png");
 	plt::close();
 	
 	plt::figure_size(10000, 4000);
-	plt::title("IMU Lidar p Estimate");
+	plt::title("IMU LiDAR position Estimate");
 	plt::plot(x, p_x);
 	plt::plot(x, p_y);
 	plt::plot(x, p_z);
-	plt::plot(xl, p_lx,".");
-	plt::plot(xl, p_ly,".");
-	plt::plot(xl, p_lz,".");
-	plt::named_plot("p_x", x, p_x);
-	plt::named_plot("p_y", x, p_y);
-	plt::named_plot("p_z", x, p_z);
-	plt::named_plot("p_lx", xl, p_lx);
-	plt::named_plot("p_ly", xl, p_ly);
-	plt::named_plot("p_lz", xl, p_lz);
+	plt::plot(xl, p_lx,"o");
+	plt::plot(xl, p_ly,"o");
+	plt::plot(xl, p_lz,"o");
+	plt::named_plot("p_x_imu", x, p_x);
+	plt::named_plot("p_y_imu", x, p_y);
+	plt::named_plot("p_z_imu", x, p_z);
+	plt::named_plot("p_x_LiDAR", xl, p_lx);
+	plt::named_plot("p_y_LiDAR", xl, p_ly);
+	plt::named_plot("p_z_LiDAR", xl, p_lz);
 	plt::legend();
+	plt::grid(true);
 	plt::save("./p_imu_lidar.png");
 	plt::close();
 /*	g2osaver.saveGraph(save_g2o_path);
@@ -1896,6 +1932,7 @@ void main_function::IMUPQVEstimation(int index, Eigen::Isometry3d current_pose, 
 Eigen::Isometry3d main_function::GetRollPitch(int length){
 	Eigen::Vector3d g_c,gyro,bg;
 	gravity.setZero();
+	bias_gyro.setZero();
 	for (int l = 0; l < length; ++l) {
 		g_c(0) = IMUdata[l][0];
 		g_c(1) = IMUdata[l][1];
@@ -1906,7 +1943,7 @@ Eigen::Isometry3d main_function::GetRollPitch(int length){
 		gravity += g_c;
 		bias_gyro += gyro;
 	}
-	std::cout <<" bias_gyro: "<<bias_gyro<<std::endl;
+	
 	g_c = gravity;
 	gravity = g_c/length;
 	bg = bias_gyro;
@@ -1915,7 +1952,7 @@ Eigen::Isometry3d main_function::GetRollPitch(int length){
 	gravity_w[0] = 0;
 	gravity_w[1] = 0;
 	gravity_w[2] = -gravity.norm();
-	std::cout<<" g: "<<gravity.norm()<<" x,y,z: "<<gravity.transpose()<<" bias_gyro: "<<bias_gyro<<std::endl;
+	std::cout<<" g: "<<gravity.norm()<<" x,y,z: "<<gravity.transpose()<<" bias_gyro: "<<bias_gyro.transpose()<<std::endl;
 	double roll = atan2(gravity[1],gravity[2]);
 	double pitch = atan2(-gravity[0],sqrt(gravity[2]*gravity[2]+gravity[1]*gravity[1]));
 	std::cout<<" roll: "<<roll*180/M_PI<<" pitch: "<<pitch*180/M_PI<<std::endl;
@@ -2009,10 +2046,8 @@ main_function::IMUDistortion(VLPPointCloud point_in, Eigen::Isometry3d PQ, Eigen
 	for (int k = 0; k < 13; ++k) {
 		IMUIntergrate(PQ_Dist,V_Dist,ImuIndex +  k);
 		imu_DT.push_back(PQ*PQ_Dist.inverse());
-//		std::cout<<"delta T: \n"<<PQ*PQ_Dist.inverse().matrix()<<std::endl;//感觉数值都挺正常
 		PQ = PQ_Dist;
 		imu_absT[k] = PQ_Dist;
-//		std::cout<<k<<" 相对雷达起点的位姿:\n"<<PQ_Dist.matrix()<<std::endl;
 	}
 	//1.2 每组去个畸变
 	
@@ -2029,23 +2064,126 @@ main_function::IMUDistortion(VLPPointCloud point_in, Eigen::Isometry3d PQ, Eigen
 	return result;
 }
 //1.2.2 获得速度
-Eigen::Vector3d main_function::GetVelocityOfbody(Eigen::Isometry3d last, Eigen::Isometry3d cur, int ImuIndex) {
+Eigen::Vector3d main_function::GetVelocityOfbody(Eigen::Isometry3d last, Eigen::Isometry3d cur, int ImuIndex,Eigen::Isometry3d &middle) {
 	Eigen::Vector3d velocity;
 	Eigen::Isometry3d DeltaT ,pose;
 
 	DeltaT = last.inverse().matrix() * cur.matrix();
-	std::cout<<"雷达测出来的变化量 x: "<<DeltaT.matrix()(0,3)<<" y: "<<DeltaT.matrix()(1,3)<<" z: "<<DeltaT.matrix()(2,3)<<std::endl;
-	pose = last*(0.5*DeltaT.matrix());
+//	std::cout<<"雷达测出来的变化量 x: "<<DeltaT.matrix()(0,3)<<" y: "<<DeltaT.matrix()(1,3)<<" z: "<<DeltaT.matrix()(2,3)<<std::endl;
+	Sophus::SE3 middle_s;
+	middle_s = Sophus::SE3(DeltaT.rotation(),DeltaT.translation());
+	Sophus::Vector6d se3_Rt = middle_s.log();
+	se3_Rt = 0.5*se3_Rt;
+	middle_s = Sophus::SE3::exp(se3_Rt);
+	pose = last*middle_s.matrix();
+	middle = pose;
 	velocity[0]=  DeltaT(0,3)/0.1;
 	velocity[1]=  DeltaT(1,3)/0.1;
 	velocity[2]=  DeltaT(2,3)/0.1;
-	std::cout<<"雷达测出来的中间点速度  : "<<velocity.transpose()<<std::endl;
-	IMUIntergrate(pose,velocity,ImuIndex-5);
-	IMUIntergrate(pose,velocity,ImuIndex-4);
-	IMUIntergrate(pose,velocity,ImuIndex-3);
-	IMUIntergrate(pose,velocity,ImuIndex-2);
-	IMUIntergrate(pose,velocity,ImuIndex-1);
-	IMUIntergrate(pose,velocity,ImuIndex);
-	std::cout<<"imu测出来的上帧结束点的速度: "<<velocity.transpose()<<std::endl;
+/*	std::cout<<"开始位姿  : \n"<<last.matrix()<<std::endl;
+	std::cout<<"变化位姿  : \n"<<DeltaT.matrix()<<std::endl;
+	std::cout<<"中间位姿  : \n"<<pose.matrix()<<std::endl;
+	std::cout<<"结束位姿  : \n"<<cur.matrix()<<std::endl;
+	std::cout<<"雷达测出来的中间点速度  : "<<velocity.transpose()<<std::endl;*/
+	//todo 对不对? 数量
+//	IMUIntergrate(pose,velocity,ImuIndex-5);
+//	IMUIntergrate(pose,velocity,ImuIndex-4);
+//	IMUIntergrate(pose,velocity,ImuIndex-3);
+//	IMUIntergrate(pose,velocity,ImuIndex-2);
+//	IMUIntergrate(pose,velocity,ImuIndex-1);
+//	IMUIntergrate(pose,velocity,ImuIndex);
+//	std::cout<<"imu测出来的上帧结束点的速度: "<<velocity.transpose()<<std::endl;
 	return velocity;
+}
+
+pcl::PointCloud<pcl::PointXYZI> main_function::localMapVariance(pcl::PointCloud<pcl::PointXYZI> bigmap) {
+	pcl::KdTreeFLANN<pcl::PointXYZI> kdtree;
+	pcl::PointCloud<pcl::PointXYZI>::Ptr bigmap_ptr (new pcl::PointCloud<pcl::PointXYZI>);
+	
+	*bigmap_ptr = bigmap;
+	kdtree.setInputCloud (bigmap_ptr);
+	for (int i = 0; i < bigmap.size(); ++i) {
+		std::vector<int> pointIdxRadiusSearch;
+		std::vector<float> pointRadiusSquaredDistance;
+		float radius = 0.1;
+		//当前点进行搜索
+		if ( kdtree.radiusSearch (bigmap[i], radius, pointIdxRadiusSearch, pointRadiusSquaredDistance) > 0 )
+		{
+			float averange_intensity;
+			for (std::size_t j = 0; j < pointIdxRadiusSearch.size (); ++j){
+				averange_intensity = averange_intensity + bigmap[ pointIdxRadiusSearch[j] ].intensity;
+			}
+			averange_intensity = averange_intensity/pointIdxRadiusSearch.size ();
+			bigmap[i].intensity = fabs(bigmap[i].intensity - averange_intensity);
+		}
+	}
+
+	return bigmap;
+}
+
+void main_function::cameraDistortion(std::string input_path, std::string output_path,std::string dist_file) {
+	GetPNGFileNames(input_path,"png");
+ 
+ 
+	double *mi= new double[3*3];
+    double *md = new double[4];
+	CvMat intrinsic_matrix,distortion_coeffs;
+	  //摄像机内参数
+    cvInitMatHeader(&intrinsic_matrix,3,3,CV_64FC1,mi);
+    //镜头畸变参数
+    cvInitMatHeader(&distortion_coeffs,1,4,CV_64FC1,md);
+
+    //****** 畸变参数 赋值 *******
+    double fc1,fc2,cc1,cc2,k1,k2,k3,p1,p2;
+	std::string param_path = dist_file;
+	std::ifstream params(param_path);
+	std::cout << param_path << std::endl;
+	params >> fc1;
+	params >> fc2;
+	params >> cc1;
+	params >> cc2;
+	params >> k1;
+	params >> k2;
+	params >> p1;
+	params >> p2;
+	params >> k3;
+	std::cout<<dist_file<<" fc1: "<<fc1<<" fc2: "<<fc2<<" cc1: "<<cc1<<" cc2 "<<cc2<<" k1 "<<k1<<" k2 "<<k2<<" k3 "<<k3<<" p1 "<<p1<<" p2 "<<p2<<std::endl;
+    cvmSet(&intrinsic_matrix, 0, 0, fc1);
+    cvmSet(&intrinsic_matrix, 0, 1, 0);
+    cvmSet(&intrinsic_matrix, 0, 2, cc1);
+    cvmSet(&intrinsic_matrix, 1, 0, 0);
+    cvmSet(&intrinsic_matrix, 1, 1, fc2);
+    cvmSet(&intrinsic_matrix, 1, 2, cc2);
+    cvmSet(&intrinsic_matrix, 2, 0, 0);
+    cvmSet(&intrinsic_matrix, 2, 1, 0);
+    cvmSet(&intrinsic_matrix, 2, 2, 1);
+    cvmSet(&distortion_coeffs, 0, 0, k1);
+	cvmSet(&distortion_coeffs, 0, 1, k2);
+	cvmSet(&distortion_coeffs, 0, 2, p1);
+	cvmSet(&distortion_coeffs, 0, 3, p2);
+	
+	std::cout<<"有 "<<PNG_file_names_.size()<<" 张图像要处理"<<std::endl;
+	for (int i = 0; i < PNG_file_names_.size(); ++i) {
+		
+		IplImage*  image = cvLoadImage(PNG_file_names_[i].c_str());
+		IplImage*  dst = cvLoadImage(PNG_file_names_[i].c_str());
+		std::stringstream pcd_save;
+		
+		pcd_save<<output_path<<i<<".png";
+		std::cout<<pcd_save.str()<<std::endl;
+		cvUndistort2( image, dst, &intrinsic_matrix, &distortion_coeffs);
+		cvSaveImage(pcd_save.str().c_str(),dst);
+		cvReleaseImage(&image);
+		cvReleaseImage(&dst);
+	}
+ 
+/*//******** 显示结果 (opencv)***********
+	cvNamedWindow( "disted", 1 );//创建窗口
+	cvShowImage("disted", dst);
+	cv::moveWindow("disted"+filename,100,100);
+	cvNamedWindow( "raw", 1 );//创建窗口
+	cvShowImage("raw", image);
+	cv::moveWindow("raw"+filename,100,100);
+	cvWaitKey(0);
+	cvReleaseImage( &dst );*/
 }

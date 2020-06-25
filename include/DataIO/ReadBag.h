@@ -56,6 +56,7 @@ public:
 	void readVLP16(std::string path,std::string save_path);
 	void readVLP16WoTime(std::string path,std::string save_path);
 	void readTopRobosense(std::string path,std::string save_path);
+	void readRobo128(std::string path,std::string save_path);
 	//4. 读取图片
 	void readcamera(std::string path,std::string save_path);
 	void readCalibratedCamera(std::string path,std::string cali_path,std::string save_path);

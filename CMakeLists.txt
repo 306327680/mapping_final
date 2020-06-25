@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.6.3 FATAL_ERROR)
 project(pcd_compare)
-find_package(PCL REQUIRED)
+find_package(PCL 1.7 REQUIRED)
 set( CMAKE_CXX_FLAGS "-std=c++11 -O2" )
 set( CMAKE_EXPORT_COMPILE_COMMANDS on)
 list( APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake_modules )
@@ -125,7 +125,7 @@ add_library(ground_seg
         include/registration/registration.cpp
         include/registration/registration.h
         include/GPS/gpsTools.cpp include/GPS/gpsTools.h
-        include/lidarCameraAdjust/lidarCameraAdjust.cpp include/lidarCameraAdjust/lidarCameraAdjust.h)
+        include/lidarCameraAdjust/lidarCameraAdjust.cpp include/lidarCameraAdjust/lidarCameraAdjust.h include/cameraCalibration/cameraCalibration.cpp include/cameraCalibration/cameraCalibration.h)
 target_link_libraries(ground_seg
         ${roscpp_LIBRARIES} ${std_msgs_LIBRARIES}
         ${rosbag_LIBRARIES} ${nav_msgs_LIBRARIES}
@@ -191,3 +191,9 @@ target_link_libraries(mapping ${PCL_LIBRARIES}
         Qt5::Widgets
         Qt5::Core
         Qt5::Gui)
+##DSO
+add_executable(DSO src/DSO.cpp)
+target_link_libraries(DSO ${PCL_LIBRARIES}
+        ${OpenCV_LIBS}
+        ${CERES_LIBRARIES}
+        ${CSPARSE_LIBRARY})

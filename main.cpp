@@ -15,7 +15,7 @@ int main(int argc,char** argv){
 	//获得参数
 	m.getParam(argc,argv);
 	//得到所有的pcd名字
-	//m.GetFileNames("/home/echo/6_test_pcd/pcd_inout_abstime","pcd");
+	m.GetIntFileNames(argv[1],"pcd");
 	//读取png 彩色图
 //	m.GetPNGFileNames("/media/echo/DataDisc2/shandong/pic","png");
 	//qt
@@ -96,8 +96,8 @@ int main(int argc,char** argv){
 			m.IMUMapping();
 			break;
 		case 10:
-			//10. 格式转化,用于不同的雷达型号 保留ring 和timestamp等信息
-			m.readAndSaveHesai("/media/echo/DataDisc/9_rosbag/rsparel_64_ins/2019-11-06-20-43-12_0.bag");
+			//10. q去畸变
+			m.cameraDistortion( "/home/echo/5_png/out3loop/left_png","/home/echo/5_png/out3loop/left_png_undist/","/home/echo/5_png/out3loop/camera_left.txt");
 			break;
 		case 11:
 			//10. 格式转化,用于不同的雷达型号 保留ring 和timestamp等信息
