@@ -209,7 +209,7 @@ public:
 	pcl::PointCloud<pcl::PointXYZI> IMUDistortion(VLPPointCloud point_in,Eigen::Isometry3d PQ,Eigen::Vector3d V,int ImuIndex);
 	pcl::PointCloud<pcl::PointXYZI> IMUDistortion(mypcdCloud point_in,Eigen::Isometry3d PQ,Eigen::Vector3d V,int ImuStartIndex,int ImuEndIndex,pcl::PointCloud<pcl::PointXYZI> &output );
 	//22.1
-	pcl::PointCloud<pcl::PointXYZI> adjustDistortionBySpeed(pcl::PointCloud<PointTypeBeam> pointIn,Eigen::VectorXd IMU,Eigen::Vector3d trans,Eigen::Quaterniond last_q,double first_t,double time_diff);
+	pcl::PointCloud<pcl::PointXYZI> adjustDistortionBySpeed(pcl::PointCloud<PointTypeBeam> pointIn,Eigen::VectorXd IMU,Eigen::Vector3d trans,Eigen::Quaterniond& last_q,double first_t,double time_diff);
 	//23 通过两帧变换的到速度
 	Eigen::Vector3d GetVelocityOfbody(Eigen::Isometry3d last,Eigen::Isometry3d cur ,int ImuIndex,	Eigen::Isometry3d &middle);
 	//24. local map intensity variance
