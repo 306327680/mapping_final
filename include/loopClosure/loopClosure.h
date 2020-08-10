@@ -66,17 +66,20 @@ public:
 						int num1,std::string filepath,pcl::PointCloud<pcl::PointXYZ>& bigmap);
 	void genVLPlocalmap(int length,std::vector<Eigen::Isometry3d, Eigen::aligned_allocator<Eigen::Isometry3d>> trans_vector,
 						int num1,std::string filepath,pcl::PointCloud<pcl::PointXYZI>& bigmap);
+	
+	std::vector<std::string> file_names_;
 private:
 	std::vector<VertexSE3*> vertices;
 	std::vector<EdgeSE3*> edges;
 	g2o::SparseOptimizer optimizer;
 	//函数
 	bool GetFileNames(const std::string directory,const std::string suffix);
+	bool GetIntFileNames(const std::string directory, const std::string suffix);
 	bool FindFileseq(int64_t seq);
 	
 	void saveFile(std::string outFilename, std::vector<VertexSE3*> vertices,
 				  std::vector<EdgeSE3*> edges);
-	void SaveTrans(Eigen::Isometry3d curr); //定义存储ICP edge 的函数
+	void SaveTrans(Eigen::Isometry3d curr,double score); //定义存储ICP edge 的函数
 	void SaveLiDAREdge();
 	pcl::PointCloud<pcl::PointXYZ> GICP_OMP(const pcl::PointCloud<pcl::PointXYZ> & cloud_source,
 										const pcl::PointCloud<pcl::PointXYZ> & cloud_target,
@@ -125,9 +128,9 @@ private:
 	void quatern2rotMat(Eigen::Vector4d &q_quaternion, Eigen::Matrix3d &R);
 	std::vector<Eigen::Isometry3d, Eigen::aligned_allocator<Eigen::Isometry3d>> getEigenPoseFromg2oFile(std::string &g2ofilename);
 	//变量
-	std::vector<std::string> file_names_;
+
 	std::string filename;
-	std::string filepath = "/media/echo/DataDisc/9_rosbag/8_imu_camera_rtk_vlp/small_pcd/";
+	std::string filepath = " ";
 	Eigen::Isometry3d curICP = Eigen::Isometry3d::Identity();
 	int cur_id = 0;
 	int past = 0;

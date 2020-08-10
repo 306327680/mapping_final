@@ -11,7 +11,7 @@ GPS_loop_mapping::	GPSandPose(std::string lidar_pose, std::string gps_constraint
 	ceres::examples::ReadG2oFile(lidar_pose, &poses, &constraints);//读取g2o文件
 	std::vector<std::pair<int,Eigen::Vector3d>> relation;//gps和位姿的映射
 	PoseGraphIO wtf;//保存结果
-	RelationG2OGPS("/home/echo/shandong_in__out/LiDAR_pose.csv","/home/echo/shandong_in__out/gps.csv",relation);//获得gps和位姿的映射
+	RelationG2OGPS("/home/echo/2_bag/2_ziboHandHold/GO/lidar_csv/LiDAR_pose.csv","/home/echo/2_bag/2_ziboHandHold/GO/rtk/rtk.csv",relation);//获得gps和位姿的映射
 	poseTF(poses,extrinsic_matrix);//旋转当前LiDAR 位姿
 	ceres::Problem problem;
 	BuildOptimizationProblem(constraints, &poses, &problem);			        //闭环的约束项
@@ -28,7 +28,7 @@ GPS_loop_mapping::	GPSandPose(std::string lidar_pose, std::string gps_constraint
 	}
 	pcl::PCDWriter writer;
 	writer.write("gps_constrained.pcd",tfed);
-	wtf.saveGraph("gps_constrained.g2o");
+	wtf.saveGraph("/home/echo/2_bag/2_ziboHandHold/GO/g2o/gps_constrained.g2o");
 }
 
 void GPS_loop_mapping::poseTF(ceres::examples::MapOfPoses &input, Eigen::Isometry3d trans) {

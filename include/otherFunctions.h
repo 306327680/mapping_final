@@ -108,6 +108,7 @@ public:
 	float resolution;
  //imu相关
 	std::vector<Eigen::VectorXd> IMUdata;
+/*	temp[0] = ax;temp[1] = ay;temp[2] = az;temp[3] = wx;temp[4] = wy;temp[5] = wz;temp[6] = t;*/
 	Eigen::Vector3d gravity,gravity_w,bias_gyro;
 //0.设置起始结束的pcd
 	void setStartEnd();
@@ -206,12 +207,16 @@ public:
 	void IMUIntergrate(Eigen::Isometry3d& PQ,Eigen::Vector3d& V,int ImuIndex);
 	//22 imu去畸变 需要当前开始点的 P Q V, 开始点的imu index 返回去畸变的点云 其中PQ 是上次 icp 的结果, 去畸变后应当及时 T到最后一个点的位置
 	pcl::PointCloud<pcl::PointXYZI> IMUDistortion(VLPPointCloud point_in,Eigen::Isometry3d PQ,Eigen::Vector3d V,int ImuIndex);
+	pcl::PointCloud<pcl::PointXYZI> IMUDistortion(mypcdCloud point_in,Eigen::Isometry3d PQ,Eigen::Vector3d V,int ImuStartIndex,int ImuEndIndex,pcl::PointCloud<pcl::PointXYZI> &output );
+	//22.1
+	pcl::PointCloud<pcl::PointXYZI> adjustDistortionBySpeed(pcl::PointCloud<PointTypeBeam> pointIn,Eigen::VectorXd IMU,Eigen::Vector3d trans,Eigen::Quaterniond last_q,double first_t,double time_diff);
 	//23 通过两帧变换的到速度
 	Eigen::Vector3d GetVelocityOfbody(Eigen::Isometry3d last,Eigen::Isometry3d cur ,int ImuIndex,	Eigen::Isometry3d &middle);
 	//24. local map intensity variance
 	pcl::PointCloud<pcl::PointXYZI>  localMapVariance(pcl::PointCloud<pcl::PointXYZI> bigmap);
 //6.2 建图前端 点面icp ****************
 	int point2planeICP();
+	int IMUBasedpoint2planeICP_test();
 	int IMUBasedpoint2planeICP();
 	int point2planeICPWOLO(); //没有粗配准
 // 功能3 设置road curb 的mapping
@@ -241,10 +246,10 @@ public:
 		bool readBag = true;
 		if (readBag){
 //			a.readVLP16WoTime("/media/echo/DataDisc2/jjh/jjiao_vehicle_sensor_travel_2_filter.bag","/media/echo/DataDisc2/jjh/pcd");
-			//a.readVLP16("/media/echo/DataDisc/9_rosbag/12_imu_lidar_stereo/lidar_imu_stereo.bag","/home/echo/5_png/out3loop/pcd");
-			a.readcamera("/media/echo/DataDisc/9_rosbag/12_imu_lidar_stereo/lidar_imu_stereo.bag","/home/echo/5_png/out3loop/left_png");
-//			a.saveRTK2PCD("/media/echo/DataDisc2/shandong/udist_outdoor_indoor.bag");//把rtk保存成 csv+pcd
-			//a.readImu("/media/echo/DataDisc/9_rosbag/12_imu_lidar_stereo/lidar_imu_stereo.bag","/home/echo/5_png/out3loop/imu/imu.csv");
+			a.readVLP16(path,"/home/echo/2_bag/1_zibomapping/nanjin32/pcd");
+			a.readcamera(path,"/home/echo/2_bag/1_zibomapping/nanjin32/left_png");
+			a.saveRTK2PCD(path,"/home/echo/2_bag/1_zibomapping/nanjin32/rtk/rtk.csv");//把rtk保存成 csv+pcd
+			a.readImu(path,"/home/echo/2_bag/1_zibomapping/nanjin32/imu/imu.csv");
 		}
 		//a.readcamera("/media/echo/DataDisc2/shandong/2020-05-24-16-51-53.bag","/media/echo/DataDisc2/shandong/pic");
 		//a.readVLP16("/media/echo/DataDisc2/shandong/2020-05-24-16-51-53.bag","/media/echo/DataDisc2/shandong/pcd");
@@ -277,12 +282,12 @@ public:
 		pcl::PointXYZRGB a1;
 		writer.write("/home/echo/fusion_ws/result.pcd",tosave, true);*/
 		//3.测闭环gps约束 gps factor + lidar + loop closure
-/*
 		GPS_loop_mapping g;
-		g.GPSandPose("/home/echo/shandong_in__out/result.g2o", "/home/echo/shandong_in__out /gps.pcd",
+/*		g.GPSandPose("/home/echo/shandong_in__out/result.g2o", "/home/echo/shandong_in__out /gps.pcd",
 					 LiDARGNSScalibration("/home/echo/shandong_in__out/result.g2o","/home/echo/shandong_in__out/gps.pcd"));
-*/
-
+		*/
+		g.GPSandPose("/home/echo/2_bag/2_ziboHandHold/GO/g2o/LiDAR_Odom.g2o", "/home/echo/2_bag/2_ziboHandHold/GO/gps_pcd/gps.pcd",
+					 Eigen::Isometry3d::Identity());
 		//4.测闭环 1.加闭环边 2930 20402
 		//lc.addLoopEdge(780,7550,"/home/echo/test.g2o","/home/echo/test1.g2o","/media/echo/DataDisc/9_rosbag/8_imu_camera_rtk_vlp/car_pcd/");
 
@@ -296,12 +301,12 @@ public:
 		//genlocalmap(trans_vector, "", fxxk);
 		genColormap(trans_vector,""); //5.1 带颜色的pcd*/
 		//6.1 gps自动闭环
-//		lc.autoMaticLoopClosure("/home/echo/shandong_ceshichang/test.g2o","ss","/media/echo/DataDisc2/shandong/pcd",
-//				"/home/echo/shandong_ceshichang/test.csv","/home/echo/shandong_ceshichang/LiDAR_pose.csv");
+/*		lc.autoMaticLoopClosure("/home/echo/2_bag/2_ziboHandHold/GO/g2o/LiDAR_Odom.g2o","ss","/home/echo/2_bag/2_ziboHandHold/GO/pcd",
+				"/home/echo/2_bag/2_ziboHandHold/GO/rtk/rtk.csv","/home/echo/2_bag/2_ziboHandHold/GO/lidar_csv/LiDAR_pose.csv");*/
 		//lc.GPSLoopClosureCalc("/home/echo/autoLoop.g2o");
 		//6.1 gps 闭环后的自动闭环
-		lc.autoMaticLoopClosure("/home/echo/shandong_in__out/LiDAR_Odom.g2o","ss","/media/echo/DataDisc2/shandong/pcd_inout",
-								"/home/echo/shandong_in__out/gps.csv","/home/echo/shandong_in__out/LiDAR_pose.csv");
+/*		lc.autoMaticLoopClosure("/home/echo/shandong_in__out/LiDAR_Odom.g2o","ss","/media/echo/DataDisc2/shandong/pcd_inout",
+								"/home/echo/shandong_in__out/gps.csv","/home/echo/shandong_in__out/LiDAR_pose.csv");*/
 		//4.手动闭环 1.加闭环边20623,13617   3163 13731
 		//lc.addLoopEdge(3230,13731,"/home/echo/shandong_in__out/result.g2o","/home/echo/shandong_in__out/oneedge.g2o","/media/echo/DataDisc2/shandong/pcd_inout/");
 		

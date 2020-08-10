@@ -507,7 +507,7 @@ void ReadBag::readCalibratedCamera(std::string path,std::string cali_path, std::
 				}
 }
 
-void ReadBag::saveRTK2PCD(std::string path) {
+void ReadBag::saveRTK2PCD(std::string path,std::string savepath) {
 	std::cout<<"the bag path is: "<<path<<std::endl;
 	rosbag::Bag bag;
 	bag.open(path, rosbag::bagmode::Read);
@@ -543,7 +543,7 @@ void ReadBag::saveRTK2PCD(std::string path) {
 	pcl::PCDWriter writer;
 	std::cout<<"saving the data"<<std::endl;
  //第一帧雷达来的时间
-	csvio.NavSat2CSVLLA(gnss_tosave,"aa",lidar_first,gnss_tosave[0]);
+	csvio.NavSat2CSVLLA(gnss_tosave,savepath,lidar_first,gnss_tosave[0]);
 	writer.write("gps.pcd",*gps_route);
 }
 

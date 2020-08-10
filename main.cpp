@@ -48,14 +48,18 @@ int main(int argc,char** argv){
 			break;
 			//-3 生成彩色地图
 		case -3:
-			m.GetPNGFileNames("/media/echo/DataDisc2/shandong/pic_inout","png");
-			m.trans_vector = m.getEigenPoseFromg2oFile("/home/echo/shandong_in__out/result.g2o");
+			m.GetPNGFileNames("/home/echo/2_bag/2_ziboHandHold/GO/left_png","png");
+			m.GetIntFileNames("/home/echo/2_bag/2_ziboHandHold/GO/pcd","pcd");
+			m.trans_vector = m.getEigenPoseFromg2oFile("/home/echo/2_bag/2_ziboHandHold/GO/g2o/gps_constrained.g2o");
 			m.start_id = 0;
 			m.end_id = 8500;
-			m.genColormap(m.trans_vector,""); //5.1 带颜色的pcd
+			m.filepath = "/home/echo/2_bag/2_ziboHandHold/GO/pcd";
+			m.genColormap(m.trans_vector,"/home/echo/2_bag/2_ziboHandHold/GO/ex_params3.txt"); //5.1 带颜色的pcd
 			break;
 			
 		case 1 :
+			//todo 没修好 段错误
+			m.setStartEnd();
 			m.g2omapping();
 			cout << "g2o mapping start！" << endl;
 			break;
@@ -85,7 +89,7 @@ int main(int argc,char** argv){
 			break;
 		case 7://7. 从bag中读何塞rawdata
 			cout << "read pcd:" << endl;
-			m.readAndSaveHesai("/media/echo/DataDisc/9_rosbag/zed_pandar64_ins/Hesai_back_afternoon_2.bag");
+			m.readAndSaveHesai("/media/echo/DataDisc/9_rosbag/14_ziboMappingVehicle/lidar_locked.bag");
 			cout << "read pcd finish:" << endl;
 			break;
 		case 8://8. 测试新写的函数
@@ -100,7 +104,7 @@ int main(int argc,char** argv){
 			m.cameraDistortion( "/home/echo/5_png/out3loop/left_png","/home/echo/5_png/out3loop/left_png_undist/","/home/echo/5_png/out3loop/camera_left.txt");
 			break;
 		case 11:
-			//10. 格式转化,用于不同的雷达型号 保留ring 和timestamp等信息
+			//11. 格式转化,用于不同的雷达型号 保留ring 和timestamp等信息
 			m.readAndSaveHesai("/media/echo/DataDisc/9_rosbag/rsparel_64_ins/2019-11-06-20-43-12_0.bag");
 			break;
 		default :

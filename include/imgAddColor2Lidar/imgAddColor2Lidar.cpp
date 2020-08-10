@@ -261,10 +261,10 @@ cv::Mat imgAddColor2Lidar::pcd2img(cv::Mat mat, pcl::PointCloud<pcl::PointXYZI> 
 			temp_point.a = 1;
 			coloured_point_cloud.push_back(temp_point);
 			int intensity=0;
-			if(temp_point.intensity > 50){
+			if(temp_point.intensity > 35){
 				intensity = 255;
 			} else{
-				intensity = int((temp_point.intensity/50)*255);
+				intensity = int((temp_point.intensity/35)*255);
 			}
 			if(temp_point.x>0){
 				projected_image1(cv::Rect(image_u, image_v, 1, 1)).setTo(
