@@ -89,7 +89,7 @@ int main(int argc,char** argv){
 			break;
 		case 7://7. 从bag中读何塞rawdata
 			cout << "read pcd:" << endl;
-			m.readAndSaveHesai("/media/echo/DataDisc/9_rosbag/14_ziboMappingVehicle/lidar_locked.bag");
+			m.readAndSaveHesai("/media/echo/DataDisc2/1_ziboDataset/nanjinGo.bag");
 			cout << "read pcd finish:" << endl;
 			break;
 		case 8://8. 测试新写的函数
@@ -97,6 +97,11 @@ int main(int argc,char** argv){
 			break;
 			//imu建图
 		case 9:
+			m.setStartEnd();
+			m.getStereoFileNames("/home/echo/2_bag/2_ziboHandHold/GO");
+		    m.GetPNGFileNames("/home/echo/2_bag/2_ziboHandHold/GO/left_png","png");
+	/*		m.start_id = 4200;
+			m.end_id = 4350;*/
 			m.IMUMapping();
 			break;
 		case 10:

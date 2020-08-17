@@ -1348,14 +1348,14 @@ void main_function::gpsBasedOptimziation(std::string lidar_path,std::string gps_
 //todo 完成这个
 void main_function::IMUMapping(){
 	//1.获得 IMUdata
-	start_id = 0;
 	IMUPreintergration();
 	//2. LiDAR mapping
 	GetIntFileNames("/home/echo/2_bag/2_ziboHandHold/GO/pcd","pcd");
 	IMUBasedpoint2planeICP();
 }
 void main_function::IMUPreintergration() {
-	
+	YAML::Node config = YAML::LoadFile("/home/echo/2_bag/2_ziboHandHold/GO/cfg.yaml");
+	double imu_time_offset = config["offset"].as<double>();
 	Eigen::Quaterniond q;
 	Eigen::Quaterniond imu_angle_speed;
 	ros::Publisher imu_pub;
@@ -1367,6 +1367,10 @@ void main_function::IMUPreintergration() {
 	q.setIdentity();
 	CSVio csvio;
 	csvio.ReadImuCSV("/home/echo/2_bag/2_ziboHandHold/GO/imu/imu.csv",	IMUdata );
+	for (int i = 0; i < IMUdata.size(); ++i) {
+		IMUdata[i][6] = IMUdata[i][6]+imu_time_offset;
+	}
+	std::cout<<"imu_time_offset:  "<<imu_time_offset<<std::endl;
 /*	ros::Rate r(100);
 	for (int i = 0; i < IMUdata.size(); ++i) {
 	//1.q
@@ -1836,6 +1840,7 @@ int main_function::IMUBasedpoint2planeICP(){
 	pcl::PointCloud<pcl::PointXYZI> tfed;
 	pcl::PointCloud<pcl::PointXYZI> tfed_imu;
 	pcl::PointCloud<pcl::PointXYZRGB> tfed_color;
+	pcl::PointCloud<pcl::PointXYZRGB> stereo_color;
 	pcl::PointCloud<pcl::PointXYZI> cloud_continus_time_T_world;
 	pcl::PointCloud<pcl::PointXYZI> cloud_continus_time_T_LiDAR;
 	pcl::PointCloud<pcl::PointXYZI>::Ptr filteredCloud(new pcl::PointCloud<pcl::PointXYZI>);
@@ -1876,12 +1881,20 @@ int main_function::IMUBasedpoint2planeICP(){
 	ros::Publisher raw_pc;
 	ros::Publisher linear_dist_pub;
 	ros::Publisher tfed_imu_pub;
+	ros::Publisher tfed_color_pub;
+	ros::Publisher icp_result_pub;
+	ros::Publisher imu_result_pub;
+	ros::Publisher stereo_tfed_color_pub;
 	test_frame = node.advertise<sensor_msgs::PointCloud2>("/local_map", 5);
 	test_frame_linear = node.advertise<sensor_msgs::PointCloud2>("/current_frame_linear", 5);
 	imu_dist_pub = node.advertise<sensor_msgs::PointCloud2>("/imu_dist_pub", 5);
 	raw_pc = node.advertise<sensor_msgs::PointCloud2>("/raw_pc", 5);
 	linear_dist_pub = node.advertise<sensor_msgs::PointCloud2>("/linear_dist_pub", 5);
 	tfed_imu_pub = node.advertise<sensor_msgs::PointCloud2>("/tfed_imu_pub", 5);
+	icp_result_pub = node.advertise<nav_msgs::Odometry>("/icp_result", 5);
+	imu_result_pub = node.advertise<nav_msgs::Odometry>("/imu_result", 5);
+	tfed_color_pub = node.advertise<sensor_msgs::PointCloud2>("/tfed_color_pub", 5);
+	stereo_tfed_color_pub = node.advertise<sensor_msgs::PointCloud2>("/stereo_tfed_color_pub", 5);
 	//todo end 这里可以去掉ros
 	//存tf的
 	std::vector<Eigen::Matrix4f> poses;
@@ -1914,9 +1927,10 @@ int main_function::IMUBasedpoint2planeICP(){
 	//位姿存成csv
 	CSVio csvio;//位姿csv
 	imgAddColor2Lidar a;//投影点云
-	a.readExInt("/home/echo/fusion_ws/src/coloured_cloud/ex_params.txt");
+//	a.readExInt("/home/echo/fusion_ws/src/coloured_cloud/ex_params.txt");
+	a.readExInt("/home/echo/2_bag/2_ziboHandHold/GO/ex_params3.txt");
 	//投影相关
-	bool color = false;
+	bool color = true;
 	pcl::PointCloud<pcl::PointXYZRGB> tosave;
 	cv::Mat mat;VLPPointCloud cloudin;
 
@@ -1939,7 +1953,14 @@ int main_function::IMUBasedpoint2planeICP(){
 			return(0);
 		}
 	}
-	end_id = 300;
+	//总旋转
+	Eigen::Quaterniond icp_rotation_total;
+	icp_rotation_total.setIdentity();
+	Eigen::Quaterniond imu_rotation_total;
+	imu_rotation_total.setIdentity();
+	Eigen::Quaterniond pure_q;
+	pure_q.setIdentity();
+ 
 	//****主循环
 	for(int i = 0;  i <file_names_ .size();i++){
 		tools2.timeCalcSet("total");
@@ -1977,6 +1998,9 @@ int main_function::IMUBasedpoint2planeICP(){
 			//0.0 找到对应的pcd
 			int start_index = IMUCorreIndex(xyzirVLP[0].time);
 			int end_index = IMUCorreIndex(xyzirVLP[xyzirVLP.size()-1].time);
+			if(last_imu_id == 0){
+				last_imu_id = start_index;
+			}
 			pcl::copyPointCloud(xyzItimeRing,*cloud_hesai);
 			//0. 读取完毕
 			//1. 这里用pcl的 plane to plane icp
@@ -2001,8 +2025,10 @@ int main_function::IMUBasedpoint2planeICP(){
 				//2.3.1 再次去畸变 再次减小范围
 				//simpleDistortion(xyzItimeRing,icp.increase.inverse(),*cloud_bef);
 				PQ = icp.increase.inverse().cast<double>();
-				imu_distort = IMUDistortion(xyzItimeRing,PQ,V,start_index,end_index,*cloud_bef);     //IMU 去畸变***
-				//*cloud_bef = imu_distort; //改这里就成imu!!!!!
+				Eigen::Quaterniond last_q;
+				last_q.setIdentity();
+				imu_distort = IMUDistortion(xyzItimeRing,PQ,V,start_index,end_index,*cloud_bef,last_q,pure_q);     //IMU 去畸变***
+//				*cloud_bef = imu_distort; //改这里就成imu!!!!!!!!!!!!!!!!!!
 				tools.timeUsed();
 				
 				tools.timeCalcSet("局部地图用时    ");
@@ -2017,6 +2043,9 @@ int main_function::IMUBasedpoint2planeICP(){
 				icp_result.back() = icp_result.back()*icp.pcl_plane_plane_icp->getFinalTransformation(); //第一次结果*下一次去畸变icp结果
 				//2.3.3 再次去畸变 再次减小范围
 				//simpleDistortion(xyzItimeRing,icp.increase.inverse(),*cloud_bef);
+		
+	/*			std::cout<<"  !!!!! imu与LiDAR Rotation 之差 \n"<<icp_result_a.rotation()*last_q.matrix()<<std::endl;
+				outFile<<icp_result_a.rotation()*last_q.matrix()<<std::endl;*/
 				//pointCloudRangeFilter(*cloud_bef,75 - 1.5*(curr_speed/10)); //根据车速减小范围
 				tools.timeUsed();
 				
@@ -2024,8 +2053,9 @@ int main_function::IMUBasedpoint2planeICP(){
 				curr_speed = sqrt(icp_result.back()(0,3)*icp_result.back()(0,3)+icp_result.back()(1,3)*icp_result.back()(1,3))/0.1;
 				// 2.5 点云投影
 				if(i-1>=0 && color){
-					mat = cv::imread(PNG_file_names_[i-1]);
+					mat = cv::imread(PNG_file_names_[i+1]);
 					tosave  = a.pclalignImg2LiDAR(mat,*cloud_bef);
+					stereoDepthRecovery(i+1,stereo_color);
 				}
 				//2.6 存储结果
 				*local_map_to_pub = *cloud_local_map;
@@ -2040,6 +2070,35 @@ int main_function::IMUBasedpoint2planeICP(){
 				for (int k = 0; k < icp_result.size(); ++k) {
 					current_pose *= icp_result[k];
 				}
+				//发布位姿
+				nav_msgs::Odometry to_pub;
+				Eigen::Quaterniond rotation;
+				Eigen::Isometry3d icp_result_a;
+				icp_result_a = icp.increase.cast<double>();
+				rotation = icp_result_a.rotation();
+				
+				icp_rotation_total *= rotation;
+				imu_rotation_total *= last_q.inverse();
+				to_pub.header.frame_id = "map";
+				to_pub.header.stamp = ros::Time::now();
+				to_pub.pose.pose.orientation.x = icp_rotation_total.x();//rotation
+				to_pub.pose.pose.orientation.y = icp_rotation_total.y();
+				to_pub.pose.pose.orientation.z = icp_rotation_total.z();
+				to_pub.pose.pose.orientation.w = icp_rotation_total.w();
+				to_pub.pose.pose.position.x = current_pose(0,3);
+				to_pub.pose.pose.position.y = current_pose(1,3);
+				to_pub.pose.pose.position.z = current_pose(2,3);
+				
+				icp_result_pub.publish(to_pub);
+				
+				to_pub.pose.pose.orientation.x = pure_q.x();//last_q
+				to_pub.pose.pose.orientation.y = pure_q.y();
+				to_pub.pose.pose.orientation.z = pure_q.z();
+				to_pub.pose.pose.orientation.w = pure_q.w();
+				to_pub.pose.pose.position.x = current_pose(0,3);
+				to_pub.pose.pose.position.y = current_pose(1,3);
+				to_pub.pose.pose.position.z = current_pose(2,3);
+				imu_result_pub.publish(to_pub);
 				//存储这次结果
 				poses_distortion.push_back(current_pose.matrix());
 				poses.push_back(current_pose.matrix());
@@ -2064,8 +2123,8 @@ int main_function::IMUBasedpoint2planeICP(){
 						}
 					}
 					pcl::transformPointCloud(*cloud_bef,tfed,current_pose);
-					pcl::transformPointCloud(*cloud_bef,tfed,current_pose);
-					pcl::transformPointCloud(imu_distort,tfed_imu,current_pose);
+					pcl::transformPointCloud(tosave,tfed_color,current_pose);
+					
 					*cloud_map_color += tfed_color;
 					*cloud_map += tfed;
 
@@ -2098,10 +2157,24 @@ int main_function::IMUBasedpoint2planeICP(){
 					to_pub_frame_linear.header.frame_id = "/map";
 					linear_dist_pub.publish(to_pub_frame_linear);
 					
+					pcl::transformPointCloud(imu_distort,tfed_imu,current_pose);
 					pcl::toPCLPointCloud2(tfed_imu, pcl_frame);
 					pcl_conversions::fromPCL(pcl_frame, to_pub_frame_linear);
 					to_pub_frame_linear.header.frame_id = "/map";
 					tfed_imu_pub.publish(to_pub_frame_linear);
+					
+					pcl::toPCLPointCloud2(tfed_color, pcl_frame);
+					pcl_conversions::fromPCL(pcl_frame, to_pub_frame_linear);
+					to_pub_frame_linear.header.frame_id = "/map";
+					tfed_color_pub.publish(to_pub_frame_linear);
+					
+					pcl::transformPointCloud(stereo_color,tfed_color,current_pose);
+					pcl::toPCLPointCloud2(tfed_color, pcl_frame);
+					pcl_conversions::fromPCL(pcl_frame, to_pub_frame_linear);
+					to_pub_frame_linear.header.frame_id = "/map";
+					stereo_tfed_color_pub.publish(to_pub_frame_linear);
+					
+					
 				}
 			}
 		}
@@ -2461,7 +2534,7 @@ void main_function::cameraDistortion(std::string input_path, std::string output_
 }
 
 pcl::PointCloud<pcl::PointXYZI>
-main_function::IMUDistortion(mypcdCloud point_in, Eigen::Isometry3d PQ, Eigen::Vector3d V,int ImuStartIndex,int ImuEndIndex,pcl::PointCloud<pcl::PointXYZI> &output ) {
+main_function::IMUDistortion(mypcdCloud point_in,Eigen::Isometry3d PQ,Eigen::Vector3d V,int ImuStartIndex,int ImuEndIndex,pcl::PointCloud<pcl::PointXYZI> &output ,Eigen::Quaterniond& last_q,Eigen::Quaterniond& pure_q) {
 //	IMUdata
 	output.clear();
 	
@@ -2479,11 +2552,14 @@ main_function::IMUDistortion(mypcdCloud point_in, Eigen::Isometry3d PQ, Eigen::V
 	Eigen::Vector3d V_now;
 	PQ_now.setIdentity();
 	V_now.setZero();
+	std::vector<int> IMUID;
+	IMUID.clear();
 	//1.得到tf序列
 	for (int j = ImuStartIndex; j < ImuEndIndex+2; ++j) {
 		IMUIntergrate(PQ_now,V_now,j);
 		Rotation_vector.push_back(PQ_now);
 		time_vector.push_back(IMUdata[j][6]);
+		IMUID.push_back(j);
 	}
 	subPointcloud.clear();
 	subPointcloud.resize(time_vector.size());
@@ -2508,17 +2584,15 @@ main_function::IMUDistortion(mypcdCloud point_in, Eigen::Isometry3d PQ, Eigen::V
 	pcl::PointCloud<pcl::PointXYZI> result;
 	result.clear();
 	int total = 0;
-	Eigen::Quaterniond last_q;//上次位置
+	float dt = 0;
 	last_q.setIdentity();
 	//todo 2020/8/10 这这里应该得到0度的时候的角度 然后乘以逆
 	for (int m = subPointcloud.size()-1; m >= 0; m--) {
-		//std::cout<<"submap: "<<m<<" size: "<<subPointcloud[m].size()<<std::endl;
 		total += subPointcloud[m].size();
-		result += adjustDistortionBySpeed(subPointcloud[m],IMUdata[m],PQ.translation(),last_q,point_in[0].timestamp,point_in[point_in.size()-1].timestamp-point_in[0].timestamp);
-		//std::cout<<"***imu distort result size: "<<result.size()<<std::endl;
-		std::cout<<m<<"  !!!!! last_q: \n"<<last_q.matrix()<<std::endl;
+		result += adjustDistortionBySpeed(subPointcloud[m],IMUdata[IMUID[m]],PQ.translation(),last_q,point_in[0].timestamp,point_in[point_in.size()-1].timestamp-point_in[0].timestamp);
 	}
-
+	std::cout<<"  !!!!! dt :    "<<dt<<std::endl;
+	std::cout<<"  !!!!! last_q: \n"<<last_q.matrix()<<std::endl;
 	if(total!=point_in.size()){
 		std::cerr<<total<<"  raw pcd size: "<<point_in.size()<<std::endl;
 		std::cerr<< "  &&&&&&&&&&&&&&&&&&&&&&&&&& "<<std::endl;
@@ -2539,12 +2613,40 @@ main_function::IMUDistortion(mypcdCloud point_in, Eigen::Isometry3d PQ, Eigen::V
 	}
 	Feature.adjustDistortion(test, pcout, se3);
 	pcl::copyPointCloud(*pcout, output);
+	
+	//imu 纯积分结果
+	int max_imu_id = 0;
+	for (int m = 0; m < subPointcloud.size(); ++m) {
+		if(subPointcloud.size() != 0){
+			max_imu_id = IMUID[m];
+		}
+	}
+ 
+	for (int l = last_imu_id; l < max_imu_id; ++l) {
+		Eigen::Vector3d gyro,Pwb;
+		gyro[0] = IMUdata[l][3];
+		gyro[1] = IMUdata[l][4];
+		gyro[2] = IMUdata[l][5];
+		//gyro = gyro-bias_gyro;
+		float dt =  0.01;
+		Eigen::Quaterniond dq;
+		Eigen::Vector3d dtheta_half = gyro * dt / 2.0;
+		dq.w() = 1;
+		dq.x() = dtheta_half.x();
+		dq.y() = dtheta_half.y();
+		dq.z() = dtheta_half.z();
+		
+		pure_q = pure_q * dq;
+		pure_q.normalize(); //归一化
+//		std::cout<<"max_imu_id "<<max_imu_id<<" last_imu_id "<<last_imu_id<<" l "<<l<<std::endl;
+	}
+	last_imu_id = max_imu_id;
+ 
 	return result;
 }
 
 pcl::PointCloud<pcl::PointXYZI>
-main_function::adjustDistortionBySpeed(pcl::PointCloud<PointTypeBeam> pointIn, Eigen::VectorXd IMU,
-									   Eigen::Vector3d trans, Eigen::Quaterniond& last_q, double first_t,double time_diff) {
+main_function::adjustDistortionBySpeed(pcl::PointCloud<PointTypeBeam> pointIn, Eigen::VectorXd IMU,Eigen::Vector3d trans, Eigen::Quaterniond& last_q, double first_t,double time_diff) {
 	pcl::PointCloud<PointTypeBeam>::Ptr Individual(new pcl::PointCloud<PointTypeBeam>);
 	pcl::PointCloud<PointTypeBeam>::Ptr Individual_bef(new pcl::PointCloud<PointTypeBeam>);
 	pcl::PointCloud<pcl::PointXYZI>::Ptr temp(new pcl::PointCloud<pcl::PointXYZI>);
@@ -2567,14 +2669,14 @@ main_function::adjustDistortionBySpeed(pcl::PointCloud<PointTypeBeam> pointIn, E
 		gyro[1] = IMU[4];
 		gyro[2] = IMU[5];
 		//gyro = gyro-bias_gyro;
-		float dt = pointIn[0].pctime - pointIn[i].pctime;
+		float dt =  pointIn[0].pctime - pointIn[i].pctime   ;
 		Eigen::Quaterniond dq;
 		Eigen::Vector3d dtheta_half = gyro * dt / 2.0;
 		dq.w() = 1;
 		dq.x() = dtheta_half.x();
 		dq.y() = dtheta_half.y();
 		dq.z() = dtheta_half.z();
-		
+		//todo 旋转不一致的问题没有解决
 		Qwb = Qwb * dq;
 		Qwb.normalize(); //归一化
 		//组装出se3
@@ -2595,8 +2697,207 @@ main_function::adjustDistortionBySpeed(pcl::PointCloud<PointTypeBeam> pointIn, E
  
 	}
 	if(pointIn.size() != 0){
-		//last_q = Qwb;//主要是这个问题?
+/*		Qwb = last_q;
+		Eigen::Vector3d gyro,Pwb;
+		gyro[0] = IMU[3];
+		gyro[1] = IMU[4];
+		gyro[2] = IMU[5];
+		//gyro = gyro-bias_gyro;
+		float dt =  pointIn[pointIn.size()-1].pctime - pointIn[0].pctime  ;
+		Eigen::Quaterniond dq;
+		Eigen::Vector3d dtheta_half = gyro * dt / 2.0;
+		dq.w() = 1;
+		dq.x() = dtheta_half.x();
+		dq.y() = dtheta_half.y();
+		dq.z() = dtheta_half.z();
+		//todo 旋转不一致的问题没有解决
+		Qwb = Qwb * dq;
+		Qwb.normalize(); //归一化*/
+		last_q = Qwb;//主要是这个问题?
+//		std::cout<<"????"<<pointIn[0].pctime - pointIn[pointIn.size()-1].pctime<<std::endl;
 	}
 
 	return result;
+}
+// 没测过不知道好使不
+
+void main_function::getStereoFileNames(std::string image_path) {
+	std::string image_path_l;
+	std::string image_path_r;
+	image_path_l  = image_path + "/left";
+	image_path_r  = image_path + "/right";
+	left_file_names_.clear();
+	std::string suffix = "png";
+	DIR *dp;
+	struct dirent *dirp;
+	dp = opendir(image_path_l.c_str());
+	if (!dp) {
+		std::cerr << "cannot open directory:" << image_path_l << std::endl;
+ 
+	}
+	std::string file;
+	while (dirp = readdir(dp)) {
+		file = dirp->d_name;
+		if (file.find(".") != std::string::npos) {
+			file = image_path_l + "/" + file;
+			if (suffix == file.substr(file.size() - suffix.size())) {
+				left_file_names_.push_back(file);
+			}
+		}
+	}
+	closedir(dp);
+	std::sort(left_file_names_.begin(), left_file_names_.end());
+	
+	if (left_file_names_.empty()) {
+		std::cerr << "directory:" << image_path_l << "is empty" << std::endl;
+	 
+	}
+ 
+	std::cerr << "路径: " << image_path_l << " 有" << left_file_names_.size() << "个png文件" << std::endl;
+	std::cerr << left_file_names_.back() << std::endl;
+	
+	
+	
+	right_file_names_.clear();
+	DIR *dp1;
+	dp1 = opendir(image_path_r.c_str());
+	if (!dp1) {
+		std::cerr << "cannot open directory:" << image_path_r << std::endl;
+	}
+ 
+	while (dirp = readdir(dp1)) {
+		file = dirp->d_name;
+		if (file.find(".") != std::string::npos) {
+			file = image_path_r + "/" + file;
+			if (suffix == file.substr(file.size() - suffix.size())) {
+				right_file_names_.push_back(file);
+			}
+		}
+	}
+	closedir(dp1);
+	std::sort(right_file_names_.begin(), right_file_names_.end());
+	
+	if (right_file_names_.empty()) {
+		std::cerr << "directory:" << image_path_r << "is empty" << std::endl;
+		
+	}
+	
+	std::cerr << "路径: " << image_path_r << " 有" << right_file_names_.size() << "个png文件" << std::endl;
+	std::cerr << right_file_names_.back() << std::endl;
+}
+
+int main_function::stereoDepthRecovery(int img_index, pcl::PointCloud<pcl::PointXYZRGB> &image_depth) {
+	
+	using namespace std;
+	using namespace cv;
+	
+	// Parameter parsing
+	string right_file = right_file_names_[img_index];
+	string left_file = left_file_names_[img_index];
+ 
+	auto left_input_file_name = left_file;
+	auto right_input_file_name = right_file;
+	
+	// Mat Containers
+	Mat left_input_image, right_input_image, disparity_image, output_image, rectified_left_image, rectified_right_image, image_3d;
+	
+	// Intrinsic and Extrinsic matrices data structure
+ 
+	
+	// Read Images from file
+	left_input_image = imread( left_input_file_name, IMREAD_COLOR );
+	right_input_image = imread( right_input_file_name, IMREAD_COLOR );
+	// Check if files could be opened
+ 
+	// Intrinsics
+	double K_l[3][3] = { 1208.9292973932006, 0.0, 1041.7613787970736, 0.0, 1207.350061428228, 778.8436236702281, 0.0, 0.0, 1.0};
+	double D_l[5] = { -0.0917816692393193, 0.08744263701143247, -0.00026370990465432795, 0.0005992360002091688, 0.0};
+	double K_r[3][3] = { 1210.9024770353074, 0.0, 1025.0324011541563, 0.0, 1209.5302705634385, 802.2825085380839, 0.0, 0.0, 1.0};
+	double D_r[5] = { -0.08841191239447888, 0.08365502590597514, -0.000516136472800342, 0.00019781445111794737, 0.0 };
+	Mat M1, D1, M2, D2, M1_new, M2_new;
+	M1 = cv::Mat(3,3,CV_64F,K_l);
+	D1 = cv::Mat(5,1,CV_64F,D_l);
+	M2 = cv::Mat(3,3,CV_64F,K_r);
+	D2 = cv::Mat(5,1,CV_64F,D_r);
+	
+	// Extrinsics
+	double R_e[9] = {0.9999780345977214, -0.004004075599955124, -0.005281827398543132, 0.003995666346083448, 0.9999907345554566, -0.0016017033711173481, 0.00528819180145095, 0.001580563769076256, 0.9999847683068193};
+	double T_e[3] = {-0.15997026739960685, -0.0004924536716978333, 0.0012117161278211593};
+//	float Q_e[4][4] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+	Mat R, T, R1, R2, P1, P2, Q;
+	
+	R = cv::Mat(3,3,CV_64F,R_e);
+	T = cv::Mat(3,1,CV_64F,T_e);
+	
+	// Rectifying
+	cv::Mat left_map1, left_map2, right_map1, right_map2;
+/*cameraMatrix1-第一个摄像机的摄像机矩阵
+    distCoeffs1-第一个摄像机的畸变向量
+    cameraMatrix2-第二个摄像机的摄像机矩阵
+    distCoeffs1-第二个摄像机的畸变向量
+    imageSize-图像大小
+    R- stereoCalibrate() 求得的R矩阵
+    T- stereoCalibrate() 求得的T矩阵
+    R1-输出矩阵，第一个摄像机的校正变换矩阵（旋转变换）
+	R2-输出矩阵，第二个摄像机的校正变换矩阵（旋转矩阵）
+	P1-输出矩阵，第一个摄像机在新坐标系下的投影矩阵
+	P2-输出矩阵，第二个摄像机在想坐标系下的投影矩阵
+	Q-4*4的深度差异映射矩阵
+	flags-可选的标志有两种零或者 CV_CALIB_ZERO_DISPARITY ,如果设置 CV_CALIB_ZERO_DISPARITY 的话，该函数会让两幅校正后的图像的主点有相同的像素坐标。否则该函数会水平或垂直的移动图像，以使得其有用的范围最大
+	alpha-拉伸参数。如果设置为负或忽略，将不进行拉伸。如果设置为0，那么校正后图像只有有效的部分会被显示（没有黑色的部分），如果设置为1，那么就会显示整个图像。设置为0~1之间的某个值，其效果也居于两者之间。
+	newImageSize-校正后的图像分辨率，默认为原分辨率大小。
+	validPixROI1-可选的输出参数，Rect型数据。其内部的所有像素都有效
+	validPixROI2-可选的输出参数，Rect型数据。其内部的所有像素都有效*/
+	
+	std::cout<<"input R: \n"<< R<<std::endl;
+	std::cout<<"input T: \n"<< T<<std::endl;
+	cv::stereoRectify(M1,D1,M2,D2, left_input_image.size(), R, T, R1, R2, P1, P2, Q);//作用是为每个摄像头计算立体校正的映射矩阵。所以其运行结果并不是直接将图片进行立体矫正，而是得出进行立体矫正所需要的映射矩阵。
+	std::cout<<R1<<std::endl;
+	std::cout<<R2<<std::endl;
+	std::cout<<P1<<std::endl;
+	std::cout<<P2<<std::endl;
+	std::cout<<Q<<std::endl;
+	cv::initUndistortRectifyMap(M1, D1, R1, M1_new, left_input_image.size(),CV_32FC1, left_map1, left_map2);
+	cv::initUndistortRectifyMap(M2, D2, R2, M2_new, right_input_image.size(),CV_32FC1, right_map1, right_map2);
+	cv::remap(left_input_image, rectified_left_image, left_map1, left_map2, INTER_LINEAR);
+	cv::remap(right_input_image, rectified_right_image, right_map1, right_map2, INTER_LINEAR);
+	cv::imwrite("/home/echo/slambook2/ch5/pic/rectified_left_image.png",rectified_left_image);
+	cv::imwrite("/home/echo/slambook2/ch5/pic/right_input_image.png",rectified_right_image);
+ 
+	Ptr<StereoSGBM> sgbm = StereoSGBM::create(1,80,11,0,16,-1,0, 30,1);
+	
+	// Compute Disparity Image
+	sgbm->compute(rectified_left_image, rectified_right_image, disparity_image);
+ 
+	cv::reprojectImageTo3D(disparity_image, image_3d, Q);
+	
+	// iterate through 3d image
+	image_3d.forEach<Vec3f>([&](Vec3f& pixel, const int* position) -> void {
+		if( pixel[2] > 6 || pixel[2] < -4){
+			pixel = std::numeric_limits<float>::quiet_NaN();
+		}
+	});
+	
+	// 3c cloud
+	cv::viz::WCloud cloud(image_3d, rectified_left_image);
+	
+	pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_map_color(new 	pcl::PointCloud<pcl::PointXYZRGB>);
+	for (int y = 0; y < image_3d.rows; y++)
+	{
+		for (int x = 0; x < image_3d.cols; x++)
+		{
+			Point3f pointOcv = image_3d.at<Point3f>(y, x);
+			//Insert info into point cloud structure
+			pcl::PointXYZRGB point;
+			point.x =  pointOcv.z;  // xyz points transformed in Z upwards system
+			point.y =  pointOcv.x;
+			point.z =  pointOcv.y;
+			point.r = rectified_left_image.at<Vec3b>(y, x)[2];
+			point.g = rectified_left_image.at<Vec3b>(y, x)[1];
+			point.b = rectified_left_image.at<Vec3b>(y, x)[0];
+			cloud_map_color->points.push_back (point);  // push back actual point
+		}
+	}
+	image_depth = *cloud_map_color;
+	return 0;
 }

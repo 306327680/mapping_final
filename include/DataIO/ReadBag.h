@@ -59,6 +59,7 @@ public:
 	void readRobo128(std::string path,std::string save_path);
 	//4. 读取图片
 	void readcamera(std::string path,std::string save_path);
+	void readStereoCamera(std::string path,std::string save_path);
 	void readCalibratedCamera(std::string path,std::string cali_path,std::string save_path);
 	//5. readImu
 	void readImu(std::string path,std::string save_path);

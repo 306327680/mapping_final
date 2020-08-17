@@ -456,6 +456,48 @@ void ReadBag::readTopRobosense(std::string path, std::string save_path) {
 				}
 }
 
+void ReadBag::readStereoCamera(std::string path, std::string save_path) {
+	std::cout<<"the bag path is: "<<path<<std::endl;
+	rosbag::Bag bag;
+	bag.open(path, rosbag::bagmode::Read);
+	std::vector<std::string> topics;
+	
+	double timestamp;
+	//可以加挺多topic的?
+	topics.push_back(std::string("/stereo/left/image_color/compressed"));
+	rosbag::View view(bag, rosbag::TopicQuery(topics));
+	
+	BOOST_FOREACH(rosbag::MessageInstance const m, view)
+				{
+					
+					sensor_msgs::CompressedImage::ConstPtr s = m.instantiate<sensor_msgs::CompressedImage>();
+					cv_bridge::CvImagePtr cv_cam = cv_bridge::toCvCopy(s, sensor_msgs::image_encodings::BGR8);
+					cv::Mat src = cv_cam->image;
+					//用来找最大最小intensity的
+					std::stringstream ss;
+					ss.setf(std::ios::fixed);
+					ss<<setprecision(9)<<save_path.c_str()<<"/left"<<"/"<<s->header.stamp.toSec() <<".png";
+					std::cout<<ss.str()<<std::endl;
+					cv::imwrite(ss.str(),src);
+				}
+	topics.clear();
+	topics.push_back(std::string("/stereo/right/image_color/compressed"));
+	rosbag::View view1(bag, rosbag::TopicQuery(topics));
+	
+	BOOST_FOREACH(rosbag::MessageInstance const m, view1)
+				{
+					
+					sensor_msgs::CompressedImage::ConstPtr s = m.instantiate<sensor_msgs::CompressedImage>();
+					cv_bridge::CvImagePtr cv_cam = cv_bridge::toCvCopy(s, sensor_msgs::image_encodings::BGR8);
+					cv::Mat src = cv_cam->image;
+					//用来找最大最小intensity的
+					std::stringstream ss;
+					ss.setf(std::ios::fixed);
+					ss<<setprecision(9)<<save_path.c_str()<<"/right"<<"/"<<s->header.stamp.toSec() <<".png";
+					std::cout<<ss.str()<<std::endl;
+					cv::imwrite(ss.str(),src);
+				}
+}
 void ReadBag::readcamera(std::string path, std::string save_path) {
 	std::cout<<"the bag path is: "<<path<<std::endl;
 	rosbag::Bag bag;
@@ -464,7 +506,7 @@ void ReadBag::readcamera(std::string path, std::string save_path) {
  
 	double timestamp;
 	//可以加挺多topic的?
-	topics.push_back(std::string("/stereo/left/image_color/compressed"));
+	topics.push_back(std::string("/stereo/right/image_color/compressed"));
 	rosbag::View view(bag, rosbag::TopicQuery(topics));
 	
 	BOOST_FOREACH(rosbag::MessageInstance const m, view)

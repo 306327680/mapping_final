@@ -79,6 +79,8 @@ public:
 	bool tensorvoting = true;
 
 	std::vector<std::string> file_names_;
+	std::vector<std::string> left_file_names_;
+	std::vector<std::string> right_file_names_;
 	std::vector<std::string> PNG_file_names_;
 	std::string filename;
 	std::string filepath = "/media/echo/DataDisc2/shandong/pcd_inout";
@@ -110,6 +112,7 @@ public:
 	std::vector<Eigen::VectorXd> IMUdata;
 /*	temp[0] = ax;temp[1] = ay;temp[2] = az;temp[3] = wx;temp[4] = wy;temp[5] = wz;temp[6] = t;*/
 	Eigen::Vector3d gravity,gravity_w,bias_gyro;
+	int last_imu_id = 0;
 //0.设置起始结束的pcd
 	void setStartEnd();
 
@@ -207,7 +210,7 @@ public:
 	void IMUIntergrate(Eigen::Isometry3d& PQ,Eigen::Vector3d& V,int ImuIndex);
 	//22 imu去畸变 需要当前开始点的 P Q V, 开始点的imu index 返回去畸变的点云 其中PQ 是上次 icp 的结果, 去畸变后应当及时 T到最后一个点的位置
 	pcl::PointCloud<pcl::PointXYZI> IMUDistortion(VLPPointCloud point_in,Eigen::Isometry3d PQ,Eigen::Vector3d V,int ImuIndex);
-	pcl::PointCloud<pcl::PointXYZI> IMUDistortion(mypcdCloud point_in,Eigen::Isometry3d PQ,Eigen::Vector3d V,int ImuStartIndex,int ImuEndIndex,pcl::PointCloud<pcl::PointXYZI> &output );
+	pcl::PointCloud<pcl::PointXYZI> IMUDistortion(mypcdCloud point_in,Eigen::Isometry3d PQ,Eigen::Vector3d V,int ImuStartIndex,int ImuEndIndex,pcl::PointCloud<pcl::PointXYZI> &output ,Eigen::Quaterniond& last_q,Eigen::Quaterniond& pure_q);
 	//22.1
 	pcl::PointCloud<pcl::PointXYZI> adjustDistortionBySpeed(pcl::PointCloud<PointTypeBeam> pointIn,Eigen::VectorXd IMU,Eigen::Vector3d trans,Eigen::Quaterniond& last_q,double first_t,double time_diff);
 	//23 通过两帧变换的到速度
@@ -219,6 +222,9 @@ public:
 	int IMUBasedpoint2planeICP_test();
 	int IMUBasedpoint2planeICP();
 	int point2planeICPWOLO(); //没有粗配准
+	//6.3 双目相关
+	void getStereoFileNames(std::string image_path);
+	int stereoDepthRecovery(int img_index,pcl::PointCloud<pcl::PointXYZRGB>& image_depth);
 // 功能3 设置road curb 的mapping
 	void traversableMapping();
 
@@ -246,10 +252,12 @@ public:
 		bool readBag = true;
 		if (readBag){
 //			a.readVLP16WoTime("/media/echo/DataDisc2/jjh/jjiao_vehicle_sensor_travel_2_filter.bag","/media/echo/DataDisc2/jjh/pcd");
-			a.readVLP16(path,"/home/echo/2_bag/1_zibomapping/nanjin32/pcd");
-			a.readcamera(path,"/home/echo/2_bag/1_zibomapping/nanjin32/left_png");
-			a.saveRTK2PCD(path,"/home/echo/2_bag/1_zibomapping/nanjin32/rtk/rtk.csv");//把rtk保存成 csv+pcd
-			a.readImu(path,"/home/echo/2_bag/1_zibomapping/nanjin32/imu/imu.csv");
+	/*		a.readVLP16(path,"/media/echo/yzhubrData/qb_bag/01_pcd");
+//			a.readcamera(path,"/home/echo/2_bag/2_ziboHandHold/GO/right_png");
+			a.readStereoCamera(path,"/media/echo/yzhubrData/qb_bag/01_png");
+			a.saveRTK2PCD(path,"/media/echo/yzhubrData/qb_bag/01_rtk/rtk.csv");//把rtk保存成 csv+pcd
+			a.readImu(path,"/media/echo/yzhubrData/qb_bag/01_imu/imu.csv");*/
+			a.readcamera(path,"/home/echo/2_bag/2_ziboHandHold/GO/right_png");
 		}
 		//a.readcamera("/media/echo/DataDisc2/shandong/2020-05-24-16-51-53.bag","/media/echo/DataDisc2/shandong/pic");
 		//a.readVLP16("/media/echo/DataDisc2/shandong/2020-05-24-16-51-53.bag","/media/echo/DataDisc2/shandong/pcd");
