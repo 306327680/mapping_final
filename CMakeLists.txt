@@ -170,7 +170,7 @@ add_executable(mapping main.cpp
         include/qt/mainwindow.h
         include/imgAddColor2Lidar/imgAddColor2Lidar.cpp
         include/imgAddColor2Lidar/imgAddColor2Lidar.h
-        include/CSV/CSVio.cpp include/CSV/CSVio.h include/otherFunctions.cpp include/VO/VisualOdom.cpp include/VO/VisualOdom.h include/loopClosure/loopClosure.cpp include/loopClosure/loopClosure.h include/GPS_constraint_mapping/GPS_loop_mapping.cpp include/GPS_constraint_mapping/GPS_loop_mapping.h include/DynamicRemoveMap/DynamicRemoveMap.cpp include/DynamicRemoveMap/DynamicRemoveMap.h include/imu/imu_tools.cpp include/imu/imu_tools.h)
+        include/CSV/CSVio.cpp include/CSV/CSVio.h include/otherFunctions.cpp include/VO/VisualOdom.cpp include/VO/VisualOdom.h include/loopClosure/loopClosure.cpp include/loopClosure/loopClosure.h include/GPS_constraint_mapping/GPS_loop_mapping.cpp include/GPS_constraint_mapping/GPS_loop_mapping.h include/DynamicRemoveMap/DynamicRemoveMap.cpp include/DynamicRemoveMap/DynamicRemoveMap.h include/imu/imu_tools.cpp include/imu/imu_tools.h include/DegenerateAwareICP/DAICP.cpp include/DegenerateAwareICP/DAICP.h)
 
 target_link_libraries(mapping ${PCL_LIBRARIES}
         ${tf_conversions_LIBRARIES}

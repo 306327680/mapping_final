@@ -75,7 +75,7 @@ void registration::addNormal(pcl::PointCloud<pcl::PointXYZI>::Ptr cloud,
 		normalEstimator_pa.setInputCloud(cloud_source_normals);
 		normalEstimator_pa.setSearchMethod(searchTree);
 		//normalEstimator_pa.setRadiusSearch(0.05);
-		normalEstimator_pa.setKSearch(20);
+		normalEstimator_pa.setKSearch(15);//20
 		normalEstimator_pa.compute(*normals);
 		pcl::concatenateFields(*cloud_source_normals, *normals, *cloud_with_normals);
 	}else{
@@ -92,8 +92,8 @@ void registration::addNormal(pcl::PointCloud<pcl::PointXYZI>::Ptr cloud,
 void registration::SetNormalICP() {
 	pcl::IterativeClosestPointWithNormals<pcl::PointXYZINormal, pcl::PointXYZINormal>::Ptr icp(
 			new pcl::IterativeClosestPointWithNormals<pcl::PointXYZINormal, pcl::PointXYZINormal>());
-	icp->setMaximumIterations(25);
-	icp->setMaxCorrespondenceDistance(0.75);
+	icp->setMaximumIterations(15);
+	icp->setMaxCorrespondenceDistance(0.2);
 	icp->setTransformationEpsilon(0.001);
 	icp->setEuclideanFitnessEpsilon(0.001);
 	this->pcl_plane_plane_icp = icp;
@@ -104,8 +104,8 @@ void registration::SetPlaneICP() {
 			new pcl::IterativeClosestPointWithNormals<pcl::PointXYZINormal, pcl::PointXYZINormal>());
 	icp->setMaximumIterations(30);
 	icp->setMaxCorrespondenceDistance(0.2);
-	icp->setTransformationEpsilon(0.001);
-	icp->setEuclideanFitnessEpsilon(0.001);
+	icp->setTransformationEpsilon(0.0001);
+	icp->setEuclideanFitnessEpsilon(0.0001);
 	this->pcl_plane_plane_icp = icp;
 	
 }

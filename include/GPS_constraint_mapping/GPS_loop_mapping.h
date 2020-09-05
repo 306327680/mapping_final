@@ -117,6 +117,7 @@ namespace ceres {
 				// Clear any trailing whitespace from the line.
 				infile >> std::ws;
 			}
+			std::cerr<<"read poses->size(): "<<poses->size()<<" read constraints->size(): "<<constraints->size()<<std::endl;
 			return true;
 		}
 		//************ 设定数据格式
@@ -262,7 +263,7 @@ namespace ceres {
 				//当前的
 				residuals(0,0) = p_a(0,0) - t_ab_measured_(0);
 				residuals(1,0) = p_a(1,0) - t_ab_measured_(1);
-				residuals(2,0) = T(5.0)*(p_a(2,0) - t_ab_measured_(2));
+				residuals(2,0) = T(0.1)*(p_a(2,0) - t_ab_measured_(2));
 				
 				return true;
 			}

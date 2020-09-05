@@ -50,6 +50,7 @@
 #include <nav_msgs/Odometry.h>
 #include <g2o/types/slam3d/types_slam3d.h>
 #include <g2o/solvers/eigen/linear_solver_eigen.h>
+#include <tf/transform_broadcaster.h>
 //todo 现在需要通过gps给定初值
 using namespace g2o;
 class loopClosure {

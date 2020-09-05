@@ -25,11 +25,12 @@ public:
 	cv::Mat pcd2img(cv::Mat mat,pcl::PointCloud<pcl::PointXYZI> cloudin);
 	pcl::PointCloud<pcl::PointXYZRGB> pclalignImg2LiDAR(cv::Mat mat,VLPPointCloud cloudin);
 	pcl::PointCloud<pcl::PointXYZRGB> pclalignImg2LiDAR(cv::Mat mat, pcl::PointCloud<pcl::PointXYZI> cloudin);
-	
-private:
-	Eigen::Matrix3d intrinsics = Eigen::Matrix3d::Zero();
+	Eigen::Isometry3d extrinstic_param;
 	Eigen::Matrix3d rotation = Eigen::Matrix3d::Identity();
 	Eigen::Vector3d translation;
+private:
+	Eigen::Matrix3d intrinsics = Eigen::Matrix3d::Zero();
+
 	Eigen::Vector3d point_3d, point_t3d, point_3d_3;
 	
 	int publish_option;

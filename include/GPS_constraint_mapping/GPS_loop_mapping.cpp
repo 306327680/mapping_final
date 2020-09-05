@@ -11,7 +11,7 @@ GPS_loop_mapping::	GPSandPose(std::string lidar_pose, std::string gps_constraint
 	ceres::examples::ReadG2oFile(lidar_pose, &poses, &constraints);//读取g2o文件
 	std::vector<std::pair<int,Eigen::Vector3d>> relation;//gps和位姿的映射
 	PoseGraphIO wtf;//保存结果
-	RelationG2OGPS("/home/echo/2_bag/2_ziboHandHold/GO/lidar_csv/LiDAR_pose.csv","/home/echo/2_bag/2_ziboHandHold/GO/rtk/rtk.csv",relation);//获得gps和位姿的映射
+	RelationG2OGPS("/home/echo/2_bag/2_ziboHandHold/qisheng/csv/LiDAR_pose.csv","/home/echo/2_bag/2_ziboHandHold/qisheng/rtk/rtk.csv",relation);//获得gps和位姿的映射
 	poseTF(poses,extrinsic_matrix);//旋转当前LiDAR 位姿
 	ceres::Problem problem;
 	BuildOptimizationProblem(constraints, &poses, &problem);			        //闭环的约束项
@@ -27,8 +27,8 @@ GPS_loop_mapping::	GPSandPose(std::string lidar_pose, std::string gps_constraint
 		tfed.push_back(pcl::PointXYZ(poses[i].p(0),poses[i].p(1),poses[i].p(2)));
 	}
 	pcl::PCDWriter writer;
-	writer.write("gps_constrained.pcd",tfed);
-	wtf.saveGraph("/home/echo/2_bag/2_ziboHandHold/GO/g2o/gps_constrained.g2o");
+	writer.write("/home/echo/2_bag/2_ziboHandHold/qisheng/g2o/gps_constrained.pcd",tfed);
+	wtf.saveGraph("/home/echo/2_bag/2_ziboHandHold/qisheng/g2o/gps_constrained.g2o");
 }
 
 void GPS_loop_mapping::poseTF(ceres::examples::MapOfPoses &input, Eigen::Isometry3d trans) {
@@ -108,7 +108,7 @@ void GPS_loop_mapping::RelationG2OGPS(std::string lidar_pose, std::string gps_co
 		std::string time = fields[15];
 		std::string status = fields[12];
 		float fconv_xy = std::atof(conv_xy.c_str());
-		if((status=="2")){
+		if((status=="2"&& std::atof(z.c_str())<1.5)){
 		/*	if((status=="2"||status=="1")&&fconv_xy<3.0){	*/  //如果是rtk模式就加入candidate,之后可以加入其他的约束,例如cov 协方差等
 			pose_time.push_back(Eigen::Vector4d((double)std::atof(x.c_str()),(double)std::atof(y.c_str()),(double)std::atof(z.c_str()),(double)std::atof(time.c_str())));
 		}
@@ -153,6 +153,7 @@ void GPS_loop_mapping::RelationG2OGPS(std::string lidar_pose, std::string gps_co
 		tfed.push_back(pcl::PointXYZ(relation[i].second(0),relation[i].second(1),relation[i].second(2)));
 	}
 	pcl::PCDWriter writer;
+	std::cout<<"RelationG2OGPS: 有 "<<relation.size()<<" 个满足条件的 GPS-LiDAR relation"<<std::endl;
 	writer.write("select_gps.pcd",tfed);
 }
 //对应关系 带information

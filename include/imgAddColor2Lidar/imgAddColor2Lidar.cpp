@@ -45,7 +45,9 @@ void imgAddColor2Lidar::readExInt(std::string path) {
 	std::cout << k3 << std::endl;
 	std::cout << p1 << std::endl;
 	std::cout << p2 << std::endl;
-	
+	extrinstic_param.setIdentity();
+	extrinstic_param.rotate(rotation);
+	extrinstic_param.translate(translation);
 }
 
 pcl::PointCloud<PointXYZRGBI>  imgAddColor2Lidar::alignImg2LiDAR(cv::Mat mat, pcl::PointCloud<pcl::PointXYZI> cloudin) {

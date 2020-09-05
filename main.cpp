@@ -48,12 +48,12 @@ int main(int argc,char** argv){
 			break;
 			//-3 生成彩色地图
 		case -3:
-			m.GetPNGFileNames("/home/echo/2_bag/2_ziboHandHold/GO/left_png","png");
-			m.GetIntFileNames("/home/echo/2_bag/2_ziboHandHold/GO/pcd","pcd");
-			m.trans_vector = m.getEigenPoseFromg2oFile("/home/echo/2_bag/2_ziboHandHold/GO/g2o/gps_constrained.g2o");
-			m.start_id = 0;
-			m.end_id = 8500;
-			m.filepath = "/home/echo/2_bag/2_ziboHandHold/GO/pcd";
+			m.GetPNGFileNames("/home/echo/2_bag/2_ziboHandHold/ceshichang/left","png");
+			m.GetIntFileNames("/home/echo/2_bag/2_ziboHandHold/ceshichang/pcd","pcd");
+			m.trans_vector = m.getEigenPoseFromg2oFile("/home/echo/2_bag/2_ziboHandHold/ceshichang/gps_constrained.g2o");
+			m.start_id = 400;
+			m.end_id = 18500;
+			m.filepath = "/home/echo/2_bag/2_ziboHandHold/ceshichang/pcd";
 			m.genColormap(m.trans_vector,"/home/echo/2_bag/2_ziboHandHold/GO/ex_params3.txt"); //5.1 带颜色的pcd
 			break;
 			
@@ -89,7 +89,7 @@ int main(int argc,char** argv){
 			break;
 		case 7://7. 从bag中读何塞rawdata
 			cout << "read pcd:" << endl;
-			m.readAndSaveHesai("/media/echo/DataDisc2/1_ziboDataset/nanjinGo.bag");
+			m.readAndSaveHesai("/media/echo/DataDisc2/1_ziboDataset/qichengHotel1.bag");
 			cout << "read pcd finish:" << endl;
 			break;
 		case 8://8. 测试新写的函数
@@ -98,11 +98,11 @@ int main(int argc,char** argv){
 			//imu建图
 		case 9:
 			m.setStartEnd();
-			m.getStereoFileNames("/home/echo/2_bag/2_ziboHandHold/GO");
-		    m.GetPNGFileNames("/home/echo/2_bag/2_ziboHandHold/GO/left_png","png");
+			m.getStereoFileNames("/home/echo/2_bag/2_ziboHandHold/qisheng");
+		    m.GetPNGFileNames("/home/echo/2_bag/2_ziboHandHold/qisheng/left","png");
 	/*		m.start_id = 4200;
 			m.end_id = 4350;*/
-			m.IMUMapping();
+			m.IMUMapping("/home/echo/2_bag/2_ziboHandHold/qisheng/imu/imu.csv","/home/echo/2_bag/2_ziboHandHold/qisheng/pcd");
 			break;
 		case 10:
 			//10. q去畸变

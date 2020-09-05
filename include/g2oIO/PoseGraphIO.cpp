@@ -51,6 +51,7 @@ void PoseGraphIO::saveGraph(std::string g2o_path) {
 	optimizer.optimize(30);*/
 	optimizer.save(g2o_path.c_str());
 	std::cout << "result saved!" << std::endl;
+	std::cerr << g2o_path<<std::endl;
 }
 
 void PoseGraphIO::insertPose(Eigen::Isometry3d pose) {
