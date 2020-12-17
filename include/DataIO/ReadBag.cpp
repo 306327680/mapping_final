@@ -318,6 +318,8 @@ void ReadBag::readVLP16(std::string path,std::string save_path) {
 				}
 }
 void ReadBag::readVLP16WoTime(std::string path, std::string save_path) {
+	mergePC mPc;
+	mPc.readYaml("/home/echo/jjh/config_zhubr.yaml");
 	std::cout<<"the bag path is: "<<path<<std::endl;
 	bag.open(path, rosbag::bagmode::Read);
 	std::vector<std::string> topics;
@@ -325,11 +327,12 @@ void ReadBag::readVLP16WoTime(std::string path, std::string save_path) {
 	int beam_size ;
 	double timestamp;
 	//可以加挺多topic的?
-	topics.push_back(std::string("/top/rslidar_points"));
+	topics.push_back(std::string("/left/velodyne_points"));
 	rosbag::View view(bag, rosbag::TopicQuery(topics));
-	
+	float time_last = 0;
 	std::vector<int> indices1;
-	
+	std::vector<VLPPointCloud> left_all;
+	std::vector<VLPPointCloud> right_all;
 	//读广场的也就几秒
 	int inter_times =0;
 	BOOST_FOREACH(rosbag::MessageInstance const m, view)
@@ -339,48 +342,79 @@ void ReadBag::readVLP16WoTime(std::string path, std::string save_path) {
 					pcd_save.precision(18);
 					sensor_msgs::PointCloud2::ConstPtr s = m.instantiate<sensor_msgs::PointCloud2>();
 					pcl::PCLPointCloud2 pcl_pc2;
-					pcl::fromROSMsg(*s,robosense_pcd);
+					pcl::fromROSMsg(*s,vlp_pcd);
 		 
-					for (int i = 0; i < robosense_pcd.size(); ++i) {
-						
-						RoboPoint temp;
-						temp.x = robosense_pcd[i].x;
-						temp.y = robosense_pcd[i].y;
-						temp.z = robosense_pcd[i].z;
-						temp.intensity = robosense_pcd[i].intensity;
-						temp.time =  i*0.1/robosense_pcd.size();
-						temp.ring = 0;
-						robo_pcdtosave.push_back(temp);
+					for (int i = 0; i < vlp_pcd.size(); ++i) {
+						VLPPoint temp;
+						temp.x = vlp_pcd[i].x;
+						temp.y = vlp_pcd[i].y;
+						temp.z = vlp_pcd[i].z;
+						temp.intensity = vlp_pcd[i].intensity;
+						temp.time = i*0.1/vlp_pcd.size() +time_last;
+						temp.ring = vlp_pcd[i].ring;
+						vlp_pcdtosave.push_back(temp);
+				 
 					}
-					robo_pcdtosave.width = robo_pcdtosave.size();
-					RoboPointCLoud robo_pcdtosave_temp;
-					pcl::removeNaNFromPointCloud(robo_pcdtosave, robo_pcdtosave_temp, indices1);
 					
-					//用来找最大最小intensity的
-					int nsec_c[9];
+					time_last += 0.1;
+					std::cout<<time_last<<std::endl;
+					vlp_pcdtosave.width = vlp_pcdtosave.size();
 					
-					nsec_c[8] = s->header.stamp.nsec%10;
-					nsec_c[7] = (s->header.stamp.nsec/10)%10;
-					nsec_c[6] = (s->header.stamp.nsec/100)%10;
-					nsec_c[5] = (s->header.stamp.nsec/1000)%10;
-					nsec_c[4] = (s->header.stamp.nsec/10000)%10;
-					nsec_c[3] = (s->header.stamp.nsec/100000)%10;
-					nsec_c[2] = (s->header.stamp.nsec/1000000)%10;
-					nsec_c[1] = (s->header.stamp.nsec/10000000)%10;
-					nsec_c[0] = (s->header.stamp.nsec/100000000)%10;
-					
-					std::cout<<nsec_c[0]<<nsec_c[1]<<nsec_c[2]<<nsec_c[3]<<nsec_c[4]<<nsec_c[5]
-							 <<nsec_c[6]<<nsec_c[7]<<nsec_c[8]<<" "<<s->header.stamp.nsec<<std::endl;
-					timestamp = s->header.stamp.sec;
-					pcd_save<<save_path.c_str()<<"/"<<timestamp<<"."<<nsec_c[0]<<nsec_c[1]<<nsec_c[2]<<nsec_c[3]
-							<<nsec_c[4]<<nsec_c[5]<<nsec_c[6]<<nsec_c[7]<<nsec_c[8]<<".pcd";
-					
-					std::cout<<pcd_save.str()<<" size: "<<robo_pcdtosave_temp.size()<<" times: "<<inter_times<<std::endl;
-					writer.write(pcd_save.str(),robo_pcdtosave_temp, true);
-					robo_pcdtosave.clear();
-					std::cout<<pcd_save.str()<<" saved " <<std::endl;
+					pcd_save<<save_path.c_str()<<"/"<<inter_times<<".pcd";
+					std::cout<<pcd_save.str()<<" size: "<<vlp_pcd.size()<<" times: "<<inter_times<<std::endl;
+					left_all.push_back(vlp_pcdtosave);
+//					writer.write(pcd_save.str(),vlp_pcdtosave,true);
+					vlp_pcdtosave.clear();
 					inter_times++;
 				}
+				//再加一个topic
+	topics.clear();
+	topics.push_back("/right/velodyne_points");
+	
+	rosbag::View view1(bag, rosbag::TopicQuery(topics));
+	float time_last_r = 0;
+	int inter_times_r =0;
+	BOOST_FOREACH(rosbag::MessageInstance const m, view1)
+				{
+					pcdtosave.clear();
+					std::stringstream pcd_save;
+					pcd_save.precision(18);
+					sensor_msgs::PointCloud2::ConstPtr s = m.instantiate<sensor_msgs::PointCloud2>();
+					pcl::PCLPointCloud2 pcl_pc2;
+					pcl::fromROSMsg(*s,vlp_pcd);
+					
+					for (int i = 0; i < vlp_pcd.size(); ++i) {
+						VLPPoint temp;
+						temp.x = vlp_pcd[i].x;
+						temp.y = vlp_pcd[i].y;
+						temp.z = vlp_pcd[i].z;
+						temp.intensity = vlp_pcd[i].intensity;
+						temp.time = i*0.1/vlp_pcd.size() +time_last_r;
+						temp.ring = vlp_pcd[i].ring;
+						vlp_pcdtosave.push_back(temp);
+						
+					}
+					
+					time_last_r += 0.1;
+					std::cout<<time_last_r<<std::endl;
+					vlp_pcdtosave.width = vlp_pcdtosave.size();
+					
+					pcd_save<<save_path.c_str()<<"/"<<inter_times_r<<".pcd";
+					std::cout<<pcd_save.str()<<" size: "<<vlp_pcd.size()<<" times: "<<inter_times_r<<std::endl;
+					right_all.push_back(vlp_pcdtosave);
+//					writer.write(pcd_save.str(),vlp_pcdtosave,true);
+					vlp_pcdtosave.clear();
+					inter_times_r++;
+				}
+	std::cout<<"right_all:   "<<right_all.size()<<"  left_all  "<<left_all.size()<<std::endl;
+	int merge_id =0;
+	for (int j = 0; j < right_all.size(); ++j) {
+		std::stringstream pcd_save;
+		pcd_save<<save_path.c_str()<<"/"<<merge_id<<".pcd";
+		std::cout<<pcd_save.str()<<" size: "<<vlp_pcd.size()<<" times: "<<merge_id<<std::endl;
+		writer.write(pcd_save.str(),mPc.process(left_all[j],right_all[j]),true);
+		merge_id ++;
+	}
 }
 //读取robosense的雷达
 void ReadBag::readTopRobosense(std::string path, std::string save_path) {

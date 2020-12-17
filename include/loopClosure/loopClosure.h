@@ -70,6 +70,7 @@ public:
 	
 	std::vector<std::string> file_names_;
 private:
+	std::string g2o_file_path_global;
 	std::vector<VertexSE3*> vertices;
 	std::vector<EdgeSE3*> edges;
 	g2o::SparseOptimizer optimizer;
@@ -127,6 +128,8 @@ private:
 							  Eigen::Vector4d &q_quaternion_interpolation);
 	void rotMat2quaternion(Eigen::Matrix4d &T, Eigen::Vector4d &q_quaternion);
 	void quatern2rotMat(Eigen::Vector4d &q_quaternion, Eigen::Matrix3d &R);
+	//12. 重新优化当前位姿 修改 这个 optimized_lidar_odom
+	void reOptimizeUpdatePose();
 	std::vector<Eigen::Isometry3d, Eigen::aligned_allocator<Eigen::Isometry3d>> getEigenPoseFromg2oFile(std::string &g2ofilename);
 	//变量
 
@@ -135,7 +138,10 @@ private:
 	Eigen::Isometry3d curICP = Eigen::Isometry3d::Identity();
 	int cur_id = 0;
 	int past = 0;
-
+	std::vector<int> past_vector;
+	std::vector<int> cur_vector;
+	std::vector<Eigen::Isometry3d> loop_closure_vector;
+	
 	std::string g2o_path = "null";//打开g2o文件路径
 	std::string save_g2o_path = "/home/echo/autoLoop.g2o";//存g2o路径
 	std::vector<Eigen::Isometry3d, Eigen::aligned_allocator<Eigen::Isometry3d>> trans_vector;

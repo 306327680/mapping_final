@@ -66,10 +66,22 @@
 #include <pcl/octree/octree_search.h>
 #include "matplotlib-cpp/matplotlibcpp.h"
 #include <sophus/se3.h>
-EIGEN_DEFINE_STL_VECTOR_SPECIALIZATION(Eigen::Matrix4d)
-EIGEN_DEFINE_STL_VECTOR_SPECIALIZATION(Eigen::Isometry3d)
+#include "segmentation/segmentation.h"
+#include <jsk_recognition_msgs/BoundingBox.h>
+#include <jsk_recognition_msgs/BoundingBoxArray.h>
+#include "point_to_grid_map/point_to_gridmap.h"
+//EIGEN_DEFINE_STL_VECTOR_SPECIALIZATION(Eigen::Matrix4d)
+//EIGEN_DEFINE_STL_VECTOR_SPECIALIZATION(Eigen::Isometry3d)
 using namespace g2o;
 namespace plt = matplotlibcpp;
+struct Detected_Obj
+{
+	jsk_recognition_msgs::BoundingBox bounding_box_;
+	
+	pcl::PointXYZ min_point_;
+	pcl::PointXYZ max_point_;
+	pcl::PointXYZ centroid_;
+};
 class main_function {
 public:
 	main_function(){};
@@ -207,6 +219,8 @@ pcl::PointCloud<pcl::PointXYZI> dynamicRemove(pcl::PointCloud<pcl::PointXYZI> la
 	
 	ros::Time fromPath2Time(std::string s);
 	//17.1 动态物体,通过tracking的方法
+		//输入单帧点云/进行地面滤除/聚类 再通过ros 发布出来
+	pcl::PointCloud<pcl::PointXYZI> objectSegmentation(ros::NodeHandle node,pcl::PointCloud<pcl::PointXYZI> origin_pc,std::vector<Detected_Obj> & boudingBox);
 	pcl::PointCloud<pcl::PointXYZI> trackingDynamic(std::vector<Eigen::Matrix4f> &poses, std::vector<pcl::PointCloud<pcl::PointXYZI>> &clouds,double distiance, int buffer_size, pcl::PointCloud<pcl::PointXYZI>& rubbish_points);
 //18 IMU index寻找
 	int  last_imu_index = 0 ;
@@ -256,17 +270,16 @@ pcl::PointCloud<pcl::PointXYZI> dynamicRemove(pcl::PointCloud<pcl::PointXYZI> la
 		//a.readHesai(path);
 		//a.readVLP16("/media/echo/DataDisc/9_rosbag/8_imu_camera_rtk_vlp/2020-05-11-16-07-59.bag","/media/echo/DataDisc/9_rosbag/8_imu_camera_rtk_vlp/car_pcd");
 		//a.readTopRobosense("/media/echo/DataDisc/9_rosbag/9_huawei_jialuowuliu/2020-04-09-11-44-45.bag","/home/echo/2_huawei");
-		
+		std::string save_path = "/home/echo/1_mapping_data/125hzUDIST";
 
 		bool readBag = true;
 		if (readBag){
-//			a.readVLP16WoTime("/media/echo/DataDisc2/jjh/jjiao_vehicle_sensor_travel_2_filter.bag","/media/echo/DataDisc2/jjh/pcd");
-			a.readVLP16(path,"/home/echo/2_bag/2_ziboHandHold/qisheng/pcd");
-//			a.readcamera(path,"/home/echo/2_bag/2_ziboHandHold/GO/right_png");
-			a.readStereoCamera(path,"/home/echo/2_bag/2_ziboHandHold/qisheng");
-			a.saveRTK2PCD(path,"/home/echo/2_bag/2_ziboHandHold/qisheng/rtk/rtk.csv");//把rtk保存成 csv+pcd
-			a.readImu(path,"/home/echo/2_bag/2_ziboHandHold/qisheng/imu/imu.csv");
-//			a.readcamera(path,"/home/echo/2_bag/2_ziboHandHold/GO/right_png");
+//			a.readVLP16WoTime("/media/echo/yzhubrData/4_jjhData/RHD/RHD02lab.bag","/media/echo/yzhubrData/4_jjhData/RHD/merge_pcd");
+			a.readVLP16(path,save_path + "/pcd");
+			a.readStereoCamera(path,save_path);
+			a.saveRTK2PCD(path,save_path+"/rtk/rtk.csv");//把rtk保存成 csv+pcd
+			a.readImu(path,save_path+"/imu/imu.csv");
+ 
 		}
 		//a.readcamera("/media/echo/DataDisc2/shandong/2020-05-24-16-51-53.bag","/media/echo/DataDisc2/shandong/pic");
 		//a.readVLP16("/media/echo/DataDisc2/shandong/2020-05-24-16-51-53.bag","/media/echo/DataDisc2/shandong/pcd");
@@ -300,14 +313,14 @@ pcl::PointCloud<pcl::PointXYZI> dynamicRemove(pcl::PointCloud<pcl::PointXYZI> la
 		writer.write("/home/echo/fusion_ws/result.pcd",tosave, true);*/
 		//3.测闭环gps约束 gps factor + lidar + loop closure
 		GPS_loop_mapping g;
-/*		g.GPSandPose("/home/echo/shandong_in__out/result.g2o", "/home/echo/shandong_in__out /gps.pcd",
-					 LiDARGNSScalibration("/home/echo/shandong_in__out/result.g2o","/home/echo/shandong_in__out/gps.pcd"));
-		*/
-/*		g.GPSandPose("/home/echo/2_bag/2_ziboHandHold/qisheng/g2o/LiDAR_Odom.g2o", "/home/echo/2_bag/2_ziboHandHold/qisheng/rtk/gps.pcd",
-					 Eigen::Isometry3d::Identity());*/
+/*		g.GPSandPose("/home/echo/2_bag/2_ziboHandHold/qisheng/g2o/lidar_wo_gps.g2o", "/home/echo/2_bag/2_ziboHandHold/qisheng/rtk/gps.pcd",
+					 LiDARGNSScalibration("/home/echo/shandong_in__out/result.g2o","/home/echo/shandong_in__out/gps.pcd"));*/
+		g.GPSandPose("/home/echo/2_bag/2_ziboHandHold/qisheng/g2o/lidar_wo_gps.g2o", "/home/echo/2_bag/2_ziboHandHold/qisheng/rtk/gps.pcd",
+					 Eigen::Isometry3d::Identity());//LiDARGNSScalibration
 		//4.测闭环 1.加闭环边 2930 20402
-	/*	lc.addLoopEdge(2500,4550,"/home/echo/2_bag/2_ziboHandHold/ceshichang/g2o/LiDAR_Odom.g2o","/home/echo/2_bag/2_ziboHandHold/ceshichang/g2o/oneLoop.g2o",
-				"/home/echo/2_bag/2_ziboHandHold/ceshichang/pcd/");*/
+		//1.
+		lc.addLoopEdge(2500,4550,"/home/echo/2_bag/2_ziboHandHold/ceshichang/g2o/LiDAR_Odom.g2o","/home/echo/2_bag/2_ziboHandHold/ceshichang/g2o/oneLoop.g2o",
+				"/home/echo/2_bag/2_ziboHandHold/ceshichang/pcd/");
 
 		//5.测闭环后的建图
 		//trans_vector = getEigenPoseFromg2oFile("/media/echo/DataDisc/3_program/mapping/cmake-build-debug/gps_constrained.g2o");
@@ -319,14 +332,14 @@ pcl::PointCloud<pcl::PointXYZI> dynamicRemove(pcl::PointCloud<pcl::PointXYZI> la
 		//genlocalmap(trans_vector, "", fxxk);
 		genColormap(trans_vector,""); //5.1 带颜色的pcd*/
 		//6.1 gps自动闭环
-/*		lc.autoMaticLoopClosure("/home/echo/2_bag/2_ziboHandHold/GO/g2o/LiDAR_Odom.g2o","ss","/home/echo/2_bag/2_ziboHandHold/GO/pcd",
-				"/home/echo/2_bag/2_ziboHandHold/GO/rtk/rtk.csv","/home/echo/2_bag/2_ziboHandHold/GO/lidar_csv/LiDAR_pose.csv");*/
+		lc.autoMaticLoopClosure("/home/echo/2_bag/2_ziboHandHold/qisheng/g2o/lidar_wo_gps.g2o","ss","/home/echo/2_bag/2_ziboHandHold/qisheng/pcd",
+				"/home/echo/2_bag/2_ziboHandHold/qisheng/rtk/rtk.csv","/home/echo/2_bag/2_ziboHandHold/qisheng/csv/LiDAR_pose.csv");
 		//lc.GPSLoopClosureCalc("/home/echo/autoLoop.g2o");
 		//6.1 gps 闭环后的自动闭环
 		lc.autoMaticLoopClosure("/home/echo/2_bag/2_ziboHandHold/ceshichang/g2o/loop.g2o","ss","/home/echo/2_bag/2_ziboHandHold/ceshichang/pcd",
 								"/home/echo/2_bag/2_ziboHandHold/ceshichang/rtk/rtk.csv","/home/echo/2_bag/2_ziboHandHold/ceshichang/csv/LiDAR_pose.csv");
 		//4.手动闭环 1.加闭环边20623,13617   3163 13731
-		//lc.addLoopEdge(3230,13731,"/home/echo/shandong_in__out/result.g2o","/home/echo/shandong_in__out/oneedge.g2o","/media/echo/DataDisc2/shandong/pcd_inout/");
+		lc.addLoopEdge(3230,13731,"/home/echo/shandong_in__out/result.g2o","/home/echo/shandong_in__out/oneedge.g2o","/media/echo/DataDisc2/shandong/pcd_inout/");
 		
 	}
 
@@ -336,11 +349,14 @@ pcl::PointCloud<pcl::PointXYZI> dynamicRemove(pcl::PointCloud<pcl::PointXYZI> la
 	void IMUMapping(std::string imu_path,std::string pcd_path);
 	//11. imu LiDAR 外参标定
 	void IMU_LiDAR_ExParam();
-
+	//12. 进行带tracking的 slam
+	int lidarOdomWithTracking();
 //功能10. gpsbased mapping
 	void gpsBasedOptimziation(std::string lidar_path, std::string gps_path, Eigen::Isometry3d lidar_to_gps,
 							  std::string save_path);
 	void cameraDistortion(std::string input_path, std::string output_path,std::string dist_file);
+	//13. 点云地图投影
+	void PCmap2GridMap(std::string pointcloudPath);
 private:
 };
 

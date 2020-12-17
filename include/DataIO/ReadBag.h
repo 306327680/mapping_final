@@ -34,6 +34,7 @@
 #include<opencv2/opencv.hpp>
 #include <stdio.h>
 #include <stdlib.h>
+#include "mergeTwoPC/mergePC.h"
 class ReadBag {
 public:
 	ReadBag(){bag_strat_time.init();};

@@ -261,9 +261,9 @@ namespace ceres {
 				Eigen::Map<const Eigen::Quaternion<T> > q_a(q_a_ptr);
 				Eigen::Map<Eigen::Matrix<T, 3, 1> > residuals(residuals_ptr);
 				//当前的
-				residuals(0,0) = p_a(0,0) - t_ab_measured_(0);
-				residuals(1,0) = p_a(1,0) - t_ab_measured_(1);
-				residuals(2,0) = T(0.1)*(p_a(2,0) - t_ab_measured_(2));
+				residuals(0,0) = T(0.1)*(p_a(0,0) - t_ab_measured_(0));
+				residuals(1,0) = T(0.1)*(p_a(1,0) - t_ab_measured_(1));
+				residuals(2,0) = T(0.5)*(p_a(2,0) - t_ab_measured_(2));
 				
 				return true;
 			}

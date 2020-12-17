@@ -48,12 +48,12 @@ int main(int argc,char** argv){
 			break;
 			//-3 生成彩色地图
 		case -3:
-			m.GetPNGFileNames("/home/echo/2_bag/2_ziboHandHold/ceshichang/left","png");
-			m.GetIntFileNames("/home/echo/2_bag/2_ziboHandHold/ceshichang/pcd","pcd");
-			m.trans_vector = m.getEigenPoseFromg2oFile("/home/echo/2_bag/2_ziboHandHold/ceshichang/gps_constrained.g2o");
+			m.GetPNGFileNames("/home/echo/2_bag/2_ziboHandHold/qisheng/left","png");
+			m.GetIntFileNames("/home/echo/2_bag/2_ziboHandHold/qisheng/pcd","pcd");
+			m.trans_vector = m.getEigenPoseFromg2oFile("/home/echo/2_bag/2_ziboHandHold/qisheng/g2o/LiDAR_Odom.g2o");
 			m.start_id = 400;
 			m.end_id = 18500;
-			m.filepath = "/home/echo/2_bag/2_ziboHandHold/ceshichang/pcd";
+			m.filepath = "/home/echo/2_bag/2_ziboHandHold/qisheng/pcd";
 			m.genColormap(m.trans_vector,"/home/echo/2_bag/2_ziboHandHold/GO/ex_params3.txt"); //5.1 带颜色的pcd
 			break;
 			
@@ -87,9 +87,9 @@ int main(int argc,char** argv){
 			m.setStartEnd();
 			m.NDTmapping();
 			break;
-		case 7://7. 从bag中读何塞rawdata
+		case 7://7. 从bag中读bag 的 raw data(包括vlp等)
 			cout << "read pcd:" << endl;
-			m.readAndSaveHesai("/media/echo/DataDisc2/1_ziboDataset/qichengHotel1.bag");
+			m.readAndSaveHesai("/media/echo/DataDisc/9_rosbag/11_shandongchechang/udist.bag");
 			cout << "read pcd finish:" << endl;
 			break;
 		case 8://8. 测试新写的函数
@@ -111,6 +111,14 @@ int main(int argc,char** argv){
 		case 11:
 			//11. 格式转化,用于不同的雷达型号 保留ring 和timestamp等信息
 			m.readAndSaveHesai("/media/echo/DataDisc/9_rosbag/rsparel_64_ins/2019-11-06-20-43-12_0.bag");
+			break;
+		case 12://带tracking 的 icp
+			//11. 格式转化,用于不同的雷达型号 保留ring 和timestamp等信息
+			m.setStartEnd();
+			m.lidarOdomWithTracking();//普通点面icp
+			break;
+		case 13:
+			m.PCmap2GridMap("/media/echo/DataDisc/5_map/fsk_19/map.pcd");
 			break;
 		default :
 			cout << "无效输入" << endl;

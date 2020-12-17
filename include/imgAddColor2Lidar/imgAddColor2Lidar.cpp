@@ -130,7 +130,7 @@ pcl::PointCloud<pcl::PointXYZRGB> imgAddColor2Lidar::pclalignImg2LiDAR(cv::Mat m
 }
 
 pcl::PointCloud<pcl::PointXYZRGB>
-imgAddColor2Lidar::pclalignImg2LiDAR(cv::Mat mat, pcl::PointCloud<pcl::PointXYZI> cloudin){
+imgAddColor2Lidar::pclalignImg2LiDAR(cv::Mat mat, pcl::PointCloud<pcl::PointXYZI> cloudin,cv::Mat &depth){
 	//去畸变
 	cv::Mat image = mat;
 	cv::Mat frame;
@@ -159,6 +159,7 @@ imgAddColor2Lidar::pclalignImg2LiDAR(cv::Mat mat, pcl::PointCloud<pcl::PointXYZI
 	remap(image, imageCalibration, map1, map2, cv::INTER_LINEAR);
 	
  	mat = imageCalibration;
+	depth.size() = mat.size();
 	//正经程序
 	pcl::PointCloud<pcl::PointXYZRGB> coloured_point_cloud;
 	cv::Mat projected_image1;
@@ -186,13 +187,13 @@ imgAddColor2Lidar::pclalignImg2LiDAR(cv::Mat mat, pcl::PointCloud<pcl::PointXYZI
 		if (1 <= image_u && image_u < mat.size().width-1 &&
 			1 <= image_v && image_v < mat.size().height-1 &&
 			mat.at<cv::Vec3b>(image_u,image_v)[0] >= 0 && temp_point.x>0){
-			
+
 			cv::Vec3b colour= mat.at<cv::Vec3b>(cv::Point(image_u, image_v));
 			temp_point.r = colour[2];
 			temp_point.g = colour[1];
 			temp_point.b = colour[0];
 			/*if(colour[0]<250||colour[1]<250||colour[2]<250){*/
-				coloured_point_cloud.push_back(temp_point);
+			coloured_point_cloud.push_back(temp_point);
 		/*	}*/
 	
 /*			projected_image1(cv::Rect(image_u, image_v, 2, 2)).setTo(255);*/
@@ -201,7 +202,7 @@ imgAddColor2Lidar::pclalignImg2LiDAR(cv::Mat mat, pcl::PointCloud<pcl::PointXYZI
 	return coloured_point_cloud;
 }
 
-cv::Mat imgAddColor2Lidar::pcd2img(cv::Mat mat, pcl::PointCloud<pcl::PointXYZI> cloudin) {
+cv::Mat imgAddColor2Lidar::pcd2img(cv::Mat mat, pcl::PointCloud<pcl::PointXYZI> cloudin,cv::Mat &depth) {
 	pcl::PointCloud<PointXYZRGBI>  coloured_point_cloud;
 /*	cv::Mat image = mat;
 	cv::Mat frame;
@@ -231,6 +232,9 @@ cv::Mat imgAddColor2Lidar::pcd2img(cv::Mat mat, pcl::PointCloud<pcl::PointXYZI> 
 	mat = imageCalibration;*/
 	//之前的
 	cv::Mat projected_image1 =  mat;
+	depth.size() = mat.size();
+	cv::Mat depth_image = cv::Mat::zeros(mat.size(), CV_16UC1);
+	std::cout<<depth_image.size()<<std::endl;
 	for (int i = 0; i < cloudin.size(); ++i) {
 		PointXYZRGBI	  temp_point;
 		temp_point.x = cloudin[i].x;
@@ -246,6 +250,9 @@ cv::Mat imgAddColor2Lidar::pcd2img(cv::Mat mat, pcl::PointCloud<pcl::PointXYZI> 
 		float r_2 = point_t3d[0] * point_t3d[0] + point_t3d[1] * point_t3d[1];
 		float x_ori = point_t3d[0];
 		float y_ori = point_t3d[1];
+
+		float depth_float;
+		depth_float = sqrtf(temp_point.x*temp_point.x+temp_point.y*temp_point.y+temp_point.z*temp_point.z)*1000;
 		//这里用去畸变 这里公式问题??
 		point_t3d[0] = x_ori*(1 + k1*r_2 + k2*pow(r_2, 2) + k3*pow(r_2, 3)) + 2*p1*x_ori*y_ori + p2*(r_2 + 2*pow(x_ori,2));
 		point_t3d[1] = y_ori*(1 + k1*r_2 + k2*pow(r_2, 2) + k3*pow(r_2, 3)) + 2*p2*x_ori*y_ori + p1*(r_2 + 2*pow(y_ori,2));
@@ -271,6 +278,14 @@ cv::Mat imgAddColor2Lidar::pcd2img(cv::Mat mat, pcl::PointCloud<pcl::PointXYZI> 
 			if(temp_point.x>0){
 				projected_image1(cv::Rect(image_u, image_v, 1, 1)).setTo(
 						cv::Vec3b( abs(255 - intensity), abs(127 - intensity), abs(0 - intensity)));
+ 		/*		if(depth_image.at<float>(image_u,image_v) != 0){
+ 					if (depth_image.at<float>(image_u,image_v) > depth_float){
+						depth_image(cv::Rect(image_u, image_v, 2, 2)) = depth_float;
+ 					}
+ 				} else{
+					depth_image(cv::Rect(image_u, image_v, 2, 2)) = depth_float;
+ 				}*/
+				depth_image(cv::Rect(image_u, image_v, 2, 2)) = depth_float;
 			}
 		
 /*			projected_image1.at<cv::Vec3b>(image_u,image_v)[0] = abs(255 - intensity); //blue
@@ -278,5 +293,6 @@ cv::Mat imgAddColor2Lidar::pcd2img(cv::Mat mat, pcl::PointCloud<pcl::PointXYZI> 
 			projected_image1.at<cv::Vec3b>(image_u,image_v)[2] = abs(0   - intensity); //red*/
 		}
 	}
+	depth = depth_image;
 	return projected_image1;
 }

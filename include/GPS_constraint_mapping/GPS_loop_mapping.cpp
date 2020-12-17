@@ -14,7 +14,7 @@ GPS_loop_mapping::	GPSandPose(std::string lidar_pose, std::string gps_constraint
 	RelationG2OGPS("/home/echo/2_bag/2_ziboHandHold/qisheng/csv/LiDAR_pose.csv","/home/echo/2_bag/2_ziboHandHold/qisheng/rtk/rtk.csv",relation);//获得gps和位姿的映射
 	poseTF(poses,extrinsic_matrix);//旋转当前LiDAR 位姿
 	ceres::Problem problem;
-	BuildOptimizationProblem(constraints, &poses, &problem);			        //闭环的约束项
+	BuildOptimizationProblem(constraints, &poses, &problem);			            //闭环的约束项
 	BuildGPSOptimizationProblem(constraints, &poses, &problem,relation);            //gps的约束项
 	SolveOptimizationProblem(&problem);						//解决
 	OutputPoses("poses_optimized1.txt", poses);
@@ -108,7 +108,7 @@ void GPS_loop_mapping::RelationG2OGPS(std::string lidar_pose, std::string gps_co
 		std::string time = fields[15];
 		std::string status = fields[12];
 		float fconv_xy = std::atof(conv_xy.c_str());
-		if((status=="2"&& std::atof(z.c_str())<1.5)){
+		if((status=="2"&& std::atof(z.c_str())<10)){
 		/*	if((status=="2"||status=="1")&&fconv_xy<3.0){	*/  //如果是rtk模式就加入candidate,之后可以加入其他的约束,例如cov 协方差等
 			pose_time.push_back(Eigen::Vector4d((double)std::atof(x.c_str()),(double)std::atof(y.c_str()),(double)std::atof(z.c_str()),(double)std::atof(time.c_str())));
 		}
