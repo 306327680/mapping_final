@@ -531,7 +531,7 @@ int main_function::point2planeICP() {
 	
 	bool VLP = true;
 	bool lidar_odom_open = true; //使用lidar odom
-	std::string LiDAR_type = "VLP";
+	std::string LiDAR_type = "Hesai";
 	bool local_map_updated = true; //todo 加入地图更新判断 1100-3000
 	std::vector<nav_msgs::Odometry> odoms;//当前结果转成odom 存储
 	nav_msgs::Odometry current_odom;
@@ -616,8 +616,8 @@ int main_function::point2planeICP() {
 				//todo 有个bug,就是第二次去畸变没有用完全的tf去畸变 没问题
 				//2.1 加个去畸变
 				simpleDistortion(xyzItimeRing,icp.increase.inverse(),*cloud_bef); //T_l-1_l
-				//2.1.0 分割 这个应该不影响整体建图
-				seg_points = objectSegmentation(node,*cloud_bef,global_obj_list);
+				//2.1.0 分割 这个应该不影响整体建图$$$$$$$$$$$$$$$$$$
+				//seg_points = objectSegmentation(node,*cloud_bef,global_obj_list);
 				//2.1.1 设为普通icp********
 				icp.transformation = Eigen::Matrix4f::Identity();
 				if(lidar_odom_open){
@@ -724,7 +724,7 @@ int main_function::point2planeICP() {
 					pcl::transformPointCloud(dynamic_obj,bef_tfed_scan,current_pose);//bef_tfed_scan 现在是垃圾点
 					pcl::transformPointCloud(tosave,tfed_color,current_pose);
 					*cloud_map_color += tfed_color;
-					*cloud_map = tfed;
+					*cloud_map += tfed;
 //					*cloud_map += tfed;
 					oct_last = tfed;
 					pcd_save<<"tf_ed/"<<i<<".pcd";
@@ -1575,19 +1575,21 @@ void main_function::genlocalmap(std::vector<Eigen::Isometry3d, Eigen::aligned_al
 			Feature.calcFeature(segmentedCloud);*/
  
 			//tmp用来转换格式 把去了畸变的放进去
-		/*	tmp->clear();
+			tmp->clear();
 			tmp->resize(pcout->size());
 			for (int j = 0; j < pcout->size(); ++j) {
 				tmp->points[j].x = pcout->points[j].x;
 				tmp->points[j].y = pcout->points[j].y;
 				tmp->points[j].z = pcout->points[j].z;
 				tmp->points[j].intensity = pcout->points[j].intensity;
-			}*/
+			}
 		
 			//todo 改成 第一步提取index 先,之后记录index,最后滤除
 			//***这里是地面滤波器
-/*			filter.point_cb(*tmp);
-			*tmp = *filter.g_ground_pc;*/
+			std::cout<<" before: "<<tmp->size()<<std::endl;
+			filter.point_cb(*tmp);
+			*cloud_bef = *filter.g_ground_pc;
+			std::cout<<" after: "<<tmp->size()<<std::endl;
 /*			pcl::VoxelGrid<pcl::PointXYZI> sor;
 			sor.setInputCloud(tmp);                   //设置需要过滤的点云给滤波对象
 			sor.setLeafSize(0.2, 0.2, 0.2);               //设置滤波时创建的体素大小为2cm立方体，通过设置该值可以直接改变滤波结果，值越大结果越稀疏
@@ -3642,7 +3644,7 @@ int main_function::lidarOdomWithTracking() {
 					pcl::transformPointCloud(dynamic_obj,bef_tfed_scan,current_pose);//bef_tfed_scan 现在是垃圾点
 					pcl::transformPointCloud(tosave,tfed_color,current_pose);
 					*cloud_map_color += tfed_color;
-					*cloud_map = tfed;
+					*cloud_map += tfed;
  
  
 					pcl::toPCLPointCloud2(tfed, pcl_frame);
@@ -3706,6 +3708,7 @@ int main_function::lidarOdomWithTracking() {
 	}
 	std::cout<<save_g2o_path<<"\n"<<save_pcd_path<<std::endl;
 	g2osaver.saveGraph(save_g2o_path);
+	std::cout<<"cloud map: "<<cloud_map->size()<<std::endl;
 	writer.write(save_pcd_path,*cloud_map, true);
 	if(color){
 		writer.write(save_color_pcd_path,*cloud_map_color, true);
@@ -3715,9 +3718,9 @@ int main_function::lidarOdomWithTracking() {
 }
 
 void main_function::PCmap2GridMap(std::string pointcloudPath) {
-	point_to_gridmap PTG;
+	
 	double xMax = 0, yMax = 0, xMin = 0, yMin = 0;
-	double cellResolution = 0.3;
+	double cellResolution = 0.05;
 	nav_msgs::OccupancyGridPtr grid(new nav_msgs::OccupancyGrid);
 
 	
@@ -3729,7 +3732,11 @@ void main_function::PCmap2GridMap(std::string pointcloudPath) {
 	
 	pcl::io::loadPCDFile<pcl::PointXYZI>(pointcloudPath,cloud_map);
 	pcl::PointCloud<pcl::Normal>::Ptr cloud_normals(new pcl::PointCloud<pcl::Normal>);
-	PTG.calcSurfaceNormals(cloud_map, cloud_normals);
+ 
+	nav_msgs::OccupancyGridPtr grid1;
+	point_to_gridmap PTG(cloud_map);
+	PTG.groundVoxelMap(  grid1);
+/*	PTG.calcSurfaceNormals(cloud_map, cloud_normals);
 	PTG.calcPcBoundary(xMax, yMax, xMin, yMin);
 	int xCells = ((int) ((xMax - xMin) / cellResolution)) + 1;
 	int yCells = ((int) ((yMax - yMin) / cellResolution)) + 1;
@@ -3740,6 +3747,6 @@ void main_function::PCmap2GridMap(std::string pointcloudPath) {
 	PTG.initGrid(grid);
 	std::cout<<"cellResolution: "<<cellResolution<<" xCells: "<<xCells<<" yCells: "<<yCells<<" xMin: "<<xMin<<" yMin: "<<yMin<<std::endl;
 	PTG.updateGrid(grid, cellResolution, xCells, yCells, xMin, yMin, &ocGrid);
-	PTG.saveGridasPNG(grid,"/home/echo/11_gridmap/map.png");
+	PTG.saveGridasPNG(grid,"/home/echo/11_gridmap/map.png");*/
 }
 

@@ -58,6 +58,7 @@ public:
 	void readVLP16WoTime(std::string path,std::string save_path);
 	void readTopRobosense(std::string path,std::string save_path);
 	void readRobo128(std::string path,std::string save_path);
+	void readPandarXT32(std::string path,std::string save_path);
 	//4. 读取图片
 	void readcamera(std::string path,std::string save_path);
 	void readStereoCamera(std::string path,std::string save_path);

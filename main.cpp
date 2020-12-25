@@ -118,7 +118,7 @@ int main(int argc,char** argv){
 			m.lidarOdomWithTracking();//普通点面icp
 			break;
 		case 13:
-			m.PCmap2GridMap("/media/echo/DataDisc/5_map/fsk_19/map.pcd");
+			m.PCmap2GridMap("/home/echo/7_map/qichengbinguan/gnd.pcd");
 			break;
 		default :
 			cout << "无效输入" << endl;

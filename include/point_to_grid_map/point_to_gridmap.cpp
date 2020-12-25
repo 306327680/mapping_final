@@ -156,7 +156,50 @@ void point_to_gridmap::updateGrid(nav_msgs::OccupancyGridPtr grid, double cellRe
  
 }
 
-void point_to_gridmap::groundVoxelMap(pcl::PointCloud<pcl::PointXYZI> cloud, nav_msgs::OccupancyGridPtr grid) {
+void point_to_gridmap::groundVoxelMap(  nav_msgs::OccupancyGridPtr grid) {
+	//1.找到点云的最大最小
+	double xMax = 0, yMax = 0, xMin = 0, yMin = 0;
+	calcPcBoundary(xMax, yMax, xMin, yMin);
+	//2.点云的边界
+	int xCells = ((int) ((xMax - xMin) / cellResolution)) + 1;
+	int yCells = ((int) ((yMax - yMin) / cellResolution)) + 1;
+//创建待Alpha通道的Mat
+	cv::Mat mat(xCells, yCells, CV_8UC3);
+	cv::Mat mat_ori(xCells, yCells, CV_8UC3);
+	createAlphaMat(mat);
+	createAlphaMat(mat_ori);
+	for (int i = 0; i < currentPC.size(); ++i) {
+		int v = (currentPC[i].x - xMin)/ cellResolution;
+		int u = (currentPC[i].y - yMin)/ cellResolution;
+ 		int intensity_normalized = currentPC[i].intensity*7;
+ 		if(intensity_normalized>=255){
+			intensity_normalized = 255;
+ 		}
+		int intensity_last = mat.at<cv::Vec3b>(u, v)(0);
+		if(mat_ori.at<cv::Vec3b>(u, v)(0)<intensity_normalized){
+			mat(cv::Rect(u, v, 1, 1)).setTo(int2RGB(intensity_normalized));
+			mat_ori(cv::Rect(u, v, 1, 1)).setTo(cv::Vec3b( intensity_normalized, 0,0));
+		}
+	}
+	std::vector<int>compression_params;
+	compression_params.push_back(cv::IMWRITE_PNG_COMPRESSION);
+	compression_params.push_back(9);
+	
+	imwrite("/home/echo/11_gridmap/alpha.png", mat, compression_params);
+	cv::imshow("map", mat);
+	fprintf(stdout, "PNG图片文件的alpha数据保存完成\n");
+	cv::waitKey(0);
+/*	cv::Mat mat(480, 640, CV_8UC4);
+	createAlphaMat(mat);
+	
+	std::vector<int>compression_params;
+	compression_params.push_back(cv::IMWRITE_PNG_COMPRESSION);
+	compression_params.push_back(9);
+	
+	imwrite("Alph.png", mat, compression_params);
+	cv::imshow("map", mat);
+	fprintf(stdout, "PNG图片文件的alpha数据保存完成\n");
+	cv::waitKey(0);*/
 
 }
 
@@ -179,6 +222,59 @@ void point_to_gridmap::saveGridasPNG(nav_msgs::OccupancyGridPtr grid, std::strin
 	grid_map::GridMapRosConverter::toCvImage(map,"map", sensor_msgs::image_encodings::RGB8, image);
 	bool success = cv::imwrite(image_path.c_str(),image.image, {cv::IMWRITE_PNG_STRATEGY_DEFAULT});
 	std::cout<<success<<std::endl;
+}
+
+void point_to_gridmap::createAlphaMat(cv::Mat &mat) {
+	for (int i = 0; i < mat.rows; ++i) {
+		for (int j = 0; j < mat.cols; ++j) {
+			cv::Vec3b&rgba = mat.at<cv::Vec3b>(i, j);
+//			rgba[0] = UCHAR_MAX;
+/*			rgba[1] = cv::saturate_cast<uchar>((float(mat.cols - j)) / ((float)mat.cols)*UCHAR_MAX);
+			rgba[2] = cv::saturate_cast<uchar>((float(mat.rows - i)) / ((float)mat.cols)*UCHAR_MAX);
+			rgba[3] = cv::saturate_cast<uchar>(0.5*(rgba[1] + rgba[2]));*/
+			rgba[0] = cv::saturate_cast<uchar>(0);
+			rgba[1] = cv::saturate_cast<uchar>(0);
+			rgba[2] = cv::saturate_cast<uchar>(0);
+		}
+	}
+}
+
+cv::Vec3b point_to_gridmap::int2RGB(int input) {
+ 
+	int tmp2 = input;
+	if (tmp2 <= 51)
+	{
+		cv::Vec3b color2(255,tmp2*5,0);
+		return color2;
+	}
+	else if (tmp2 <= 102)
+	{
+		tmp2-=51;
+		cv::Vec3b color2(255-tmp2*5,255,0);
+		return color2;
+	}
+	else if (tmp2 <= 153)
+	{
+		tmp2-=102;
+		cv::Vec3b color2(0,255,tmp2*5);
+		return color2;
+	}
+	else if (tmp2 <= 204)
+	{
+		tmp2-=153;
+		cv::Vec3b color2(0,255-uchar(128.0*tmp2/51.0+0.5),255);
+		return color2;
+	}
+	else
+	{
+		tmp2-=204;
+		cv::Vec3b color2(0,127-uchar(127.0*tmp2/51.0+0.5),255);
+		return color2;
+	}
+}
+
+void point_to_gridmap::readGridMap(std::string mapPath) {
+
 }
 
 

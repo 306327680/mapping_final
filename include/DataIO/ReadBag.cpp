@@ -644,3 +644,49 @@ void ReadBag::readImu(std::string path, std::string save_path) {
 	}
 	csvio.IMU2CSV(IMUs,save_path,lidar_first);
 }
+
+void ReadBag::readPandarXT32(std::string path, std::string save_path) {
+	std::cout<<"the bag path is: "<<path<<std::endl;
+	bag.open(path, rosbag::bagmode::Read);
+	std::vector<std::string> topics;
+	bool pcd_start = false;
+	double time_begin;
+ 
+	double timestamp;
+	//可以加挺多topic的?
+	topics.push_back(std::string("/pandar"));
+	rosbag::View view(bag, rosbag::TopicQuery(topics));
+	//读广场的也就几秒
+	int inter_times =0;
+	BOOST_FOREACH(rosbag::MessageInstance const m, view)
+				{
+					pcdtosave.clear();
+					std::stringstream pcd_save;
+					pcd_save.precision(18);
+					sensor_msgs::PointCloud2::ConstPtr s = m.instantiate<sensor_msgs::PointCloud2>();
+					pcl::PCLPointCloud2 pcl_pc2;
+					pcl::fromROSMsg(*s,hesai_pcd);
+					if(!pcd_start){
+						time_begin = hesai_pcd[0].timestamp;
+					}
+					
+					for (int i = 0; i < hesai_pcd.size(); ++i) {
+						//std::printf("%f\n",hesai_pcd[i].timestamp);
+						mypcd temp;
+						temp.x = hesai_pcd[i].x;
+						temp.y = hesai_pcd[i].y;
+						temp.z = hesai_pcd[i].z;
+						temp.intensity = hesai_pcd[i].intensity;
+						temp.timestamp = hesai_pcd[i].timestamp - time_begin;
+						temp.ring = hesai_pcd[i].ring;
+						pcdtosave.push_back(temp);
+					}
+					pcdtosave.width = pcdtosave.size();
+					timestamp = s->header.stamp.toSec();
+					pcd_save <<save_path.c_str()<<"/"<<inter_times<<".pcd";
+					std::cout<<pcd_save.str()<<" size: "<<pcdtosave.size()<<" times: "<<inter_times<<std::endl;
+					writer.write(pcd_save.str(),pcdtosave,true);
+					std::cout<<pcd_save.str()<<" saved " <<std::endl;
+					inter_times++;
+				}
+}
