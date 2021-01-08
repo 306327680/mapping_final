@@ -55,6 +55,9 @@ include_directories(${grid_map_core_INCLUDE_DIRS})
 find_package(grid_map_ros REQUIRED)
 include_directories(${grid_map_ros_INCLUDE_DIRS})
 
+find_package(map_server  REQUIRED)
+include_directories(${map_server_INCLUDE_DIRS})
+
 #libpointmatcher
 find_package(libpointmatcher CONFIG)
 #QT
@@ -185,7 +188,8 @@ add_executable(mapping main.cpp
         include/DynamicRemoveMap/DynamicRemoveMap.cpp include/DynamicRemoveMap/DynamicRemoveMap.h include/imu/imu_tools.cpp include/imu/imu_tools.h
         include/DegenerateAwareICP/DAICP.cpp include/DegenerateAwareICP/DAICP.h include/segmentation/segmentation.cpp include/segmentation/segmentation.h
         include/mergeTwoPC/mergePC.cpp include/mergeTwoPC/mergePC.h
-        include/point_to_grid_map/point_to_gridmap.cpp include/point_to_grid_map/point_to_gridmap.h)
+        include/point_to_grid_map/point_to_gridmap.cpp include/point_to_grid_map/point_to_gridmap.h
+        include/DataIO/ReadBag.cpp include/DataIO/ReadBag.h)
 
 target_link_libraries(mapping ${PCL_LIBRARIES}
         ${tf_conversions_LIBRARIES}
@@ -204,6 +208,7 @@ target_link_libraries(mapping ${PCL_LIBRARIES}
         ndt_omp
         ${grid_map_core_LIBRARIES}
         ${grid_map_ros_LIBRARIES}
+        ${map_server_LIBRARIES}
         ${CERES_LIBRARIES}
         Qt5::Widgets
         Qt5::Core

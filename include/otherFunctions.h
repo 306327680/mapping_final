@@ -271,7 +271,7 @@ pcl::PointCloud<pcl::PointXYZI> dynamicRemove(pcl::PointCloud<pcl::PointXYZI> la
 		//a.readVLP16("/media/echo/DataDisc/9_rosbag/8_imu_camera_rtk_vlp/2020-05-11-16-07-59.bag","/media/echo/DataDisc/9_rosbag/8_imu_camera_rtk_vlp/car_pcd");
 		//a.readTopRobosense("/media/echo/DataDisc/9_rosbag/9_huawei_jialuowuliu/2020-04-09-11-44-45.bag","/home/echo/2_huawei");
 		std::string save_path = "/home/echo/1_mapping_data/125hzUDIST";
-		a.readPandarXT32("/media/echo/DataDisc2/2_pandarXT/xt.bag","/media/echo/DataDisc2/2_pandarXT/pcd");
+		a.readPandarXT32("/media/echo/DataDisc2/2_pandarXT/2020-12-25-16-30-01.bag","/media/echo/DataDisc2/2_pandarXT/xt16");
 		bool readBag = false;
 		if (readBag){
 //			a.readVLP16WoTime("/media/echo/yzhubrData/4_jjhData/RHD/RHD02lab.bag","/media/echo/yzhubrData/4_jjhData/RHD/merge_pcd");
@@ -357,6 +357,8 @@ pcl::PointCloud<pcl::PointXYZI> dynamicRemove(pcl::PointCloud<pcl::PointXYZI> la
 	void cameraDistortion(std::string input_path, std::string output_path,std::string dist_file);
 	//13. 点云地图投影
 	void PCmap2GridMap(std::string pointcloudPath);
+	//14. 点云地图范围 2d kd tree 确定范围
+	void PCrangeDetect(std::string map_path);
 private:
 };
 

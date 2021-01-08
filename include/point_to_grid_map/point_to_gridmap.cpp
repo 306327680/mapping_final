@@ -273,8 +273,118 @@ cv::Vec3b point_to_gridmap::int2RGB(int input) {
 	}
 }
 
-void point_to_gridmap::readGridMap(std::string mapPath) {
-
+void point_to_gridmap::readGridMap(std::string mapPath,std::string map_yaml) {
+	double res = 0.05;//分辨率
+	double origin[3];
+	int negate = 0;
+	double occ_th = 0.65;
+	double free_th = 0.196;
+	MapMode mode = TRINARY;
+	nav_msgs::GetMap::Response map_resp_;
+ 	map_server::loadMapFromFile(&map_resp_,mapPath.c_str(),res,negate,occ_th,free_th, origin, mode);
+	ros::Publisher map_pub_;
+	ros::NodeHandle nh_;
+	map_resp_.map.info.map_load_time = ros::Time::now();
+	map_resp_.map.header.frame_id = "map";
+	map_resp_.map.header.stamp = ros::Time::now();
+	map_pub_ = nh_.advertise<nav_msgs::OccupancyGrid>("map", 1, true);
+	map_pub_.publish( map_resp_.map );
 }
 
 
+void LiDARnavigationSwitch::get2Dmap() {
+	
+	pcl::PointCloud<pcl::PointXY>::Ptr _2dPC(new pcl::PointCloud<pcl::PointXY>);
+	pcl::PointCloud<pcl::PointXYZI>::Ptr _3dPC(new pcl::PointCloud<pcl::PointXYZI>);
+	for (int i = 0; i < currentPC.size(); ++i) {
+		pcl::PointXYZI tmpb;
+		tmpb.x = currentPC[i].x;
+		tmpb.y = currentPC[i].y;
+		tmpb.z = 0;
+		tmpb.intensity = currentPC[i].intensity;
+		_3dPC->push_back(tmpb);
+	}
+	//1.滤波
+ 
+	pcl::PointCloud<pcl::PointXYZI>::Ptr filteredCloud(new pcl::PointCloud<pcl::PointXYZI>);
+	pcl::UniformSampling<pcl::PointXYZI> filter;
+	filter.setInputCloud(_3dPC);
+	filter.setRadiusSearch(0.05f);
+	// We need an additional object to store the indices of surviving points.
+	pcl::PointCloud<int> keypointIndices;
+	filter.compute(keypointIndices);
+	pcl::copyPointCloud(*_3dPC, keypointIndices.points, *filteredCloud);
+	_3dPC = filteredCloud;
+	//2. 2d kdTree 往里放数据
+	for (int i = 0; i < _3dPC->size(); ++i) {
+		pcl::PointXY tmp;
+		tmp.x = _3dPC->points[i].x;
+		tmp.y = _3dPC->points[i].y;
+		_2dPC->push_back(tmp);
+	}
+	//3.设置kd tree
+	_2dPCD = *_2dPC;
+	kdtree.setInputCloud (_2dPC);
+	ros::Publisher map_pub_;
+	ros::NodeHandle nh_;
+	map_pub_ = nh_.advertise<sensor_msgs::PointCloud2>("/minimap", 1);
+	sensor_msgs::PointCloud2 local_map;
+	pcl::PCLPointCloud2 pcl_frame;
+	
+	local_map.header.frame_id = "map";
+	local_map.header.stamp = ros::Time::now();
+	pcl::toPCLPointCloud2(*_3dPC, pcl_frame);
+	pcl_conversions::fromPCL(pcl_frame, local_map);
+	map_pub_.publish(local_map);
+	
+	/*pcl::toPCLPointCloud2(currentPC, pcl_frame);
+	pcl_conversions::fromPCL(pcl_frame, local_map);*/
+	//4.发布地图
+	local_map.header.frame_id = "map";
+	local_map.header.stamp = ros::Time::now();
+	for (int j = 0; j < 5; ++j) {
+		sleep(1);
+		map_pub_.publish(local_map);
+	}
+}
+
+
+
+bool LiDARnavigationSwitch::inMapRange(nav_msgs::Odometry current_odom, nav_msgs::Path &related) {
+	pcl::PointXY current_position;
+	current_position.x = current_odom.pose.pose.position.x;
+	current_position.y = current_odom.pose.pose.position.y;
+	std::vector<int> pointIdxNKNSearch(1);
+	std::vector<float> pointNKNSquaredDistance(1);
+	//找到最近的一个点
+	if ( kdtree.nearestKSearch (current_position, 1, pointIdxNKNSearch, pointNKNSquaredDistance) > 0 )
+	{
+		if(pointNKNSquaredDistance[0]>3){
+			geometry_msgs::PoseStamped from;
+			from.pose.position.x = current_odom.pose.pose.position.x;
+			from.pose.position.y = current_odom.pose.pose.position.y;
+			from.pose.position.z = current_odom.pose.pose.position.z;
+			related.poses.push_back(from);
+			from.pose.position.x = _2dPCD[pointIdxNKNSearch[0]].x;
+			from.pose.position.y = _2dPCD[pointIdxNKNSearch[0]].y;
+			from.pose.position.z = 0;
+			related.poses.push_back(from);
+			return false;
+		} else{
+			geometry_msgs::PoseStamped from;
+			from.pose.position.x = current_odom.pose.pose.position.x;
+			from.pose.position.y = current_odom.pose.pose.position.y;
+			from.pose.position.z = current_odom.pose.pose.position.z;
+			related.poses.push_back(from);
+			from.pose.position.x = _2dPCD[pointIdxNKNSearch[0]].x;
+			from.pose.position.y = _2dPCD[pointIdxNKNSearch[0]].y;
+			from.pose.position.z = 0;
+			related.poses.push_back(from);
+			return true;
+		}
+	} else{//找不到最近的点
+		std::cout<<"Can not Find Map point!!!!!!!!"<<std::endl;
+		return false;
+	}
+
+}

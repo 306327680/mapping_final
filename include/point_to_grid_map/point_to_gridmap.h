@@ -5,6 +5,9 @@
 // 3.用途: 用ground map 把这个投影到png类似的图片中进行辅助标注 ok
 // 4.自动对地面的东西进行标注 normal 啥的
 // 5.读取
+// *******定位切换****
+// step 1. get2Dmap: 把地面地图 转化为2d 的地图,然后构建2d kd tree,并且发布2d 的地图
+// step 2. inMapRange: 判断当前的位置是不是在地图中, 返回相关的点对
 
 #ifndef PCD_COMPARE_POINT_TO_GRIDMAP_H
 #define PCD_COMPARE_POINT_TO_GRIDMAP_H
@@ -17,6 +20,12 @@
 #include <opencv2/imgcodecs.hpp>
 #include <opencv2/opencv.hpp>
 #include <grid_map_ros/GridMapRosConverter.hpp>
+#include <map_server/image_loader.h>
+#include <yaml-cpp/yaml.h>
+#include <pcl/PCLPointCloud2.h>
+#include <pcl/keypoints/uniform_sampling.h>
+#include <nav_msgs/Odometry.h>
+#include <nav_msgs/Path.h>
 class point_to_gridmap {
 public:
 	point_to_gridmap(pcl::PointCloud<pcl::PointXYZI> pc){currentPC = pc;};
@@ -43,10 +52,23 @@ public:
 	//变量
 	pcl::PointCloud<pcl::PointXYZI> currentPC;
 	//b.1 读取GridMap
-	void readGridMap(std::string mapPath);
+	void readGridMap(std::string mapPath,std::string map_yaml);
 private:
 	double cellResolution = 0.05;
 };
 
+class LiDARnavigationSwitch {
+public:
+	LiDARnavigationSwitch(pcl::PointCloud<pcl::PointXYZI> pc){currentPC = pc;};
+	//1.使用之前要先投影到2d
+	void get2Dmap();
+	//2. 计算是不是在地面图范围内
+	bool inMapRange(nav_msgs::Odometry current_odom, nav_msgs::Path &related);
+
+private:
+	pcl::KdTreeFLANN<pcl::PointXY> kdtree;
+	pcl::PointCloud<pcl::PointXYZI> currentPC;
+	pcl::PointCloud<pcl::PointXY> _2dPCD;
+};
 
 #endif //PCD_COMPARE_POINT_TO_GRIDMAP_H

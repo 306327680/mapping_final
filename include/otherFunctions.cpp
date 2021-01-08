@@ -3732,10 +3732,15 @@ void main_function::PCmap2GridMap(std::string pointcloudPath) {
 	
 	pcl::io::loadPCDFile<pcl::PointXYZI>(pointcloudPath,cloud_map);
 	pcl::PointCloud<pcl::Normal>::Ptr cloud_normals(new pcl::PointCloud<pcl::Normal>);
- 
 	nav_msgs::OccupancyGridPtr grid1;
 	point_to_gridmap PTG(cloud_map);
-	PTG.groundVoxelMap(  grid1);
+	//PTG.readGridMap("/home/echo/11_gridmap/map.png","/home/echo/11_gridmap/map.png");
+	
+	std::string lidar_range_map = "/home/echo/7_map/ceshichang/gnd.pcd";
+	pcl::io::loadPCDFile<pcl::PointXYZI>(lidar_range_map,cloud_map);
+	LiDARnavigationSwitch LS(cloud_map);
+	LS.get2Dmap();
+//	PTG.groundVoxelMap( grid1);
 /*	PTG.calcSurfaceNormals(cloud_map, cloud_normals);
 	PTG.calcPcBoundary(xMax, yMax, xMin, yMin);
 	int xCells = ((int) ((xMax - xMin) / cellResolution)) + 1;
@@ -3748,5 +3753,9 @@ void main_function::PCmap2GridMap(std::string pointcloudPath) {
 	std::cout<<"cellResolution: "<<cellResolution<<" xCells: "<<xCells<<" yCells: "<<yCells<<" xMin: "<<xMin<<" yMin: "<<yMin<<std::endl;
 	PTG.updateGrid(grid, cellResolution, xCells, yCells, xMin, yMin, &ocGrid);
 	PTG.saveGridasPNG(grid,"/home/echo/11_gridmap/map.png");*/
+}
+
+void main_function::PCrangeDetect(std::string map_path) {
+
 }
 
