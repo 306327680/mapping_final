@@ -35,6 +35,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "mergeTwoPC/mergePC.h"
+#include "g2oIO/PoseGraphIO.h"
 class ReadBag {
 public:
 	ReadBag(){bag_strat_time.init();};
@@ -65,6 +66,8 @@ public:
 	void readCalibratedCamera(std::string path,std::string cali_path,std::string save_path);
 	//5. readImu
 	void readImu(std::string path,std::string save_path);
+	//6. readINS and LiDAR 华测给定gga的
+	void readINS(std::string path,std::string save_path);
 private:
 	rosbag::Bag bag;
 	nav_msgs::Odometry encoder_odom_;

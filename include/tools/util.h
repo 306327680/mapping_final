@@ -29,7 +29,7 @@ G2O_USE_TYPE_GROUP(slam3d);
 #include <pcl/point_types.h>
 #include <pcl/io/pcd_io.h>
 #include <opencv/cv.h>
-
+#include <nav_msgs/Odometry.h>
 //新的点云类型
 
 
@@ -231,6 +231,15 @@ public:
 	void GetPointCloudBeam(pcl::PointCloud<pcl::PointXYZINormal> pc_in,pcl::PointCloud<pcl::PointXYZINormal>& pc_out);
 	//提取边缘点
 	void GetBeamEdge(pcl::PointCloud<pcl::PointXYZINormal> pc_in,pcl::PointCloud<pcl::PointXYZINormal>& pc_out);
+	//格式转换
+/*	Eigen::Isometry3d odometryToEigen(nav_msgs::Odometry &o, Eigen::Isometry3d &e) {
+		Eigen::Isometry3d is_test;
+		is_test = Eigen::Isometry3d::Identity();
+		tf::Transform tf_test;
+		tf::poseMsgToTF(o.pose.pose, tf_test);
+		tf::transformTFToEigen(tf_test, e);
+		return e;
+	}*/
 	
 	std::vector<int> unique_element_in_vector(std::vector<int> v){
 		std::vector<int>::iterator vector_iterator;
