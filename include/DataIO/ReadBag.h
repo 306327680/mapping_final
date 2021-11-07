@@ -60,6 +60,7 @@ public:
 	void readTopRobosense(std::string path,std::string save_path);
 	void readRobo128(std::string path,std::string save_path);
 	void readPandarXT32(std::string path,std::string save_path);
+    void readOuster(std::string path, std::string save_path);
 	//4. 读取图片
 	void readcamera(std::string path,std::string save_path);
 	void readStereoCamera(std::string path,std::string save_path);
@@ -89,6 +90,9 @@ private:
 	mypcdCloud pcdtosave;
 	VLPPointCloud vlp_pcdtosave;
 	RoboPointCLoud robo_pcdtosave;
+    pcl::PointCloud<ouster_ros::Point> ouster_read;
+    VLPPointCloud ouster_pcdtosave;
+
 	//外外参标定的两个topic
 	std::string lidarodom = "/odom_mapped";
 	std::string gps_calibrate = "/ins_linsin_odom";

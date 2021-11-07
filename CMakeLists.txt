@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.6.3 FATAL_ERROR)
 project(pcd_compare)
-find_package(PCL 1.7 REQUIRED)
+find_package(PCL REQUIRED)
 set( CMAKE_CXX_FLAGS "-std=c++11 -O2" )
 set( CMAKE_EXPORT_COMPILE_COMMANDS on)
 list( APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake_modules )

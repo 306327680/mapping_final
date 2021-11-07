@@ -32,7 +32,7 @@ int main(int argc,char** argv){
 	{
 		//0. VLP+IMU+RTK 存成相应的文件
 		case 0:
-			m.readAndSaveHesai("/media/echo/DataDisc/9_rosbag/zed_pandar64_ins/Hesai_back_afternoon_2.bag");
+			m.readAndSaveHesai("/media/echo/E/udi_fusion_2021-11-01-23-04-50.bag");
 			break;
 			//-1 建立lidar odom
 		case -1:
@@ -98,11 +98,11 @@ int main(int argc,char** argv){
 			//imu建图
 		case 9:
 			m.setStartEnd();
-			m.getStereoFileNames("/home/echo/2_bag/2_ziboHandHold/qisheng");
-		    m.GetPNGFileNames("/home/echo/2_bag/2_ziboHandHold/qisheng/left","png");
+//			m.getStereoFileNames("/home/echo/2_bag/2_ziboHandHold/qisheng");
+//		    m.GetPNGFileNames("/home/echo/2_bag/2_ziboHandHold/qisheng/left","png");
 	/*		m.start_id = 4200;
 			m.end_id = 4350;*/
-			m.IMUMapping("/home/echo/2_bag/2_ziboHandHold/qisheng/imu/imu.csv","/home/echo/2_bag/2_ziboHandHold/qisheng/pcd");
+			m.IMUMapping("/home/echo/9_rosbag/dongguan/imu/imu.csv","/home/echo/9_rosbag/dongguan/pcd");
 			break;
 		case 10:
 			//10. q去畸变
@@ -110,7 +110,7 @@ int main(int argc,char** argv){
 			break;
 		case 11:
 			//11. 格式转化,用于不同的雷达型号 保留ring 和timestamp等信息
-			m.readAndSaveHesai("/media/echo/DataDisc/9_rosbag/rsparel_64_ins/2019-11-06-20-43-12_0.bag");
+			m.readAndSaveHesai("/home/echo/9_rosbag/dongguan/2021-01-27-11-53-46.bag");
 			break;
 		case 12://带tracking 的 icp
 			//11. 格式转化,用于不同的雷达型号 保留ring 和timestamp等信息
@@ -118,7 +118,7 @@ int main(int argc,char** argv){
 			m.lidarOdomWithTracking();//普通点面icp
 			break;
 		case 13:
-			m.PCmap2GridMap("/home/echo/7_map/qichengbinguan/gnd.pcd");
+			m.PCmap2GridMap("/home/echo/7_map/qichengbinguan/gnd.pcd");//点云转栅格地图和2d PNG
 			break;
 		default :
 			cout << "无效输入" << endl;

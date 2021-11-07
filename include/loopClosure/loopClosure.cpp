@@ -912,9 +912,9 @@ void loopClosure::genVLPlocalmap(int length, std::vector<Eigen::Isometry3d, Eige
 		pcl::UniformSampling<pcl::PointXYZ> uniFilter;
 		uniFilter.setRadiusSearch(0.25f); //0.1米
 		pcl::PointCloud<int> keypointIndices;
-		uniFilter.setInputCloud(xyz_map);
-		uniFilter.compute(keypointIndices);
-		pcl::copyPointCloud(*xyz_map, keypointIndices.points, *xyz_map_filter);
+//		uniFilter.setInputCloud(xyz_map);
+		uniFilter.filter(*xyz_map_filter);
+//		pcl::copyPointCloud(*xyz_map, keypointIndices.points, *xyz_map_filter);
 		
 		/*pcl::VoxelGrid<pcl::PointXYZ> sor;
 		sor.setInputCloud(xyz_map);

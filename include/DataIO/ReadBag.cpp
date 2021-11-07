@@ -327,7 +327,7 @@ void ReadBag::readVLP16WoTime(std::string path, std::string save_path) {
 	int beam_size ;
 	double timestamp;
 	//可以加挺多topic的?
-	topics.push_back(std::string("/left/velodyne_points"));
+	topics.push_back(std::string("/top/rslidar_points"));
 	rosbag::View view(bag, rosbag::TopicQuery(topics));
 	float time_last = 0;
 	std::vector<int> indices1;
@@ -363,7 +363,7 @@ void ReadBag::readVLP16WoTime(std::string path, std::string save_path) {
 					pcd_save<<save_path.c_str()<<"/"<<inter_times<<".pcd";
 					std::cout<<pcd_save.str()<<" size: "<<vlp_pcd.size()<<" times: "<<inter_times<<std::endl;
 					left_all.push_back(vlp_pcdtosave);
-//					writer.write(pcd_save.str(),vlp_pcdtosave,true);
+					writer.write(pcd_save.str(),vlp_pcdtosave,true);
 					vlp_pcdtosave.clear();
 					inter_times++;
 				}
@@ -756,4 +756,57 @@ void ReadBag::readINS(std::string path, std::string save_path) {
 					Pio.insertPose(is_test);
 				}
 	Pio.saveGraph(ss.str());
+}
+
+void ReadBag::readOuster(std::string path, std::string save_path) {
+    std::cout<<"the bag path is: "<<path<<std::endl;
+    rosbag::Bag bag;
+    bag.open(path, rosbag::bagmode::Read);
+    std::vector<std::string> topics;
+    bool pcd_start = false;
+    float time_last = 0;
+    float timestamp;
+    //The topic of subscribe
+    topics.push_back(std::string("/os_cloud_node/points"));
+    rosbag::View view(bag, rosbag::TopicQuery(topics));
+    //读广场的也就几秒
+    int inter_times =0;
+    BOOST_FOREACH(rosbag::MessageInstance const m, view)
+                {
+                    double time_range = 0;
+                    pcdtosave.clear();
+                    std::stringstream pcd_save;
+                    pcd_save.precision(18);
+                    sensor_msgs::PointCloud2::ConstPtr s = m.instantiate<sensor_msgs::PointCloud2>();
+                    pcl::PCLPointCloud2 pcl_pc2;
+                    pcl::fromROSMsg(*s,ouster_read);
+                    time_range = ouster_read.size()*10;
+                    time_range = ouster_read[ouster_read.size()-1].t - ouster_read[0].t;
+                    if(!pcd_start){
+                        lidar_first = s->header.stamp;
+                        pcd_start = true;
+                    }
+
+                    for (int i = 0; i < ouster_read.size(); ++i) {
+                        VLPPoint temp;
+                        temp.x = ouster_read[i].x;
+                        temp.y = ouster_read[i].y;
+                        temp.z = ouster_read[i].z;
+                        temp.intensity = int((ouster_read[i].reflectivity/65535.0)*256);
+                        temp.time = (i%1024)/10240.000;
+                        temp.ring = ouster_read[i].ring;
+                        ouster_pcdtosave.push_back(temp);
+                    }
+                    std::cout<<ouster_read[ouster_read.size()-1].t<< "  ss  "<<ouster_read[0].t<<std::endl;
+                    time_last += ouster_read[ouster_read.size()-1].t - ouster_read[0].t;
+                    std::cout<<time_last<<std::endl;
+                    ouster_pcdtosave.width = ouster_pcdtosave.size();
+
+                    pcd_save<<save_path.c_str()<<"/"<<inter_times<<".pcd";
+                    std::cout<<pcd_save.str()<<" size: "<<ouster_read.size()<<" times: "<<inter_times<<std::endl;
+                    writer.write(pcd_save.str(),ouster_pcdtosave,true);
+                    ouster_pcdtosave.clear();
+
+                    inter_times++;
+                }
 }

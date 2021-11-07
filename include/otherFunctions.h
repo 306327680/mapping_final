@@ -268,17 +268,18 @@ pcl::PointCloud<pcl::PointXYZI> dynamicRemove(pcl::PointCloud<pcl::PointXYZI> la
 	void readAndSaveHesai(std::string path) {
 		ReadBag a;
 		//a.readHesai(path);
-		//a.readVLP16("/media/echo/DataDisc/9_rosbag/8_imu_camera_rtk_vlp/2020-05-11-16-07-59.bag","/media/echo/DataDisc/9_rosbag/8_imu_camera_rtk_vlp/car_pcd");
+		//a.readVLP16("/media/echo/DataDisc/9_rosbag/8_imu_camera_rtk_vlp/2020-05-11-16-07-59.bag","/media/echo/DataDisc/9_rosbag/8_imu_camera_rtk_vlp/pcd");
 		//a.readTopRobosense("/media/echo/DataDisc/9_rosbag/9_huawei_jialuowuliu/2020-04-09-11-44-45.bag","/home/echo/2_huawei");
-		std::string save_path = "/home/echo/1_mapping_data/125hzUDIST";
-		a.readPandarXT32("/media/echo/DataDisc2/2_pandarXT/2020-12-25-16-30-01.bag","/media/echo/DataDisc2/2_pandarXT/xt16");
-		bool readBag = false;
+		std::string save_path = "/media/echo/DataDisc/1_pcd_file/cyt_huoniao_ouster64/pcd";
+//		a.readPandarXT32("/media/echo/DataDisc2/2_pandarXT/2020-12-25-16-30-01.bag","/media/echo/DataDisc2/2_pandarXT/xt16");
+		bool readBag = true;
 		if (readBag){
-//			a.readVLP16WoTime("/media/echo/yzhubrData/4_jjhData/RHD/RHD02lab.bag","/media/echo/yzhubrData/4_jjhData/RHD/merge_pcd");
-			a.readVLP16(path,save_path + "/pcd");
-			a.readStereoCamera(path,save_path);
-			a.saveRTK2PCD(path,save_path+"/rtk/rtk.csv");//把rtk保存成 csv+pcd
-			a.readImu(path,save_path+"/imu/imu.csv");
+            a.readOuster(path,save_path + "/pcd");
+//			a.readVLP16WoTime(path,save_path + "/pcd");
+//			a.readVLP16(path,save_path + "/pcd");
+//			a.readStereoCamera(path,save_path);
+//			a.saveRTK2PCD(path,save_path+"/rtk/rtk.csv");//把rtk保存成 csv+pcd
+//			a.readImu(path,save_path+"/imu/imu.csv");
  
 		}
 		//a.readcamera("/media/echo/DataDisc2/shandong/2020-05-24-16-51-53.bag","/media/echo/DataDisc2/shandong/pic");
@@ -345,6 +346,7 @@ pcl::PointCloud<pcl::PointXYZI> dynamicRemove(pcl::PointCloud<pcl::PointXYZI> la
 
 	//功能9. 预计分
 	void IMUPreintergration(std::string imu_path);
+	Eigen::Isometry3d T_w_L0; //9.1 IMU 初始的roll pitch
 	//功能10 带imu的mapping
 	void IMUMapping(std::string imu_path,std::string pcd_path);
 	//11. imu LiDAR 外参标定
@@ -359,6 +361,9 @@ pcl::PointCloud<pcl::PointXYZI> dynamicRemove(pcl::PointCloud<pcl::PointXYZI> la
 	void PCmap2GridMap(std::string pointcloudPath);
 	//14. 点云地图范围 2d kd tree 确定范围
 	void PCrangeDetect(std::string map_path);
+	//xx1 简化代码结构部分
+	//xx1.1 读取pcd
+	void readPointCloud(std::string file_names,pcl::PointCloud<pcl::PointXYZI>::Ptr cloud_hesai,ros::Time& cur_time,mypcdCloud& xyzItimeRing,std::string LiDAR_type = "VLP");
 private:
 };
 

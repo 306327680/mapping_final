@@ -149,12 +149,17 @@ public:
 
 	};
 
-	//1. 输入: 雷达和INS时间戳对齐后的位姿 输出:(1). 雷达到gnss的外参  感觉一个就行
+	//1. 输入: 雷达和GNSS时间戳对齐后的位姿 输出:(1). 雷达到gnss的外参  感觉一个就行
+	//优化的方法直接标定3DOF-6DOF外参
 	void CalibrateGNSSLiDAR(std::vector<Eigen::Matrix4d> gps_poses,std::vector<Eigen::Matrix4d> LiDAR_poses,
 			Eigen::Isometry3d & T_lidar2INS);
 	//1.1 ICP 求解
 	void CalibrateGNSSLiDARICP(std::vector<Eigen::Matrix4d> gps_poses,std::vector<Eigen::Matrix4d> LiDAR_poses,
 							Eigen::Isometry3d & T_lidar2INS,Eigen::Vector3d arm);
+	//1.2 输入: 雷达和INS时间戳对齐后的位姿 输出:(1). 雷达到gnss的外参  感觉一个就行
+	//优化的方法直接标定6DOF-6DOF外参
+	void CalibrateINSLiDAR(std::vector<Eigen::Matrix4d> gps_poses,std::vector<Eigen::Matrix4d> LiDAR_poses,
+							Eigen::Isometry3d & T_lidar2INS);
 	//2. 外参
 	double extrinsic_param[7]={0,0,0,0,0,0};
 	//3. aloam的外参

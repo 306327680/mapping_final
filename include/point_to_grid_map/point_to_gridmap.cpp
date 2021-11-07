@@ -311,9 +311,9 @@ void LiDARnavigationSwitch::get2Dmap() {
 	filter.setInputCloud(_3dPC);
 	filter.setRadiusSearch(0.05f);
 	// We need an additional object to store the indices of surviving points.
-	pcl::PointCloud<int> keypointIndices;
-	filter.compute(keypointIndices);
-	pcl::copyPointCloud(*_3dPC, keypointIndices.points, *filteredCloud);
+//	pcl::PointCloud<int> keypointIndices;
+	filter.filter(*filteredCloud);
+//	pcl::copyPointCloud(*_3dPC, keypointIndices.points, *filteredCloud);
 	_3dPC = filteredCloud;
 	//2. 2d kdTree 往里放数据
 	for (int i = 0; i < _3dPC->size(); ++i) {
